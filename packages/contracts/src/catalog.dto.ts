@@ -9,10 +9,10 @@ const MinorAmount = z.number().int().nonnegative();
 
 export const ColourDto = z.object({
   id: z.string().uuid(),
-  /** Human name. Native Spirit has these; own production has only numbers. */
-  name: z.string().min(1),
-  /** Supplier's own code — "38", "NS-Aquamarine". Kept for the workshop. */
-  supplierCode: z.string().nullable(),
+  /** Native Spirit has these; own production is only numbered, so null here. */
+  name: z.string().min(1).nullable(),
+  /** Supplier's own code — "38", "NS-Aquamarine". Always present. */
+  supplierCode: z.string().min(1),
   /** #RRGGBB for the swatch. Null means "we have not digitised it yet". */
   hex: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable(),
   imageUrl: z.string().url().nullable(),

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/features/auth/session';
 import { LogoutButton } from '@/features/auth/logout-button';
+import { AdminNav } from '@/features/admin-shell/admin-nav';
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession();
@@ -10,8 +11,11 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   return (
     <div className="min-h-screen bg-surface">
       <header className="flex items-center justify-between border-b border-line px-6 py-4">
-        <span className="text-sm text-ink-muted">{session.email}</span>
-        <LogoutButton />
+        <AdminNav />
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-ink-muted">{session.email}</span>
+          <LogoutButton />
+        </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
     </div>

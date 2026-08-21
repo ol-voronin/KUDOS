@@ -1,6 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import type { AdminLeadListDto, AdminLeadListQueryDto, LeadStatus } from '@dt/contracts';
+import { ErrorCode } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { formatLead, type Lead, sendToTelegram } from './telegram';
+
+const ADMIN_LEAD_SELECT = {
+  id: true, number: true, status: true, name: true, phone: true, message: true,
+  source: true, telegramSentAt: true, telegramError: true, createdAt: true,
+} satisfies Prisma.LeadSelect;
 
 @Injectable()
 export class LeadsService {
@@ -64,5 +72,38 @@ export class LeadsService {
     }
 
     return lead;
+  }
+
+  /** The admin's "Заявки" list — newest first, optionally filtered by status. */
+  async list(query: AdminLeadListQueryDto): Promise<AdminLeadListDto> {
+    const where = query.status ? { status: query.status } : {};
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.lead.findMany({
+        where,
+        select: ADMIN_LEAD_SELECT,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.perPage,
+        take: query.perPage,
+      }),
+      this.prisma.lead.count({ where }),
+    ]);
+
+    return { items, total, page: query.page, perPage: query.perPage };
+  }
+
+  async updateStatus(id: string, status: LeadStatus) {
+    try {
+      return await this.prisma.lead.update({
+        where: { id },
+        data: { status },
+        select: ADMIN_LEAD_SELECT,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Заявку не знайдено' });
+      }
+      throw error;
+    }
   }
 }

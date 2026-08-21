@@ -66,3 +66,7 @@ export const MeasurementKey = z.enum([
   'WIDTH', 'LENGTH', 'SLEEVE', 'WAIST', 'HIP',
 ]);
 export type MeasurementKey = z.infer<typeof MeasurementKey>;
+
+/** Where a lead sits in the admin's follow-up workflow. */
+export const LeadStatus = z.enum(['NEW', 'CONTACTED', 'CONVERTED', 'LOST']);
+export type LeadStatus = z.infer<typeof LeadStatus>;
