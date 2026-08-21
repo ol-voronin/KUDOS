@@ -1,3 +1,6 @@
+// Мусить іти першим: решта модулів читає process.env на етапі імпорту.
+// Шукає .env поруч із apps/api — там символьне посилання на корінь монорепо.
+import 'dotenv/config';
 import 'reflect-metadata';
 import { Logger, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -8,7 +11,13 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
-  if (!value || value === '__replace_me__') {
+  if (value === '__replace_me__') {
+    throw new Error(
+      `${name} все ще має значення __replace_me__. Згенеруйте секрет:\n` +
+      `  node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`,
+    );
+  }
+  if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
