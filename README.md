@@ -284,13 +284,18 @@ TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... node apps/api/scripts/send-test.mjs
 
 ```bash
 cp .env.example .env          # заповнити TELEGRAM_* і JWT_*
+ln -s ../../.env apps/api/.env         # Prisma CLI шукає .env поруч зі схемою
 pnpm install
 pnpm run build:contracts
-docker compose up -d postgres redis
+docker compose up -d postgres          # redis поки не потрібен, його ніщо не використовує
 pnpm --filter @dt/api prisma generate
 pnpm --filter @dt/api run db:setup     # migrate dev + checks.sql + seed
 pnpm run typecheck && pnpm -r test     # ось тепер typecheck справді щось значить
 ```
+
+Символьне посилання обовʼязкове: скрипти `@dt/api` виконуються з `apps/api`, а
+`.env` лежить у корені монорепо. Без нього Prisma не бачить `DATABASE_URL`.
+`.env` у `.gitignore` за шаблоном без слеша, тож посилання в гіт не поїде.
 
 `db:checks` накатує `prisma/checks.sql` — CHECK-констрейнт, який Prisma не
 вміє описати в схемі. Він ідемпотентний, і його треба ганяти після кожної

@@ -12,7 +12,7 @@
     "test:cov": "vitest run --coverage",
     "lint": "eslint src --max-warnings 0",
     "prisma": "prisma",
-    "db:checks": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f prisma/checks.sql",
+    "db:checks": "set -a; . ./.env; set +a; psql \"${DATABASE_URL%%\\?*}\" -v ON_ERROR_STOP=1 -f prisma/checks.sql",
     "db:setup": "prisma migrate dev && pnpm run db:checks && prisma db seed"
   },
   "prisma": {
