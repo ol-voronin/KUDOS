@@ -498,6 +498,24 @@ model CustomRequest {
 // Operational
 // ---------------------------------------------------------------------------
 
+/// Admin panel accounts. No self-registration endpoint exists — rows are
+/// created only by `scripts/create-admin.mjs`, run by hand against the DB.
+model AdminUser {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  passwordHash String
+  isActive     Boolean @default(true)
+
+  /// Per-account brute-force lockout, on top of the per-IP rate limit on
+  /// /auth/login. Reset to 0 on any successful login.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 /// Append-only. Written for every state change on an order or request so that
 /// "it changed by itself" has somewhere to be looked up.
 model AuditLog {
