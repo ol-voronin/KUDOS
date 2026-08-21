@@ -1,0 +1,18 @@
+{
+  "name": "doggie-tale",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build": "pnpm run build:contracts && pnpm -r --filter '!@dt/contracts' build",
+    "typecheck": "pnpm run build:contracts && pnpm -r --filter '!@dt/contracts' typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:up": "docker compose up -d postgres redis",
+    "db:migrate": "pnpm --filter @dt/api prisma migrate dev",
+    "db:seed": "pnpm --filter @dt/api prisma db seed",
+    "build:contracts": "pnpm --filter @dt/contracts build"
+  }
+}

@@ -1,0 +1,546 @@
+// Doggie Tale — catalogue and orders.
+//
+// Money: every *Minor field is an INTEGER number of kopiykas. There is no
+// Decimal and no Float anywhere in this schema, deliberately.
+//
+// The product model is five levels deep, which is one more than a normal shop:
+//   Line -> Garment (type + fit) -> Fabric -> Colour -> Size
+// The extra level is Fabric, because own-production sweatshirts can be sewn
+// from either тринитка петля or тринитка з начісом and each has its own palette.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums — mirrored in @dt/contracts. Keep both in sync; the contracts package
+// is what the frontend sees, this is what the database enforces.
+// ---------------------------------------------------------------------------
+
+enum ProductLine {
+  OWN_PRODUCTION
+  NATIVE_SPIRIT
+}
+
+enum GarmentFit {
+  CLASSIC
+  OVERSIZE
+  OVERSIZE_WOMEN
+  COMFORT
+  HYBRID
+  KIDS
+}
+
+enum GarmentType {
+  TSHIRT
+  SWEATSHIRT
+  HOODIE
+  ZIP_HOODIE
+  JOGGERS
+  TOTE_BAG
+}
+
+enum VariantAvailability {
+  IN_STOCK
+  MADE_TO_ORDER
+  UNAVAILABLE
+}
+
+enum PrintSizeTier {
+  MINI
+  MEDIUM
+  MAXI
+}
+
+enum PrintMethod {
+  DTF
+  DTG
+}
+
+enum OrderStream {
+  READY_PRINT
+  CUSTOMISATION
+  FROM_ZERO
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  IN_PRODUCTION
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum CustomRequestStatus {
+  SUBMITTED
+  QUOTED
+  DEPOSIT_PAID
+  IN_DESIGN
+  AWAITING_APPROVAL
+  APPROVED
+  IN_PRODUCTION
+  COMPLETED
+  CANCELLED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  LOST
+}
+
+enum MeasurementKey {
+  WIDTH
+  LENGTH
+  SLEEVE
+  WAIST
+  HIP
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue — garment side
+// ---------------------------------------------------------------------------
+
+model Fabric {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String
+  line        ProductLine
+  /// g/m². A single number. The source sheets disagree (320-340 vs 330) —
+  /// resolve that once, here, not on every page that renders it.
+  weightGsm   Int
+  composition String
+  origin      String?
+
+  garments GarmentFabric[]
+  colours  FabricColour[]
+  variants Variant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([line, name])
+  @@index([line])
+}
+
+model Colour {
+  id           String  @id @default(uuid()) @db.Uuid
+  /// Native Spirit colours have real names. Own-production colours are known
+  /// only by a number on a physical swatch card — this is nullable until
+  /// somebody names them.
+  name         String?
+  /// The supplier's identifier: "38", "Aquamarine". Always present.
+  supplierCode String
+  /// #RRGGBB. Null means "not digitised yet" and the UI must fall back to a
+  /// photo rather than rendering a wrong swatch.
+  hex          String? @db.Char(7)
+  imageUrl     String?
+
+  fabrics  FabricColour[]
+  variants Variant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([supplierCode])
+  @@index([name])
+}
+
+/// A colour exists only in the fabrics that are actually woven in it.
+model FabricColour {
+  fabricId String @db.Uuid
+  colourId String @db.Uuid
+
+  fabric Fabric @relation(fields: [fabricId], references: [id], onDelete: Cascade)
+  colour Colour @relation(fields: [colourId], references: [id], onDelete: Cascade)
+
+  @@id([fabricId, colourId])
+  @@index([colourId])
+}
+
+model Garment {
+  id   String      @id @default(uuid()) @db.Uuid
+  slug String      @unique
+  line ProductLine
+  type GarmentType
+  fit  GarmentFit
+  name String
+
+  /// Own production can shorten the item to fit the person. No blank can.
+  /// This is a selling point, not a footnote — it belongs in the data.
+  lengthAdjustable Boolean @default(false)
+
+  basePriceMinor Int
+  isPublished    Boolean @default(false)
+
+  fabrics  GarmentFabric[]
+  sizes    Size[]
+  variants Variant[]
+  rules    PrintGarmentRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One row per real product. "Класична футболка" exists twice — once per
+  /// line — and that is correct; they are different garments.
+  @@unique([line, type, fit])
+  @@index([line, type])
+  @@index([isPublished])
+}
+
+model GarmentFabric {
+  garmentId String @db.Uuid
+  fabricId  String @db.Uuid
+  /// Own production lets the buyer pick петля or начіс. Native Spirit does not.
+  isDefault Boolean @default(false)
+
+  garment Garment @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+  fabric  Fabric  @relation(fields: [fabricId], references: [id], onDelete: Cascade)
+
+  @@id([garmentId, fabricId])
+  @@index([fabricId])
+}
+
+/// Sizes belong to a garment, not to the shop. There are nine different size
+/// schemas across the range (XS-3XL, XS/S-XL/2XL, S/M-L/XL, XXS-XXL, 98-152...)
+/// and no universal selector will work.
+model Size {
+  id        String @id @default(uuid()) @db.Uuid
+  garmentId String @db.Uuid
+  /// Exactly as printed on the chart: "XS", "XS/S", "116", "98-104".
+  label     String
+  position  Int
+
+  garment      Garment       @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+  measurements Measurement[]
+  variants     Variant[]
+
+  @@unique([garmentId, label])
+  @@unique([garmentId, position])
+  @@index([garmentId])
+}
+
+/// Measurement rows differ per garment: width+length, or +sleeve, or
+/// waist+hip+length. Modelled as rows rather than columns for that reason.
+model Measurement {
+  id     String         @id @default(uuid()) @db.Uuid
+  sizeId String         @db.Uuid
+  key    MeasurementKey
+  /// String, because real charts contain ranges: "66-76", "95.5".
+  value  String
+
+  size Size @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@unique([sizeId, key])
+}
+
+/// The sellable blank: one garment, in one fabric, one colour, one size.
+model Variant {
+  id        String @id @default(uuid()) @db.Uuid
+  sku       String @unique
+  garmentId String @db.Uuid
+  fabricId  String @db.Uuid
+  colourId  String @db.Uuid
+  sizeId    String @db.Uuid
+
+  availability VariantAvailability @default(UNAVAILABLE)
+  /// MUST be set when availability = MADE_TO_ORDER. Enforced by a CHECK
+  /// constraint added in the migration — application validation is not enough.
+  leadTimeDays Int?
+  /// Only when this variant costs more than the garment's base price.
+  priceOverrideMinor Int?
+
+  garment Garment @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+  fabric  Fabric  @relation(fields: [fabricId], references: [id])
+  colour  Colour  @relation(fields: [colourId], references: [id])
+  size    Size    @relation(fields: [sizeId], references: [id])
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([garmentId, fabricId, colourId, sizeId])
+  @@index([garmentId, availability])
+  @@index([availability])
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue — artwork side
+// ---------------------------------------------------------------------------
+
+model Collection {
+  id          String  @id @default(uuid()) @db.Uuid
+  slug        String  @unique
+  title       String
+  description String?
+  position    Int     @default(0)
+  isPublished Boolean @default(false)
+
+  prints PrintCollection[]
+  rules  PrintGarmentRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, position])
+}
+
+/// The long-tail SEO axis. "футболка з коргі" is a query with intent;
+/// "принт на футболку" is not.
+model Breed {
+  id       String  @id @default(uuid()) @db.Uuid
+  slug     String  @unique
+  name     String
+  /// коргі / вельш-коргі / corgi — all point at the same breed page.
+  synonyms String[]
+
+  prints PrintBreed[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Print {
+  id         String        @id @default(uuid()) @db.Uuid
+  slug       String        @unique
+  title      String
+  sizeTier   PrintSizeTier
+  previewUrl String
+  /// Production artwork location. Never exposed through the public API.
+  artworkKey String
+
+  isPublished Boolean @default(false)
+
+  collections PrintCollection[]
+  breeds      PrintBreed[]
+  orderItems  OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished])
+  @@index([sizeTier])
+}
+
+model PrintCollection {
+  printId      String @db.Uuid
+  collectionId String @db.Uuid
+
+  print      Print      @relation(fields: [printId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([printId, collectionId])
+  @@index([collectionId])
+}
+
+model PrintBreed {
+  printId String @db.Uuid
+  breedId String @db.Uuid
+
+  print Print @relation(fields: [printId], references: [id], onDelete: Cascade)
+  breed Breed @relation(fields: [breedId], references: [id], onDelete: Cascade)
+
+  @@id([printId, breedId])
+  @@index([breedId])
+}
+
+/// "Портрети — тільки оверсайз" as data instead of as a rule in someone's head.
+/// A collection allows a set of garments; anything not listed is not offered.
+model PrintGarmentRule {
+  id           String @id @default(uuid()) @db.Uuid
+  collectionId String @db.Uuid
+  garmentId    String @db.Uuid
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  garment    Garment    @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, garmentId])
+  @@index([garmentId])
+}
+
+/// Print price by tier. A row, not a constant, so the workshop can reprice
+/// without a deploy.
+model PrintPrice {
+  tier       PrintSizeTier @id
+  priceMinor Int
+  /// Discount when the customer brings finished artwork. Custom stream only.
+  suppliedArtworkDiscountMinor Int @default(15000)
+
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Orders — the cart stream
+// ---------------------------------------------------------------------------
+
+/// База номерів. Один запис на телефон — сюди зводяться всі заявки,
+/// замовлення й брифи від однієї людини.
+model Customer {
+  id        String  @id @default(uuid()) @db.Uuid
+  email     String? @unique
+  phone     String  @unique
+  name      String
+
+  /// Явна згода на подальшу комунікацію. За замовчуванням false:
+  /// залишена заявка — це згода на відповідь щодо неї, не на розсилку.
+  marketingConsent   Boolean   @default(false)
+  marketingConsentAt DateTime?
+
+  orders         Order[]
+  customRequests CustomRequest[]
+  leads          Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id         String      @id @default(uuid()) @db.Uuid
+  /// Continues the numbering that already runs from #1 (9 September 2025).
+  /// It is the external counter the playbook insists on keeping — do not let
+  /// an analytics platform become the source of truth for order count.
+  number     Int         @unique @default(autoincrement())
+  customerId String      @db.Uuid
+  stream     OrderStream
+  status     OrderStatus @default(PENDING_PAYMENT)
+
+  /// Snapshot totals. Recomputing an old order from current prices is a bug.
+  subtotalMinor Int
+  shippingMinor Int @default(0)
+  discountMinor Int @default(0)
+  totalMinor    Int
+
+  customer Customer    @relation(fields: [customerId], references: [id])
+  items    OrderItem[]
+
+  placedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([status, placedAt])
+}
+
+model OrderItem {
+  id        String @id @default(uuid()) @db.Uuid
+  orderId   String @db.Uuid
+  variantId String @db.Uuid
+  printId   String @db.Uuid
+
+  quantity    Int
+  printMethod PrintMethod
+
+  /// Price snapshots taken at checkout. Never join to current prices to
+  /// display an old order.
+  garmentPriceMinor Int
+  printPriceMinor   Int
+  lineTotalMinor    Int
+
+  /// What the customer was promised at the time, for MADE_TO_ORDER items.
+  promisedLeadTimeDays Int?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id])
+  print   Print   @relation(fields: [printId], references: [id])
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders — the "from zero" stream. Deliberately NOT an Order.
+// A 16-hour design cycle is a project, not a purchase; forcing it through the
+// cart is the mistake this separation exists to prevent.
+// ---------------------------------------------------------------------------
+
+model CustomRequest {
+  id         String              @id @default(uuid()) @db.Uuid
+  number     Int                 @unique @default(autoincrement())
+  customerId String              @db.Uuid
+  status     CustomRequestStatus @default(SUBMITTED)
+
+  dogName    String
+  dogBreed   String
+  photoKeys  String[]
+  mood       String
+  references String[]
+  notes      String?
+
+  garmentType             GarmentType
+  preferredLine           ProductLine?
+  sizeLabel               String?
+  colourNote              String?
+  customerSuppliedArtwork Boolean      @default(false)
+  deadline                DateTime?
+
+  /// Filled in at QUOTED. Null before that — an unquoted request has no price.
+  quotedTotalMinor      Int?
+  includedRevisions     Int  @default(2)
+  extraRevisionMinor    Int?
+  quoteValidUntil       DateTime?
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([customerId])
+}
+
+// ---------------------------------------------------------------------------
+// Operational
+// ---------------------------------------------------------------------------
+
+/// Append-only. Written for every state change on an order or request so that
+/// "it changed by itself" has somewhere to be looked up.
+model AuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  correlationId String
+  actor         String
+  entity        String
+  entityId      String   @db.Uuid
+  action        String
+  /// Never store tokens, passwords or payment credentials in here.
+  payload       Json?
+  createdAt     DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+/// Заявка з сайту. Пишеться в базу ПЕРШОЮ, і лише потім летить у Telegram —
+/// заявка, що існує тільки в чаті, зникає щойно чат прокрутиться.
+model Lead {
+  id     String     @id @default(uuid()) @db.Uuid
+  number Int        @unique @default(autoincrement())
+  status LeadStatus @default(NEW)
+
+  name    String
+  phone   String
+  message String?
+  /// Звідки прийшла: сторінка, кампанія, UTM.
+  source  String?
+
+  /// Чи долетіло в Telegram. Null означає «не долетіло» — видно в адмінці,
+  /// а не тільки в логах.
+  telegramSentAt DateTime?
+  telegramError  String?
+
+  customerId String?   @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  correlationId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([phone])
+  @@index([status, createdAt])
+  @@index([telegramSentAt])
+}
