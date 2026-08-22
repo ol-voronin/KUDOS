@@ -86,4 +86,10 @@ export class PaymentsAdminService {
     this.logger.log(`payment.cancel_requested invoiceId=${invoiceId}`);
     return toAdminDto(payment);
   }
+
+  /** Fiscal-receipt (PDF) info — see `MonobankService.getFiscalChecks` for the caveat on its shape. */
+  async getFiscalChecks(invoiceId: string): Promise<unknown> {
+    await this.findPayment(invoiceId);
+    return this.monobank.getFiscalChecks(invoiceId);
+  }
 }

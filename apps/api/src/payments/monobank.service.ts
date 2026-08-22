@@ -5,6 +5,35 @@ import { parseMonobankPublicKey, verifyMonobankSignature } from './webhook-signa
 
 const MONOBANK_API = 'https://api.monobank.ua';
 
+/**
+ * A discount on a basket line or the whole order. Live-verified 2026-08-22:
+ * `type`/`mode` must be UPPERCASE (`{type: "discount", mode: "percent"}`, as
+ * shown in some copy-pasted "AI prompt" guides, is rejected outright —
+ * `INVALID_MERCHANT_PAYM_INFO`). Only `type: "DISCOUNT"` is confirmed working
+ * here; a surcharge type (docs suggest `"EXTRA"`) was tried and rejected too
+ * (`invalid 'type'`) — the real value for that is unconfirmed, so it is not
+ * exposed until it's been checked against Monobank support/updated docs.
+ */
+export interface MonobankDiscount {
+  readonly type: 'DISCOUNT';
+  readonly mode: 'PERCENT' | 'VALUE';
+  readonly value: number;
+}
+
+/** One fiscal-receipt line. `tax` are Monobank/pRRO tax-group codes, e.g. `[0]` = no VAT, `[1]` = 20% VAT. */
+export interface MonobankBasketItem {
+  readonly name: string;
+  readonly qty: number;
+  /** Price for one unit, minor units (kopiykas). */
+  readonly sum: number;
+  /** `qty * sum`, after this item's own `discounts` (if any) — minor units. */
+  readonly total: number;
+  readonly code: string;
+  readonly barcode?: string;
+  readonly tax: readonly number[];
+  readonly discounts?: readonly MonobankDiscount[];
+}
+
 export interface CreateInvoiceInput {
   readonly amountMinor: number;
   readonly reference: string;
@@ -14,6 +43,10 @@ export interface CreateInvoiceInput {
   readonly validitySeconds?: number;
   /** Omitted = Monobank's own default ("debit", capture immediately). */
   readonly paymentType?: 'debit' | 'hold';
+  /** Fiscal-receipt line items. Omitted = no receipt line detail (still creates a valid invoice). */
+  readonly basketOrder?: readonly MonobankBasketItem[];
+  /** Order-level discount/surcharge (e.g. -10% cart-wide, or +delivery). Per-item ones go on the basket item itself. */
+  readonly discounts?: readonly MonobankDiscount[];
 }
 
 export interface CreateInvoiceResult {
@@ -46,13 +79,29 @@ export class MonobankService {
   }
 
   async createInvoice(input: CreateInvoiceInput): Promise<CreateInvoiceResult> {
+    if (input.basketOrder) {
+      const basketTotal = input.basketOrder.reduce((sum, item) => sum + item.total, 0);
+      if (basketTotal !== input.amountMinor) {
+        // Monobank's own rule (Сума всіх total ПОВИННА = amount інвойсу) — catch a mismatch here,
+        // not as a rejected/malformed invoice on Monobank's side.
+        throw new Error(
+          `basketOrder total (${basketTotal}) != invoice amount (${input.amountMinor})`,
+        );
+      }
+    }
+
     const res = await fetch(`${MONOBANK_API}/api/merchant/invoice/create`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'X-Token': this.token() },
       body: JSON.stringify({
         amount: input.amountMinor,
         ccy: 980,
-        merchantPaymInfo: { reference: input.reference, destination: input.destination },
+        merchantPaymInfo: {
+          reference: input.reference,
+          destination: input.destination,
+          ...(input.basketOrder ? { basketOrder: input.basketOrder } : {}),
+          ...(input.discounts ? { discounts: input.discounts } : {}),
+        },
         redirectUrl: input.redirectUrl,
         webHookUrl: input.webHookUrl,
         validity: input.validitySeconds ?? 3600,
@@ -117,6 +166,35 @@ export class MonobankService {
         message: 'Не вдалося скасувати оплату. Спробуйте ще раз або напишіть нам.',
       });
     }
+  }
+
+  /**
+   * Fiscal-receipt info (pRRO) for a paid invoice — a link to the PDF among
+   * other fields. Live-checked once (2026-08-22, unpaid test invoice):
+   * confirmed 200 OK with `{ checks: [] }` — so the top-level shape is a
+   * `checks` array. What each entry looks like once an invoice is actually
+   * paid/fiscalised is NOT verified — this environment cannot fetch
+   * monobank.ua/api-docs (client-rendered, redirects through an ad-tracking
+   * pixel for this tool). Returned as-is (untyped); confirm the per-check
+   * fields against a real paid invoice before building more than "hand the
+   * customer whatever URL/field is in there" on top of this.
+   */
+  async getFiscalChecks(invoiceId: string): Promise<unknown> {
+    const res = await fetch(
+      `${MONOBANK_API}/api/merchant/invoice/fiscal-checks?invoiceId=${encodeURIComponent(invoiceId)}`,
+      { headers: { 'X-Token': this.token() } },
+    );
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      this.logger.error(`Monobank invoice/fiscal-checks HTTP ${res.status}: ${body.slice(0, 300)}`);
+      throw new BadGatewayException({
+        code: ErrorCode.PAYMENT_PROVIDER_ERROR,
+        message: 'Не вдалося отримати фіскальний чек. Спробуйте ще раз або напишіть нам.',
+      });
+    }
+
+    return res.json();
   }
 
   /**

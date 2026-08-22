@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PaymentCancelRequestDto, PaymentFinalizeRequestDto } from '@dt/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -28,5 +28,10 @@ export class PaymentsAdminController {
     @Body(new ZodValidationPipe(PaymentCancelRequestDto)) dto: PaymentCancelRequestDto,
   ) {
     return this.paymentsAdmin.cancel(invoiceId, dto.amountMinor);
+  }
+
+  @Get(':invoiceId/fiscal-checks')
+  getFiscalChecks(@Param('invoiceId') invoiceId: string) {
+    return this.paymentsAdmin.getFiscalChecks(invoiceId);
   }
 }

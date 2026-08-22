@@ -145,6 +145,19 @@ export class CheckoutService {
     const webBase = publicUrl('WEB_PUBLIC_URL');
     const apiBase = publicUrl('API_PUBLIC_URL');
 
+    // Fiscal-receipt line for this order. `tax: [0]` = no VAT group set — this
+    // is a placeholder until the merchant's actual pRRO/VAT setup is
+    // confirmed; Monobank only enforces a real tax code once fiscalisation is
+    // switched on for the account.
+    const basketOrder = [{
+      name: `${variant.garment.name} — ${print.title}`,
+      qty: dto.quantity,
+      sum: offer.garmentPriceMinor + offer.printPriceMinor,
+      total: order.totalMinor,
+      code: variant.id,
+      tax: [0],
+    }];
+
     let invoice: { invoiceId: string; pageUrl: string };
     try {
       invoice = await this.monobank.createInvoice({
@@ -154,6 +167,7 @@ export class CheckoutService {
         redirectUrl: `${webBase}/order/${order.id}`,
         webHookUrl: `${apiBase}/api/v1/payments/monobank/webhook`,
         paymentType: dto.paymentType === 'HOLD' ? 'hold' : 'debit',
+        basketOrder,
       });
     } catch (error) {
       // No invoice means no way to pay — do not leave an order sitting in
