@@ -12,6 +12,8 @@ export interface CreateInvoiceInput {
   readonly redirectUrl: string;
   readonly webHookUrl: string;
   readonly validitySeconds?: number;
+  /** Omitted = Monobank's own default ("debit", capture immediately). */
+  readonly paymentType?: 'debit' | 'hold';
 }
 
 export interface CreateInvoiceResult {
@@ -54,6 +56,7 @@ export class MonobankService {
         redirectUrl: input.redirectUrl,
         webHookUrl: input.webHookUrl,
         validity: input.validitySeconds ?? 3600,
+        ...(input.paymentType ? { paymentType: input.paymentType } : {}),
       }),
     });
 
@@ -67,6 +70,53 @@ export class MonobankService {
     }
 
     return (await res.json()) as CreateInvoiceResult;
+  }
+
+  /**
+   * Captures a HOLD invoice — the money actually leaves the card only now.
+   * `amountMinor` below the held amount is a partial finalize; omitted means
+   * "the full held amount". Monobank confirms the outcome asynchronously via
+   * the `success` webhook, same as a normal debit.
+   */
+  async finalizeInvoice(invoiceId: string, amountMinor?: number): Promise<void> {
+    const res = await fetch(`${MONOBANK_API}/api/merchant/invoice/finalize`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-Token': this.token() },
+      body: JSON.stringify({ invoiceId, ...(amountMinor ? { amount: amountMinor } : {}) }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      this.logger.error(`Monobank invoice/finalize HTTP ${res.status}: ${body.slice(0, 300)}`);
+      throw new BadGatewayException({
+        code: ErrorCode.PAYMENT_PROVIDER_ERROR,
+        message: 'Не вдалося списати заблоковані кошти. Спробуйте ще раз або напишіть нам.',
+      });
+    }
+  }
+
+  /**
+   * Refunds an already-captured invoice. Only valid once `status` is
+   * `success` — Monobank rejects this on a HOLD/pending invoice with
+   * `errCode: "1004"` ("invoice not paid"). To invalidate an unpaid HOLD or
+   * DEBIT invoice instead, use `/api/merchant/invoice/remove` (not needed for
+   * HOLD: an un-finalized hold self-expires, see `holdExpiresAt`).
+   */
+  async cancelInvoice(invoiceId: string, amountMinor?: number): Promise<void> {
+    const res = await fetch(`${MONOBANK_API}/api/merchant/invoice/cancel`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-Token': this.token() },
+      body: JSON.stringify({ invoiceId, ...(amountMinor ? { amount: amountMinor } : {}) }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      this.logger.error(`Monobank invoice/cancel HTTP ${res.status}: ${body.slice(0, 300)}`);
+      throw new BadGatewayException({
+        code: ErrorCode.PAYMENT_PROVIDER_ERROR,
+        message: 'Не вдалося скасувати оплату. Спробуйте ще раз або напишіть нам.',
+      });
+    }
   }
 
   /**

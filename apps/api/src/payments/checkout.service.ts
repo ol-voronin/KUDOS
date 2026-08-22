@@ -19,6 +19,10 @@ function publicUrl(name: 'WEB_PUBLIC_URL' | 'API_PUBLIC_URL'): string {
   return value.replace(/\/$/, '');
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+/** Monobank auto-cancels an un-finalized HOLD after this many days. */
+const HOLD_MAX_DAYS = 9;
+
 /**
  * The READY_PRINT checkout: order + Monobank invoice, no cart.
  *
@@ -149,6 +153,7 @@ export class CheckoutService {
         destination: `Замовлення №${order.number} — ${print.title}`,
         redirectUrl: `${webBase}/order/${order.id}`,
         webHookUrl: `${apiBase}/api/v1/payments/monobank/webhook`,
+        paymentType: dto.paymentType === 'HOLD' ? 'hold' : 'debit',
       });
     } catch (error) {
       // No invoice means no way to pay — do not leave an order sitting in
@@ -162,7 +167,11 @@ export class CheckoutService {
         orderId: order.id,
         invoiceId: invoice.invoiceId,
         status: 'CREATED',
+        paymentType: dto.paymentType,
         amountMinor: order.totalMinor,
+        ...(dto.paymentType === 'HOLD'
+          ? { holdExpiresAt: new Date(Date.now() + HOLD_MAX_DAYS * MS_PER_DAY) }
+          : {}),
       },
     });
 

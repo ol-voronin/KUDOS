@@ -97,6 +97,7 @@ export function PrintOfferView({ slug }: { slug: string }) {
         variantId: variant.id,
         printMethod: 'DTF',
         quantity: 1,
+        paymentType: 'HOLD',
         customer: { name: customerName, phone: customerPhone, marketingConsent: false },
       });
       window.location.href = result.pageUrl;

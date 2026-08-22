@@ -66,6 +66,10 @@ export const PaymentStatus = z.enum([
 ]);
 export type PaymentStatus = z.infer<typeof PaymentStatus>;
 
+/** DEBIT captures immediately; HOLD blocks funds until an explicit finalize. */
+export const PaymentType = z.enum(['DEBIT', 'HOLD']);
+export type PaymentType = z.infer<typeof PaymentType>;
+
 export const CustomRequestStatus = z.enum([
   'SUBMITTED', 'QUOTED', 'DEPOSIT_PAID', 'IN_DESIGN',
   'AWAITING_APPROVAL', 'APPROVED', 'IN_PRODUCTION', 'COMPLETED', 'CANCELLED',

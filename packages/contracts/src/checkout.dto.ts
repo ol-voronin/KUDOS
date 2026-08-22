@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderStatus, PrintMethod } from './enums';
+import { OrderStatus, PaymentType, PrintMethod } from './enums';
 
 /**
  * The READY_PRINT checkout: one variant, paid immediately through Monobank.
@@ -14,6 +14,13 @@ export const ReadyPrintCheckoutRequestDto = z.object({
   variantId: z.string().uuid(),
   printMethod: PrintMethod,
   quantity: z.number().int().min(1).max(5).default(1),
+  /**
+   * HOLD blocks the funds at checkout; nothing is captured until the order
+   * is packed and `finalize` is called (see `PaymentsAdminService`). DEBIT
+   * captures immediately, as before. Defaults to HOLD — check stock and
+   * assemble the order *before* touching the customer's money.
+   */
+  paymentType: PaymentType.default('HOLD'),
   customer: z.object({
     name: z.string().min(2).max(120),
     phone: z.string().regex(/^\+380\d{9}$/, 'Формат: +380XXXXXXXXX'),

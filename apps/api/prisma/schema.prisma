@@ -101,6 +101,14 @@ enum PaymentStatus {
   EXPIRED
 }
 
+/// DEBIT charges the card immediately at invoice creation. HOLD blocks the
+/// funds without capturing them — capture only happens on an explicit
+/// `finalize` call (see `PaymentsAdminService`).
+enum PaymentType {
+  DEBIT
+  HOLD
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -452,8 +460,18 @@ model Payment {
   provider  String        @default("monobank")
   invoiceId String        @unique
   status    PaymentStatus @default(CREATED)
+  paymentType PaymentType @default(DEBIT)
   amountMinor Int
   ccy       Int           @default(980)
+
+  /// Set only for HOLD invoices, at creation time (createdAt + 9 days —
+  /// Monobank's own hold auto-cancellation window). Used as a defensive
+  /// check before finalizing, not to replicate Monobank's own enforcement.
+  holdExpiresAt DateTime?
+  /// Set once `finalize` has been requested. Does not by itself mean the
+  /// funds were captured — that is only certain once a `success` webhook
+  /// arrives (see `PaymentsWebhookService`).
+  finalizedAt DateTime?
 
   failureReason String?
   /// Full webhook payload, for support/audit. Monobank never sends a full PAN
