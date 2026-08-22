@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LeadStatus } from '@dt/contracts';
-import { listLeads, updateLeadStatus } from './api';
+import { leadsExportUrl, listLeads, updateLeadStatus } from './api';
+import { LeadDetailPanel } from './lead-detail-panel';
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: 'Нова',
@@ -16,12 +17,24 @@ const STATUS_OPTIONS: LeadStatus[] = ['NEW', 'CONTACTED', 'CONVERTED', 'LOST'];
 
 export function LeadsTable() {
   const [status, setStatus] = useState<LeadStatus | ''>('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [phone, setPhone] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // Debounce phone search so every keystroke doesn't fire a request.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setPhone(phoneInput.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [phoneInput]);
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-leads', status, page],
-    queryFn: () => listLeads(status || undefined, page),
+    queryKey: ['admin-leads', status, phone, page],
+    queryFn: () => listLeads(status || undefined, page, phone || undefined),
   });
 
   const mutation = useMutation({
@@ -32,7 +45,7 @@ export function LeadsTable() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="text-sm text-ink-muted" htmlFor="lead-status-filter">Статус</label>
         <select
           id="lead-status-filter"
@@ -48,6 +61,23 @@ export function LeadsTable() {
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
           ))}
         </select>
+
+        <label className="text-sm text-ink-muted" htmlFor="lead-phone-filter">Телефон</label>
+        <input
+          id="lead-phone-filter"
+          type="search"
+          value={phoneInput}
+          onChange={(e) => setPhoneInput(e.target.value)}
+          placeholder="+380…"
+          className="rounded-card border border-line bg-surface-raised px-3 py-1.5 text-sm"
+        />
+
+        <a
+          href={leadsExportUrl(status || undefined, phone || undefined)}
+          className="ml-auto rounded-card border border-line px-3 py-1.5 text-sm hover:bg-surface-sunken"
+        >
+          Експорт CSV
+        </a>
       </div>
 
       {isLoading && <p className="text-ink-muted">Завантаження…</p>}
@@ -69,7 +99,15 @@ export function LeadsTable() {
           <tbody>
             {data.items.map((lead) => (
               <tr key={lead.id} className="border-b border-line">
-                <td className="py-2 pr-4">{lead.number}</td>
+                <td className="py-2 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLeadId(lead.id)}
+                    className="underline decoration-dotted underline-offset-2 hover:text-accent"
+                  >
+                    {lead.number}
+                  </button>
+                </td>
                 <td className="py-2 pr-4">{lead.name}</td>
                 <td className="py-2 pr-4">{lead.phone}</td>
                 <td className="max-w-xs truncate py-2 pr-4" title={lead.message ?? ''}>
@@ -125,6 +163,11 @@ export function LeadsTable() {
           </button>
         </div>
       )}
+
+      {selectedLeadId && (
+        <LeadDetailPanel leadId={selectedLeadId} onClose={() => setSelectedLeadId(null)} />
+      )}
     </div>
   );
 }
+
