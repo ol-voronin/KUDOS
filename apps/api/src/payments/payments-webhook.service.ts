@@ -73,6 +73,11 @@ export class PaymentsWebhookService {
       await this.prisma.order.update({ where: { id: payment.orderId }, data: { status: orderStatus } });
     }
 
+    this.logger.log(
+      `webhook.processed invoiceId=${body.invoiceId} paymentStatus=${nextStatus}` +
+      (orderStatus ? ` orderStatus=${orderStatus}` : ''),
+    );
+
     // Idempotency: only the first transition into SUCCESS notifies. Monobank
     // does not guarantee webhook delivery order, so this can arrive more than
     // once — a second "success" webhook must not send a second message.
