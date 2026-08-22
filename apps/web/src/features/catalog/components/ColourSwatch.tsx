@@ -30,7 +30,7 @@ export function ColourSwatch({
       onClick={() => onSelect(colour.id)}
       title={colour.state === 'MADE_TO_ORDER' ? `${label} — під замовлення` : label}
       className={[
-        'flex min-h-12 min-w-12 items-center justify-center rounded-card border-2 transition',
+        'flex min-h-12 min-w-12 items-center justify-center rounded-pill border-2 transition',
         selected ? 'border-ink' : 'border-line',
         disabled ? 'cursor-not-allowed opacity-40' : 'hover:border-ink-subtle',
       ].join(' ')}

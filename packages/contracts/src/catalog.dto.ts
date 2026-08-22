@@ -123,3 +123,21 @@ export const CatalogQueryDto = z.object({
   perPage: z.coerce.number().int().positive().max(60).default(24),
 });
 export type CatalogQueryDto = z.infer<typeof CatalogQueryDto>;
+
+/** What `GET /catalog/prints` actually returns per row — a summary, not the full offer. */
+export const PrintSummaryDto = z.object({
+  id: z.string().uuid(),
+  slug: Slug,
+  title: z.string().min(1),
+  sizeTier: PrintSizeTier,
+  previewUrl: z.string().url(),
+});
+export type PrintSummaryDto = z.infer<typeof PrintSummaryDto>;
+
+export const PrintListDto = z.object({
+  items: z.array(PrintSummaryDto),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  perPage: z.number().int().positive(),
+});
+export type PrintListDto = z.infer<typeof PrintListDto>;

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLeadDetail, resendTelegram } from './api';
 
@@ -12,6 +13,14 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function LeadDetailPanel({ leadId, onClose }: { leadId: string; onClose: () => void }) {
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-lead-detail', leadId],
@@ -28,16 +37,24 @@ export function LeadDetailPanel({ leadId, onClose }: { leadId: string; onClose: 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lead-detail-title"
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-card bg-surface-raised p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Заявка</h2>
-          <button type="button" onClick={onClose} className="text-ink-muted" aria-label="Закрити">
+          <h2 id="lead-detail-title" className="text-lg text-ink">Заявка</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-card p-1 text-ink-muted transition hover:bg-surface-sunken hover:text-ink"
+            aria-label="Закрити"
+          >
             ✕
           </button>
         </div>
@@ -70,7 +87,7 @@ export function LeadDetailPanel({ leadId, onClose }: { leadId: string; onClose: 
                   type="button"
                   onClick={() => resend.mutate()}
                   disabled={resend.isPending}
-                  className="mt-2 rounded-card border border-line px-3 py-1.5 text-sm disabled:opacity-40"
+                  className="mt-2 rounded-card border border-line px-3 py-1.5 text-sm transition hover:border-ink disabled:opacity-40"
                 >
                   {resend.isPending ? 'Надсилаємо…' : 'Надіслати ще раз'}
                 </button>
@@ -80,7 +97,7 @@ export function LeadDetailPanel({ leadId, onClose }: { leadId: string; onClose: 
 
             {data.customer && (
               <div>
-                <h3 className="mb-2 font-medium">
+                <h3 className="mb-2 font-semibold text-ink">
                   Клієнт — усього заявок: {data.customer.totalLeads}
                 </h3>
                 {data.previousLeads.length === 0 ? (

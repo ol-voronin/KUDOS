@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PublicShell } from '@/components/public-shell';
 
 interface Params { params: { slug: string } }
 
@@ -10,10 +11,14 @@ export function generateMetadata({ params }: Params): Metadata {
   };
 }
 
+// TODO(step 2): wire real data via `GET /catalog/breeds/:slug` — this is
+// still a visual stub, not a working breed page.
 export default function BreedPage({ params }: Params) {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <h1 className="text-2xl font-bold">{params.slug}</h1>
-    </main>
+    <PublicShell>
+      <div className="mx-auto max-w-5xl px-6 py-12">
+        <h1 className="text-2xl text-ink">{params.slug}</h1>
+      </div>
+    </PublicShell>
   );
 }

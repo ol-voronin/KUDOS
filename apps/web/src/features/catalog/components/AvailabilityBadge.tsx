@@ -14,20 +14,23 @@ export function AvailabilityBadge({
 }) {
   if (state === 'AVAILABLE') {
     return (
-      <span className="rounded bg-ok-soft px-2 py-1 text-xs font-semibold text-ok">
+      <span className="inline-flex items-center gap-1.5 rounded-pill bg-ok-soft px-3 py-1 text-xs font-semibold text-ok">
+        <span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />
         Є в наявності
       </span>
     );
   }
   if (state === 'MADE_TO_ORDER' && leadTimeDays !== null) {
     return (
-      <span className="rounded bg-accent-soft px-2 py-1 text-xs font-semibold text-accent">
+      <span className="inline-flex items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-strong">
+        <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
         Пошиємо за {leadTimeDays} дн.
       </span>
     );
   }
   return (
-    <span className="rounded bg-surface-sunken px-2 py-1 text-xs font-semibold text-ink-subtle">
+    <span className="inline-flex items-center gap-1.5 rounded-pill bg-surface-sunken px-3 py-1 text-xs font-semibold text-ink-subtle">
+      <span className="h-1.5 w-1.5 rounded-full bg-ink-subtle" aria-hidden="true" />
       Немає
     </span>
   );

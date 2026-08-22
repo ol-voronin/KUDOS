@@ -16,7 +16,7 @@ export function LogoutButton() {
     <button
       type="button"
       onClick={handleClick}
-      className="rounded-card border border-line px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
+      className="rounded-card border border-line px-3 py-1.5 text-left text-sm text-ink-muted transition hover:border-ink hover:text-ink"
     >
       Вийти
     </button>

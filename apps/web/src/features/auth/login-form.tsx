@@ -37,7 +37,7 @@ export function LoginForm() {
           autoComplete="username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-card border border-line px-3 py-2 text-ink"
+          className="rounded-card border border-line px-3 py-2 text-ink focus:border-ink"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
@@ -48,14 +48,14 @@ export function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-card border border-line px-3 py-2 text-ink"
+          className="rounded-card border border-line px-3 py-2 text-ink focus:border-ink"
         />
       </label>
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p className="text-sm text-danger" role="alert">{error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="rounded-card bg-ink px-4 py-2 text-surface disabled:opacity-50"
+        className="rounded-card bg-ink px-4 py-2.5 font-semibold text-surface transition hover:bg-ink/90 disabled:opacity-50"
       >
         {pending ? 'Входимо…' : 'Увійти'}
       </button>

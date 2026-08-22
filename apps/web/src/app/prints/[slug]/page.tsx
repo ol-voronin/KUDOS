@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PublicShell } from '@/components/public-shell';
 import { PrintOfferView } from '@/features/catalog/components/PrintOfferView';
 
 interface Params { params: { slug: string } }
@@ -13,8 +14,10 @@ export function generateMetadata({ params }: Params): Metadata {
  */
 export default function PrintPage({ params }: Params) {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <PrintOfferView slug={params.slug} />
-    </main>
+    <PublicShell>
+      <div className="mx-auto max-w-5xl px-6 py-12">
+        <PrintOfferView slug={params.slug} />
+      </div>
+    </PublicShell>
   );
 }

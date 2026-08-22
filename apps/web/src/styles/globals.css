@@ -3,8 +3,25 @@
 @tailwind utilities;
 
 @layer base {
-  :root { --font-sans: 'Inter', system-ui, sans-serif; }
   body { @apply bg-surface text-ink antialiased; }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  h1 { @apply font-bold; }
+  h2, h3 { @apply font-semibold; }
   /* Touch targets never below 48px — the size chart page is used on phones. */
   button, a[role='button'] { @apply min-h-12; }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.accent.DEFAULT');
+    outline-offset: 2px;
+  }
+  ::selection { background: theme('colors.accent.soft'); color: theme('colors.ink.DEFAULT'); }
+
+  .skip-link {
+    @apply absolute left-4 top-4 z-50 -translate-y-20 rounded-card bg-ink px-4 py-2 text-sm font-medium text-surface transition-transform;
+    @apply focus:translate-y-0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
 }

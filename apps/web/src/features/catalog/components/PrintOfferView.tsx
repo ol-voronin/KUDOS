@@ -74,7 +74,7 @@ export function PrintOfferView({ slug }: { slug: string }) {
   if (data.garments.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-bold">{data.print.title}</h1>
+        <h1 className="text-2xl text-ink">{data.print.title}</h1>
         <p className="mt-4 text-ink-muted">Цей принт поки що не доступний на жодному виробі.</p>
       </div>
     );
@@ -112,75 +112,84 @@ export function PrintOfferView({ slug }: { slug: string }) {
       <img src={data.print.previewUrl} alt={data.print.title} className="w-full rounded-card border border-line object-cover" />
 
       <div>
-        <h1 className="text-2xl font-bold">{data.print.title}</h1>
-        <p className="mt-2 text-xl font-semibold text-ink">{formatUAH(minor(totalMinor))}</p>
+        <h1 className="text-2xl text-ink">{data.print.title}</h1>
+        <p className="mt-2 text-xl font-semibold text-ink" aria-live="polite">
+          {formatUAH(minor(totalMinor))}
+          {garment && (
+            <span className="ml-2 text-sm font-normal text-ink-subtle">
+              {formatUAH(minor(garmentPriceMinor))} виріб + {formatUAH(minor(data.printPriceMinor))} друк
+            </span>
+          )}
+        </p>
 
         {data.garments.length > 1 && (
-          <div className="mt-6">
-            <p className="mb-2 text-sm font-medium text-ink-muted">Виріб</p>
+          <fieldset className="mt-6">
+            <legend className="mb-2 text-sm font-medium text-ink-muted">Виріб</legend>
             <div className="flex flex-wrap gap-2">
               {data.garments.map((g) => (
                 <button
                   key={g.id}
                   type="button"
+                  aria-pressed={g.id === garment?.id}
                   onClick={() => setGarmentId(g.id)}
                   className={[
-                    'rounded-card border-2 px-3 py-1.5 text-sm font-medium transition',
-                    g.id === garment?.id ? 'border-ink text-ink' : 'border-line text-ink-muted hover:border-ink-subtle',
+                    'rounded-pill border-2 px-4 py-1.5 text-sm font-medium transition',
+                    g.id === garment?.id ? 'border-ink bg-ink text-surface' : 'border-line text-ink-muted hover:border-ink-subtle',
                   ].join(' ')}
                 >
                   {g.name}
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
         {garment && garment.fabrics.length > 1 && (
-          <div className="mt-6">
-            <p className="mb-2 text-sm font-medium text-ink-muted">Тканина</p>
+          <fieldset className="mt-6">
+            <legend className="mb-2 text-sm font-medium text-ink-muted">Тканина</legend>
             <div className="flex flex-wrap gap-2">
               {garment.fabrics.map((f) => (
                 <button
                   key={f.id}
                   type="button"
+                  aria-pressed={f.id === fabricId}
                   onClick={() => setFabricId(f.id)}
                   className={[
-                    'rounded-card border-2 px-3 py-1.5 text-sm font-medium transition',
-                    f.id === fabricId ? 'border-ink text-ink' : 'border-line text-ink-muted hover:border-ink-subtle',
+                    'rounded-pill border-2 px-4 py-1.5 text-sm font-medium transition',
+                    f.id === fabricId ? 'border-ink bg-ink text-surface' : 'border-line text-ink-muted hover:border-ink-subtle',
                   ].join(' ')}
                 >
                   {f.name}
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
         {colours.length > 0 && (
-          <div className="mt-6">
-            <p className="mb-2 text-sm font-medium text-ink-muted">Колір</p>
-            <div className="flex flex-wrap gap-2" role="radiogroup">
+          <fieldset className="mt-6">
+            <legend id="colour-label" className="mb-2 text-sm font-medium text-ink-muted">Колір</legend>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="colour-label">
               {colours.map((c) => (
                 <ColourSwatch key={c.id} colour={c} selected={c.id === colourId} onSelect={setColourId} />
               ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
         {sizes.length > 0 && (
-          <div className="mt-6">
-            <p className="mb-2 text-sm font-medium text-ink-muted">Розмір</p>
-            <div className="flex flex-wrap gap-2" role="radiogroup">
+          <fieldset className="mt-6">
+            <legend id="size-label" className="mb-2 text-sm font-medium text-ink-muted">Розмір</legend>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="size-label">
               {sizes.map((s) => (
                 <SizeButton key={s.id} size={s} selected={s.id === sizeId} onSelect={setSizeId} />
               ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
         {selectedSize && (
-          <div className="mt-6">
+          <div className="mt-6" aria-live="polite">
             <AvailabilityBadge state={selectedSize.state} leadTimeDays={selectedSize.leadTimeDays} />
           </div>
         )}
@@ -190,7 +199,7 @@ export function PrintOfferView({ slug }: { slug: string }) {
             type="button"
             disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
             onClick={() => setCheckoutOpen(true)}
-            className="mt-8 w-full rounded-card bg-ink px-6 py-3 font-semibold text-surface transition disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-8 w-full rounded-card bg-ink px-6 py-3 font-semibold text-surface transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Оплатити
           </button>
@@ -205,7 +214,7 @@ export function PrintOfferView({ slug }: { slug: string }) {
                 required
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="rounded-card border border-line px-3 py-2 text-ink"
+                className="rounded-card border border-line px-3 py-2 text-ink focus:border-ink"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm text-ink-muted">
@@ -216,14 +225,14 @@ export function PrintOfferView({ slug }: { slug: string }) {
                 placeholder="+380XXXXXXXXX"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                className="rounded-card border border-line px-3 py-2 text-ink"
+                className="rounded-card border border-line px-3 py-2 text-ink focus:border-ink"
               />
             </label>
-            {checkoutError && <p className="text-sm text-danger">{checkoutError}</p>}
+            {checkoutError && <p className="text-sm text-danger" role="alert">{checkoutError}</p>}
             <button
               type="submit"
               disabled={checkout.isPending}
-              className="rounded-card bg-ink px-6 py-3 font-semibold text-surface transition disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-card bg-ink px-6 py-3 font-semibold text-surface transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {checkout.isPending ? 'Оформлюємо…' : `Оплатити ${formatUAH(minor(totalMinor))}`}
             </button>

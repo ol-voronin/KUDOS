@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PublicShell } from '@/components/public-shell';
 import { OrderStatusView } from '@/features/orders/components/OrderStatusView';
 
 interface Params { params: { id: string } }
@@ -9,8 +10,10 @@ export function generateMetadata(): Metadata {
 
 export default function OrderStatusPage({ params }: Params) {
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <OrderStatusView orderId={params.id} />
-    </main>
+    <PublicShell>
+      <div className="mx-auto max-w-2xl px-6 py-12">
+        <OrderStatusView orderId={params.id} />
+      </div>
+    </PublicShell>
   );
 }

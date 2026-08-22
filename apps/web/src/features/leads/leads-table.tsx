@@ -13,7 +13,47 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   LOST: 'Втрачена',
 };
 
+const STATUS_PILL_LABELS: Record<LeadStatus, string> = {
+  NEW: 'Нові',
+  CONTACTED: 'В роботі',
+  CONVERTED: 'Конвертовані',
+  LOST: 'Втрачені',
+};
+
+const STATUS_DOT: Record<LeadStatus, string> = {
+  NEW: 'bg-accent',
+  CONTACTED: 'bg-info',
+  CONVERTED: 'bg-ok',
+  LOST: 'bg-ink-subtle',
+};
+
 const STATUS_OPTIONS: LeadStatus[] = ['NEW', 'CONTACTED', 'CONVERTED', 'LOST'];
+
+function useStatusCounts() {
+  return useQuery({
+    queryKey: ['admin-leads-status-counts'],
+    queryFn: async () => {
+      const [all, ...perStatus] = await Promise.all([
+        listLeads(undefined, 1),
+        ...STATUS_OPTIONS.map((s) => listLeads(s, 1)),
+      ]);
+      const byStatus = Object.fromEntries(
+        STATUS_OPTIONS.map((s, i) => [s, perStatus[i]?.total ?? 0]),
+      ) as Record<LeadStatus, number>;
+      return { all: all.total, byStatus };
+    },
+    staleTime: 15_000,
+  });
+}
+
+function StatusBadge({ status }: { status: LeadStatus }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} aria-hidden="true" />
+      {STATUS_LABELS[status]}
+    </span>
+  );
+}
 
 export function LeadsTable() {
   const [status, setStatus] = useState<LeadStatus | ''>('');
@@ -22,6 +62,7 @@ export function LeadsTable() {
   const [page, setPage] = useState(1);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const counts = useStatusCounts();
 
   // Debounce phone search so every keystroke doesn't fire a request.
   useEffect(() => {
@@ -40,28 +81,48 @@ export function LeadsTable() {
   const mutation = useMutation({
     mutationFn: ({ id, nextStatus }: { id: string; nextStatus: LeadStatus }) =>
       updateLeadStatus(id, nextStatus),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin-leads'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-leads-status-counts'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-leads-new-count'] });
+    },
   });
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-ink-muted" htmlFor="lead-status-filter">Статус</label>
-        <select
-          id="lead-status-filter"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as LeadStatus | '');
-            setPage(1);
-          }}
-          className="rounded-card border border-line bg-surface-raised px-3 py-1.5 text-sm"
+      <div
+        role="group"
+        aria-label="Фільтр за статусом"
+        className="mb-4 flex flex-wrap gap-2"
+      >
+        <button
+          type="button"
+          aria-pressed={status === ''}
+          onClick={() => { setStatus(''); setPage(1); }}
+          className={[
+            'rounded-pill px-3 py-1.5 text-sm font-medium transition',
+            status === '' ? 'bg-ink text-surface' : 'bg-surface-sunken text-ink-muted hover:text-ink',
+          ].join(' ')}
         >
-          <option value="">Усі</option>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
+          Усі {counts.data ? counts.data.all : ''}
+        </button>
+        {STATUS_OPTIONS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            aria-pressed={status === s}
+            onClick={() => { setStatus(s); setPage(1); }}
+            className={[
+              'rounded-pill px-3 py-1.5 text-sm font-medium transition',
+              status === s ? 'bg-ink text-surface' : 'bg-surface-sunken text-ink-muted hover:text-ink',
+            ].join(' ')}
+          >
+            {STATUS_PILL_LABELS[s]} {counts.data ? counts.data.byStatus[s] : ''}
+          </button>
+        ))}
+      </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="text-sm text-ink-muted" htmlFor="lead-phone-filter">Телефон</label>
         <input
           id="lead-phone-filter"
@@ -69,12 +130,12 @@ export function LeadsTable() {
           value={phoneInput}
           onChange={(e) => setPhoneInput(e.target.value)}
           placeholder="+380…"
-          className="rounded-card border border-line bg-surface-raised px-3 py-1.5 text-sm"
+          className="rounded-card border border-line bg-surface-raised px-3 py-1.5 text-sm focus:border-ink"
         />
 
         <a
           href={leadsExportUrl(status || undefined, phone || undefined)}
-          className="ml-auto rounded-card border border-line px-3 py-1.5 text-sm hover:bg-surface-sunken"
+          className="ml-auto rounded-card border border-line px-3 py-1.5 text-sm transition hover:border-ink"
         >
           Експорт CSV
         </a>
@@ -121,18 +182,24 @@ export function LeadsTable() {
                   )}
                 </td>
                 <td className="py-2 pr-4">
+                  <label className="sr-only" htmlFor={`lead-status-${lead.id}`}>
+                    Статус заявки №{lead.number}
+                  </label>
                   <select
+                    id={`lead-status-${lead.id}`}
                     value={lead.status}
                     onChange={(e) =>
                       mutation.mutate({ id: lead.id, nextStatus: e.target.value as LeadStatus })
                     }
                     disabled={mutation.isPending}
-                    className="rounded-card border border-line bg-surface-raised px-2 py-1 text-sm"
+                    className="rounded-card border border-line bg-surface-raised px-2 py-1 text-sm focus:border-ink"
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                     ))}
                   </select>
+                  <span className="sr-only"> </span>
+                  <StatusBadge status={lead.status} />
                 </td>
               </tr>
             ))}
@@ -146,7 +213,7 @@ export function LeadsTable() {
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="rounded-card border border-line px-3 py-1 disabled:opacity-40"
+            className="rounded-card border border-line px-3 py-1 transition hover:border-ink disabled:opacity-40 disabled:hover:border-line"
           >
             Назад
           </button>
@@ -157,7 +224,7 @@ export function LeadsTable() {
             type="button"
             onClick={() => setPage((p) => p + 1)}
             disabled={page * data.perPage >= data.total}
-            className="rounded-card border border-line px-3 py-1 disabled:opacity-40"
+            className="rounded-card border border-line px-3 py-1 transition hover:border-ink disabled:opacity-40 disabled:hover:border-line"
           >
             Далі
           </button>
