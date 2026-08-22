@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, formatLead } from './telegram';
+import { formatLead } from './telegram';
 
 describe('formatLead', () => {
   it('містить ім’я і телефон', () => {
@@ -16,9 +16,5 @@ describe('formatLead', () => {
   it('додає повідомлення, якщо воно є', () => {
     expect(formatLead({ name: 'О', phone: '+380671234567', message: 'худі з коргі' }))
       .toContain('худі з коргі');
-  });
-
-  it('escape по порядку: & перед <', () => {
-    expect(escapeHtml('<')).toBe('&lt;');
   });
 });

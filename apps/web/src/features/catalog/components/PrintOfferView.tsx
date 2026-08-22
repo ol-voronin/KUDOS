@@ -2,19 +2,29 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { minor, formatUAH } from '@dt/contracts';
+import { ApiError } from '@/lib/api-client';
+import { useCheckoutReadyPrint } from '../hooks/useCheckoutReadyPrint';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
 import { SizeButton } from './SizeButton';
 
+const PHONE_PATTERN = /^\+380\d{9}$/;
+
 export function PrintOfferView({ slug }: { slug: string }) {
   const { data, isLoading, isError } = usePrintOffer(slug);
+  const checkout = useCheckoutReadyPrint();
 
   const [garmentId, setGarmentId] = useState<string | null>(null);
   const [fabricId, setFabricId] = useState<string | null>(null);
   const [colourId, setColourId] = useState<string | null>(null);
   const [sizeId, setSizeId] = useState<string | null>(null);
+
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Re-anchor the selection on the first garment/fabric whenever fresh data
   // arrives — a stale id from a previous slug must never leak into this one.
@@ -72,6 +82,28 @@ export function PrintOfferView({ slug }: { slug: string }) {
 
   const garmentPriceMinor = variant?.priceOverrideMinor ?? garment?.basePriceMinor ?? 0;
   const totalMinor = garmentPriceMinor + data.printPriceMinor;
+
+  async function handleCheckoutSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!variant) return;
+    setCheckoutError(null);
+    if (!PHONE_PATTERN.test(customerPhone)) {
+      setCheckoutError('Введіть телефон у форматі +380XXXXXXXXX');
+      return;
+    }
+    try {
+      const result = await checkout.mutateAsync({
+        printSlug: slug,
+        variantId: variant.id,
+        printMethod: 'DTF',
+        quantity: 1,
+        customer: { name: customerName, phone: customerPhone, marketingConsent: false },
+      });
+      window.location.href = result.pageUrl;
+    } catch (err) {
+      setCheckoutError(err instanceof ApiError ? err.message : 'Не вдалося оформити замовлення');
+    }
+  }
 
   return (
     <div className="grid gap-10 md:grid-cols-2">
@@ -152,13 +184,50 @@ export function PrintOfferView({ slug }: { slug: string }) {
           </div>
         )}
 
-        <button
-          type="button"
-          disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
-          className="mt-8 w-full rounded-card bg-ink px-6 py-3 font-semibold text-surface transition disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Додати в кошик
-        </button>
+        {!checkoutOpen && (
+          <button
+            type="button"
+            disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
+            onClick={() => setCheckoutOpen(true)}
+            className="mt-8 w-full rounded-card bg-ink px-6 py-3 font-semibold text-surface transition disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Оплатити
+          </button>
+        )}
+
+        {checkoutOpen && (
+          <form className="mt-8 flex flex-col gap-3" onSubmit={handleCheckoutSubmit}>
+            <label className="flex flex-col gap-1 text-sm text-ink-muted">
+              Ім&rsquo;я
+              <input
+                type="text"
+                required
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="rounded-card border border-line px-3 py-2 text-ink"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-ink-muted">
+              Телефон
+              <input
+                type="tel"
+                required
+                placeholder="+380XXXXXXXXX"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="rounded-card border border-line px-3 py-2 text-ink"
+              />
+            </label>
+            {checkoutError && <p className="text-sm text-danger">{checkoutError}</p>}
+            <button
+              type="submit"
+              disabled={checkout.isPending}
+              className="rounded-card bg-ink px-6 py-3 font-semibold text-surface transition disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {checkout.isPending ? 'Оформлюємо…' : `Оплатити ${formatUAH(minor(totalMinor))}`}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

@@ -30,7 +30,12 @@ async function bootstrap(): Promise<void> {
   requiredEnv('JWT_ACCESS_SECRET');
   requiredEnv('JWT_REFRESH_SECRET');
 
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    // The Monobank webhook must verify a signature over the exact raw bytes
+    // of the request body — Nest stashes them on `req.rawBody` when this is on.
+    rawBody: true,
+  });
 
   app.use(helmet());
   app.use(cookieParser());

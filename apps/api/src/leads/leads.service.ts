@@ -6,8 +6,9 @@ import type {
 } from '@dt/contracts';
 import { ErrorCode } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { sendToTelegram } from '../common/telegram';
 import { rowsToCsv } from './csv';
-import { formatLead, type Lead, sendToTelegram } from './telegram';
+import { formatLead, type Lead } from './telegram';
 
 const ADMIN_LEAD_SELECT = {
   id: true, number: true, status: true, name: true, phone: true, message: true,

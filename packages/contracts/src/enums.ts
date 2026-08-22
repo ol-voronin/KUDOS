@@ -55,6 +55,17 @@ export const OrderStream = z.enum([
 ]);
 export type OrderStream = z.infer<typeof OrderStream>;
 
+export const OrderStatus = z.enum([
+  'PENDING_PAYMENT', 'PAID', 'IN_PRODUCTION', 'SHIPPED', 'COMPLETED', 'CANCELLED',
+]);
+export type OrderStatus = z.infer<typeof OrderStatus>;
+
+/** Mirrors Monobank's invoice status field — see apps/api payments module. */
+export const PaymentStatus = z.enum([
+  'CREATED', 'PROCESSING', 'HOLD', 'SUCCESS', 'FAILURE', 'REVERSED', 'EXPIRED',
+]);
+export type PaymentStatus = z.infer<typeof PaymentStatus>;
+
 export const CustomRequestStatus = z.enum([
   'SUBMITTED', 'QUOTED', 'DEPOSIT_PAID', 'IN_DESIGN',
   'AWAITING_APPROVAL', 'APPROVED', 'IN_PRODUCTION', 'COMPLETED', 'CANCELLED',

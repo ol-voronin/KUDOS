@@ -89,6 +89,18 @@ enum CustomRequestStatus {
   CANCELLED
 }
 
+/// Mirrors Monobank's invoice status field exactly — there is no reason to
+/// invent a parallel vocabulary for the same seven states.
+enum PaymentStatus {
+  CREATED
+  PROCESSING
+  HOLD
+  SUCCESS
+  FAILURE
+  REVERSED
+  EXPIRED
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -417,14 +429,44 @@ model Order {
   discountMinor Int @default(0)
   totalMinor    Int
 
+  /// Free-text note the customer left at checkout (e.g. "довжину коротше").
+  note String?
+
   customer Customer    @relation(fields: [customerId], references: [id])
   items    OrderItem[]
+  payments Payment[]
 
   placedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([customerId])
   @@index([status, placedAt])
+}
+
+/// One row per Monobank invoice attempt against an order. An order can have
+/// more than one — the customer's card can fail and they retry — so this is
+/// never folded onto Order itself.
+model Payment {
+  id        String        @id @default(uuid()) @db.Uuid
+  orderId   String        @db.Uuid
+  provider  String        @default("monobank")
+  invoiceId String        @unique
+  status    PaymentStatus @default(CREATED)
+  amountMinor Int
+  ccy       Int           @default(980)
+
+  failureReason String?
+  /// Full webhook payload, for support/audit. Monobank never sends a full PAN
+  /// in this callback — only a masked one inside paymentInfo.
+  rawWebhook Json?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status])
 }
 
 model OrderItem {

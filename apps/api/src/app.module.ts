@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { CustomRequestsModule } from './custom-requests/custom-requests.module';
 import { LeadsModule } from './leads/leads.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { LeadsModule } from './leads/leads.module';
     CatalogModule,
     CustomRequestsModule,
     LeadsModule,
+    PaymentsModule,
   ],
   providers: [
     PrismaService,
