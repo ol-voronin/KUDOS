@@ -1,7 +1,10 @@
 import { ApiErrorDto } from '@dt/contracts';
 import type { ZodSchema } from 'zod';
 
-export const BASE_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000/api/v1';
+import { BROWSER_API_URL } from './api-origin';
+
+/** @deprecated Використовуйте BROWSER_API_URL — лишено для сумісності імпортів. */
+export const BASE_URL = BROWSER_API_URL;
 
 export class ApiError extends Error {
   constructor(

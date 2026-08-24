@@ -10,11 +10,20 @@
 
 generator client {
   provider = "prisma-client-js"
+  /// `native` — для macOS розробника. `rhel-openssl-3.0.x` — для Vercel
+  /// (Amazon Linux 2023). Без другого рядка клієнт збереться локально й
+  /// впаде в проді з «query engine binary not found» уже під час запиту.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
+  /// Пул зʼєднань (PgBouncer у Neon). Через нього ходить застосунок.
   url      = env("DATABASE_URL")
+  /// Пряме зʼєднання. Міграції через пул не працюють: PgBouncer у режимі
+  /// transaction не тримає сесійні блокування, на які спирається migrate.
+  /// Локально обидві змінні вказують на ту саму базу — і це нормально.
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------

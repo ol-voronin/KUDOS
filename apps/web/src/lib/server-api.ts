@@ -1,5 +1,5 @@
 import type { ZodSchema } from 'zod';
-import { BASE_URL } from './api-client';
+import { SERVER_API_URL } from './api-origin';
 
 /**
  * Читання каталогу на сервері.
@@ -17,7 +17,7 @@ export async function serverFetch<T>(
   schema: ZodSchema<T>,
   revalidate = 60,
 ): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${SERVER_API_URL}${path}`, {
     headers: { 'content-type': 'application/json' },
     next: { revalidate },
   });

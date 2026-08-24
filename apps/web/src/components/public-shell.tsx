@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { site } from '@/config/site';
+import { SearchForm } from '@/features/search/search-form';
 
 /**
  * Розділи, яких ще немає, лишаються видимими (це реальна інформаційна
@@ -41,6 +42,10 @@ export function PublicHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <div className="hidden lg:block">
+            {/* useSearchParams вимагає Suspense у серверному дереві. */}
+            <Suspense fallback={null}><SearchForm /></Suspense>
+          </div>
           <a
             href={site.telegramUrl}
             target="_blank"
@@ -53,9 +58,12 @@ export function PublicHeader() {
             href="/zayavka"
             className="flex min-h-11 items-center rounded-card bg-ink px-4 text-sm font-semibold text-surface transition hover:bg-ink/90"
           >
-            Залишити заявку
+            Заявка
           </Link>
         </div>
+      </div>
+      <div className="border-t border-line px-6 py-2.5 lg:hidden">
+        <Suspense fallback={null}><SearchForm compact /></Suspense>
       </div>
     </header>
   );

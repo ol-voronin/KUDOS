@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, AdminSessionDto } from '@dt/contracts';
-
-const BASE_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000/api/v1';
+import { SERVER_API_URL } from '@/lib/api-origin';
 
 /**
  * Server Component only: `next/headers` is unavailable in client code.
@@ -12,7 +11,7 @@ export async function getServerSession(): Promise<AdminSessionDto | null> {
   const token = cookies().get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const res = await fetch(`${BASE_URL}/auth/me`, {
+  const res = await fetch(`${SERVER_API_URL}/auth/me`, {
     headers: { cookie: `${ADMIN_SESSION_COOKIE}=${token}` },
     cache: 'no-store',
   });

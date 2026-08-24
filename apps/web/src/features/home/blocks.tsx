@@ -14,15 +14,21 @@ import { PrintThumb } from '@/components/print-thumb';
 export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {breeds.slice(0, 9).map((breed) => (
+      {breeds.slice(0, 11).map((breed) => (
         <Link
           key={breed.id}
           href={`/breeds/${breed.slug}`}
           className="flex min-h-16 flex-col justify-center rounded-card border border-line bg-surface-raised px-4 py-3 transition hover:border-ink focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <span className="font-medium text-ink">{breed.name}</span>
+          {/*
+            Нуль принтів — не «порожньо», а «малюємо на замовлення». Це правда
+            й це пропозиція; «0 принтів» було б і правдою, і антирекламою.
+          */}
           <span className="text-sm text-ink-subtle">
-            {breed.printCount} {plural(breed.printCount, 'принт', 'принти', 'принтів')}
+            {breed.printCount > 0
+              ? `${breed.printCount} ${plural(breed.printCount, 'принт', 'принти', 'принтів')}`
+              : 'малюємо на замовлення'}
           </span>
         </Link>
       ))}

@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { CorrelationIdMiddleware } from './common/correlation-id.middleware';
+import { HealthController } from './common/health.controller';
 import { PrismaService } from './common/prisma.service';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -19,6 +20,7 @@ import { PaymentsModule } from './payments/payments.module';
     LeadsModule,
     PaymentsModule,
   ],
+  controllers: [HealthController],
   providers: [
     PrismaService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },

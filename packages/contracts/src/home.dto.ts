@@ -91,3 +91,20 @@ export const SitemapDto = z.object({
   collections: z.array(SitemapEntryDto),
 });
 export type SitemapDto = z.infer<typeof SitemapDto>;
+
+/**
+ * Пошук по сайту.
+ *
+ * Результати згруповані, а не змішані в один список: породи, колекції й
+ * принти — це різні наміри. «Коргі» майже завжди означає «покажи всі принти
+ * з коргі», тобто породу, а не конкретний принт із цим словом у назві.
+ * Плаский список за релевантністю ховав би породу серед десяти принтів.
+ */
+export const SearchResultDto = z.object({
+  query: z.string(),
+  breeds: z.array(BreedCardDto),
+  collections: z.array(CollectionCardDto),
+  prints: z.array(PrintCardDto),
+  total: z.number().int().nonnegative(),
+});
+export type SearchResultDto = z.infer<typeof SearchResultDto>;

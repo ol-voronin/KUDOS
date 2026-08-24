@@ -13,6 +13,7 @@
     "db:up": "docker compose up -d postgres redis",
     "db:migrate": "pnpm --filter @dt/api prisma migrate dev",
     "db:seed": "pnpm --filter @dt/api prisma db seed",
-    "build:contracts": "pnpm --filter @dt/contracts build"
+    "build:contracts": "pnpm --filter @dt/contracts build",
+    "setup:neon": "bash scripts/setup-neon.sh"
   }
 }

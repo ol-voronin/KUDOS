@@ -2,7 +2,8 @@ import { Controller, Get, Param, Query, UsePipes } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   CatalogQueryDto, type BreedListDto, type BreedPageDto, type CollectionListDto,
-  type CollectionPageDto, type HomeDto, type PrintListDto, type PrintOfferDto, type SitemapDto,
+  type CollectionPageDto, type HomeDto, type PrintListDto, type PrintOfferDto,
+  type SearchResultDto, type SitemapDto,
 } from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CatalogService } from './catalog.service';
@@ -34,6 +35,12 @@ export class CatalogController {
   @Get('collections')
   listCollections(): Promise<CollectionListDto> {
     return this.catalog.listCollections();
+  }
+
+  /** Пошук: породи, колекції й принти окремо — це різні наміри. */
+  @Get('search')
+  search(@Query('q') q?: string): Promise<SearchResultDto> {
+    return this.catalog.search(q ?? '');
   }
 
   /** Плоскі списки slug-ів для sitemap.xml. */

@@ -44,7 +44,7 @@ export function LeadDetailPanel({ leadId, onClose }: { leadId: string; onClose: 
         role="dialog"
         aria-modal="true"
         aria-labelledby="lead-detail-title"
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-card bg-surface-raised p-6"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-card border border-line bg-surface-raised p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">

@@ -7,3 +7,8 @@ next-env.d.ts
 *.log
 coverage
 *.tsbuildinfo
+
+# Рядки підключення Neon і згенерований блок для Vercel — ніколи в git.
+.env.neon
+vercel-api-env.txt
+admin-credentials.txt

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
   BreedListDto, BreedPageDto, CatalogQueryDto, CollectionListDto, CollectionPageDto,
-  HomeDto, PrintListDto, PrintOfferDto, SitemapDto,
+  HomeDto, PrintListDto, PrintOfferDto, SearchResultDto, SitemapDto,
 } from '@dt/contracts';
 import { ErrorCode, minor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
@@ -297,11 +297,19 @@ export class CatalogService {
       .slice(0, HOME_BLOCK_SIZE);
 
     return {
-      // Породи без принтів на головну не потрапляють: порожня плитка обіцяє
-      // те, чого немає. Власну сторінку така порода все одно має.
+      /**
+       * Породи віддаємо всі, включно з тими, у яких ще немає жодного принта.
+       *
+       * Спершу я їх відфільтровував — і це була помилка для магазину, який
+       * тільки наповнюється: смуга порід виявлялась порожньою рівно тоді,
+       * коли вона найпотрібніша. Плитка породи без принтів нічого не обіцяє
+       * зайвого: сторінка існує, працює й пропонує намалювати з фото. Саме
+       * це зараз і є пропозиція.
+       *
+       * Порядок: спершу ті, де є що показати, далі за абеткою.
+       */
       breeds: breedRows
         .map((b) => ({ id: b.id, slug: b.slug, name: b.name, printCount: breedCounts.get(b.id) ?? 0 }))
-        .filter((b) => b.printCount > 0)
         .sort((a, b) => b.printCount - a.printCount || a.name.localeCompare(b.name, 'uk')),
       collections: collectionRows.map((c) => ({
         id: c.id, slug: c.slug, title: c.title, description: c.description,
@@ -409,6 +417,97 @@ export class CatalogService {
       collection,
       prints: rows.map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices)),
     };
+  }
+
+  /**
+   * Пошук по каталогу.
+   *
+   * Шукає в трьох місцях і повертає їх окремо:
+   *  • породи — за назвою і за **синонімами**: «йорк», «yorkie», «дворняга»
+   *    приводять туди ж, куди «йоркширський терʼєр» і «метис». Без цього
+   *    половина запитів не знаходить нічого, хоча сторінка існує;
+   *  • колекції — за назвою й описом;
+   *  • принти — за назвою і за slug.
+   *
+   * Регістр ігнорується (`mode: 'insensitive'`). Пошук по синонімах — через
+   * `has` по масиву: точний збіг елемента, а не підрядок, бо синоніми і так
+   * записані у формі, у якій їх набирають.
+   */
+  async search(rawQuery: string): Promise<SearchResultDto> {
+    const query = rawQuery.trim();
+    if (query.length < 2) {
+      return { query, breeds: [], collections: [], prints: [], total: 0 };
+    }
+    const lower = query.toLowerCase();
+
+    const [garments, printPrices, breedCounts, collectionCounts] = await Promise.all([
+      this.loadOfferableGarments(),
+      this.loadPrintPrices(),
+      this.breedPrintCounts(),
+      this.collectionPrintCounts(),
+    ]);
+
+    const [breedRows, collectionRows, printRows] = await this.prisma.$transaction([
+      this.prisma.breed.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { slug: { contains: lower } },
+            { synonyms: { has: lower } },
+          ],
+        },
+        select: { id: true, slug: true, name: true },
+        take: 8,
+      }),
+      this.prisma.collection.findMany({
+        where: {
+          isPublished: true,
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        orderBy: { position: 'asc' },
+        select: {
+          id: true, slug: true, title: true, description: true,
+          prints: {
+            where: { print: { isPublished: true } },
+            take: 3,
+            select: { print: { select: { previewUrl: true } } },
+          },
+        },
+        take: 8,
+      }),
+      this.prisma.print.findMany({
+        where: {
+          isPublished: true,
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { slug: { contains: lower } },
+            // Принти знайденої породи — а не лише ті, у чиїй назві є слово.
+            { breeds: { some: { breed: { OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { synonyms: { has: lower } },
+            ] } } } },
+          ],
+        },
+        select: CatalogService.PRINT_ROW_SELECT,
+        orderBy: { createdAt: 'desc' },
+        take: 24,
+      }),
+    ]);
+
+    const breeds = breedRows.map((b) => ({
+      id: b.id, slug: b.slug, name: b.name, printCount: breedCounts.get(b.id) ?? 0,
+    }));
+    const collections = collectionRows.map((c) => ({
+      id: c.id, slug: c.slug, title: c.title, description: c.description,
+      printCount: collectionCounts.get(c.id) ?? 0,
+      previewUrls: c.prints.map((p) => p.print.previewUrl),
+    }));
+    const prints = printRows.map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices));
+
+    return { query, breeds, collections, prints, total: breeds.length + collections.length + prints.length };
   }
 
   /** Плоскі списки для sitemap.xml. Породи віддаємо всі — навіть порожні мають сторінку. */

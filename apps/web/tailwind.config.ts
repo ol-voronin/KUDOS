@@ -1,18 +1,26 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Tokens only — no raw hex in components. Warm-neutral base + a single
- * terracotta accent, per the approved "тепла редакція" direction
- * (Unbounded display + Onest text, 4px corner radius system-wide).
+ * Tokens only — no raw hex in components.
+ *
+ * База біла. Попередній теплий беж (#f0ece3) на великих площинах читався як
+ * «брудно»: кремовий фон під фото товару підмішує жовтизну в білі футболки,
+ * а їх у Native Spirit половина асортименту. Тепло лишилось там, де воно
+ * працює — у вохряному акценті й у ледь теплих нейтралях ліній і заливок.
+ *
+ * Картки тепер відділяються рамкою, а не заливкою: `surface` і
+ * `surface.raised` обидва білі. Це навмисно — так виглядає більшість
+ * сучасних магазинів, і фото товару не змагається з фоном.
  */
 export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: '#1a1714', muted: '#6b6255', subtle: '#948b7c' },
-        surface: { DEFAULT: '#f0ece3', raised: '#ffffff', sunken: '#e7e1d4' },
-        line: { DEFAULT: '#e0d9cb', strong: '#cfc5b1' },
+        ink: { DEFAULT: '#1a1714', muted: '#645c51', subtle: '#8d8578' },
+        /** raised === DEFAULT навмисно: картку тримає рамка, не заливка. */
+        surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#f7f6f3' },
+        line: { DEFAULT: '#e6e3dc', strong: '#cfcabf' },
         accent: { DEFAULT: '#c2622e', soft: '#f6e4d6', strong: '#9c4d23' },
         info: { DEFAULT: '#3a5a85', soft: '#e6ecf3' },
         danger: { DEFAULT: '#a83226', soft: '#f8e7e3' },
