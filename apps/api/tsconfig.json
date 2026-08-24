@@ -3,7 +3,11 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "lib": ["ES2022"],
+    // DOM тут не заради браузера, а заради глобального fetch: типи Response
+    // із @types/node приходять через undici-types, і в збірці на Vercel вони
+    // не розвʼязуються — Response стає порожнім інтерфейсом, і кожен res.ok
+    // валить білд. lib.dom описує ті самі Response/Headers однозначно.
+    "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
