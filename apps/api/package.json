@@ -12,8 +12,7 @@
     "test:cov": "vitest run --coverage",
     "lint": "eslint src --max-warnings 0",
     "prisma": "prisma",
-    "db:checks": "set -a; . ./.env; set +a; psql \"${DATABASE_URL%%\\?*}\" -v ON_ERROR_STOP=1 -f prisma/checks.sql",
-    "db:setup": "prisma migrate dev && pnpm run db:checks && prisma db seed",
+    "db:setup": "prisma migrate dev && prisma db seed",
     "db:seed:demo": "tsx prisma/seed-demo.ts",
     "create-admin": "node scripts/create-admin.mjs"
   },

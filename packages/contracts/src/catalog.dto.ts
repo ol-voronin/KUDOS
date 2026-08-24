@@ -124,18 +124,33 @@ export const CatalogQueryDto = z.object({
 });
 export type CatalogQueryDto = z.infer<typeof CatalogQueryDto>;
 
-/** What `GET /catalog/prints` actually returns per row — a summary, not the full offer. */
-export const PrintSummaryDto = z.object({
+/**
+ * Плитка принта в будь-якій сітці — головна, породна, колекція, каталог.
+ *
+ * Одна на всі: інакше на одному сайті зʼявляються дві різні картки принта —
+ * одна з ціною, друга без, — і «а чому тут не видно, скільки коштує» стає
+ * постійним питанням.
+ */
+export const PrintCardDto = z.object({
   id: z.string().uuid(),
   slug: Slug,
   title: z.string().min(1),
   sizeTier: PrintSizeTier,
-  previewUrl: z.string().url(),
+  previewUrl: z.string(),
+  /**
+   * «від N ₴» — найдешевший виріб, на якому цей принт узагалі можна
+   * надрукувати, плюс друк за його розміром. `null`, якщо принт не привʼязаний
+   * до жодної колекції з правилами: тоді купити його ніде, і ціни немає.
+   * Саме `null`, а не нуль: нуль на картці читався б як «безкоштовно».
+   */
+  fromPriceMinor: MinorAmount.nullable(),
+  /** Є варіант у наявності — тобто без очікування пошиття. */
+  inStock: z.boolean(),
 });
-export type PrintSummaryDto = z.infer<typeof PrintSummaryDto>;
+export type PrintCardDto = z.infer<typeof PrintCardDto>;
 
 export const PrintListDto = z.object({
-  items: z.array(PrintSummaryDto),
+  items: z.array(PrintCardDto),
   total: z.number().int().nonnegative(),
   page: z.number().int().positive(),
   perPage: z.number().int().positive(),

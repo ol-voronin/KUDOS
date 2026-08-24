@@ -2,11 +2,14 @@ import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/commo
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { z } from 'zod';
+import { PhoneSchema } from '@dt/contracts';
 import { LeadsService } from './leads.service';
 
 const LeadDto = z.object({
   name: z.string().min(2).max(120),
-  phone: z.string().regex(/^\+?\d{10,15}$/, 'Телефон у форматі +380XXXXXXXXX'),
+  // Та сама схема, що в оплаті й брифі. Нормалізує до +380XXXXXXXXX, інакше
+  // один покупець заводить два рядки Customer — phone тут унікальний ключ.
+  phone: PhoneSchema,
   message: z.string().max(1000).optional(),
   source: z.string().max(120).optional(),
   /// Окрема галочка. Заявка — це згода на відповідь щодо неї, не на розсилку.

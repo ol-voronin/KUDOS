@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { ReadyPrintCheckoutRequestDto } from '@dt/contracts';
@@ -101,6 +102,16 @@ export class CheckoutService {
 
     const totals = totalCart([{ offer, quantity: dto.quantity }]);
 
+    // Id замовлення генеруємо самі, щоб рядок Payment створився в тій самій
+    // транзакції, що й замовлення. Інакше між успішним створенням рахунку в
+    // Monobank і записом Payment лишається вікно: клієнт платить, вебхук не
+    // знаходить платіж, гроші списані, замовлення назавжди в PENDING_PAYMENT.
+    const orderId = randomUUID();
+    // Тимчасовий invoiceId: поле унікальне й обовʼязкове, а справжній номер
+    // зʼявиться лише після відповіді Monobank. Вебхук уміє знайти такий платіж
+    // за `reference`, якщо оновлення не встигне.
+    const pendingInvoiceId = `pending:${orderId}`;
+
     const order = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const customer = await tx.customer.upsert({
         where: { phone: dto.customer.phone },
@@ -117,8 +128,9 @@ export class CheckoutService {
         select: { id: true },
       });
 
-      return tx.order.create({
+      const created = await tx.order.create({
         data: {
+          id: orderId,
           customerId: customer.id,
           stream: 'READY_PRINT',
           status: 'PENDING_PAYMENT',
@@ -140,6 +152,21 @@ export class CheckoutService {
         },
         select: { id: true, number: true, totalMinor: true },
       });
+
+      await tx.payment.create({
+        data: {
+          orderId: created.id,
+          invoiceId: pendingInvoiceId,
+          status: 'CREATED',
+          paymentType: dto.paymentType,
+          amountMinor: created.totalMinor,
+          ...(dto.paymentType === 'HOLD'
+            ? { holdExpiresAt: new Date(Date.now() + HOLD_MAX_DAYS * MS_PER_DAY) }
+            : {}),
+        },
+      });
+
+      return created;
     });
 
     const webBase = publicUrl('WEB_PUBLIC_URL');
@@ -173,20 +200,15 @@ export class CheckoutService {
       // No invoice means no way to pay — do not leave an order sitting in
       // PENDING_PAYMENT that the customer can never actually pay for.
       await this.prisma.order.update({ where: { id: order.id }, data: { status: 'CANCELLED' } }).catch(() => {});
+      await this.prisma.payment
+        .update({ where: { invoiceId: pendingInvoiceId }, data: { status: 'FAILURE', failureReason: 'Рахунок не створено' } })
+        .catch(() => undefined);
       throw error;
     }
 
-    await this.prisma.payment.create({
-      data: {
-        orderId: order.id,
-        invoiceId: invoice.invoiceId,
-        status: 'CREATED',
-        paymentType: dto.paymentType,
-        amountMinor: order.totalMinor,
-        ...(dto.paymentType === 'HOLD'
-          ? { holdExpiresAt: new Date(Date.now() + HOLD_MAX_DAYS * MS_PER_DAY) }
-          : {}),
-      },
+    await this.prisma.payment.update({
+      where: { invoiceId: pendingInvoiceId },
+      data: { invoiceId: invoice.invoiceId },
     });
 
     this.logger.log(`checkout.created order=${order.number} invoice=${invoice.invoiceId}`);

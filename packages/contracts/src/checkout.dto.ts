@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { OrderStatus, PaymentType, PrintMethod } from './enums';
+import { PhoneSchema } from './phone';
 
 /**
  * The READY_PRINT checkout: one variant, paid immediately through Monobank.
@@ -23,7 +24,7 @@ export const ReadyPrintCheckoutRequestDto = z.object({
   paymentType: PaymentType.default('HOLD'),
   customer: z.object({
     name: z.string().min(2).max(120),
-    phone: z.string().regex(/^\+380\d{9}$/, 'Формат: +380XXXXXXXXX'),
+    phone: PhoneSchema,
     marketingConsent: z.boolean().default(false),
   }),
   /** Optional note, e.g. a size adjustment request. Never priced from this. */

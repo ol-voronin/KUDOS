@@ -10,7 +10,11 @@ const WebhookBodySchema = z.object({
   invoiceId: z.string().min(1),
   status: z.enum(['created', 'processing', 'hold', 'success', 'failure', 'reversed', 'expired']),
   failureReason: z.string().optional(),
-});
+  /** Наш orderId — запасний шлях, якщо invoiceId не встиг записатись у Payment. */
+  reference: z.string().optional(),
+  /** Сума в копійках; звіряється з виставленою, розбіжність логується. */
+  amount: z.number().int().nonnegative().optional(),
+}).passthrough();
 
 /**
  * Monobank's callback. Not part of the public Swagger surface — it is not

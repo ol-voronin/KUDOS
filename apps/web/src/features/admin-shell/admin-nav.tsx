@@ -8,10 +8,11 @@ import { listLeads } from '@/features/leads/api';
 const NAV_ITEMS = [
   { href: '/admin', label: 'Огляд' },
   { href: '/admin/leads', label: 'Заявки', badge: true },
+  { href: '/admin/prints', label: 'Принти' },
 ];
 
 /** Not yet built — shown for the real information architecture, not clickable. */
-const SOON_ITEMS = ['Замовлення', 'Товари', 'Принти', 'Колекції · Породи', 'Сторінки', 'Налаштування'];
+const SOON_ITEMS = ['Замовлення', 'Товари', 'Колекції', 'Сторінки', 'Налаштування'];
 
 export function AdminNav() {
   const pathname = usePathname();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { minor, formatUAH } from '@dt/contracts';
+import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { useCheckoutReadyPrint } from '../hooks/useCheckoutReadyPrint';
 import { usePrintOffer } from '../hooks/usePrintOffer';
@@ -12,8 +12,8 @@ import { SizeButton } from './SizeButton';
 
 const PHONE_PATTERN = /^\+380\d{9}$/;
 
-export function PrintOfferView({ slug }: { slug: string }) {
-  const { data, isLoading, isError } = usePrintOffer(slug);
+export function PrintOfferView({ slug, initialData }: { slug: string; initialData?: PrintOfferDto }) {
+  const { data, isLoading, isError } = usePrintOffer(slug, initialData);
   const checkout = useCheckoutReadyPrint();
 
   const [garmentId, setGarmentId] = useState<string | null>(null);

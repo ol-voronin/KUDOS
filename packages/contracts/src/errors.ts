@@ -14,6 +14,8 @@ export type ApiErrorDto = z.infer<typeof ApiErrorDto>;
 export const ErrorCode = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   NOT_FOUND: 'NOT_FOUND',
+  /** Слаг зайнятий, сутність уже використана — те, що не можна перезаписати мовчки. */
+  CONFLICT: 'CONFLICT',
   VARIANT_NOT_PURCHASABLE: 'VARIANT_NOT_PURCHASABLE',
   PRINT_NOT_OFFERED_ON_GARMENT: 'PRINT_NOT_OFFERED_ON_GARMENT',
   RATE_LIMITED: 'RATE_LIMITED',

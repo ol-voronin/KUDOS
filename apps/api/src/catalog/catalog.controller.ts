@@ -1,6 +1,9 @@
 import { Controller, Get, Param, Query, UsePipes } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { CatalogQueryDto, type PrintOfferDto } from '@dt/contracts';
+import {
+  CatalogQueryDto, type BreedListDto, type BreedPageDto, type CollectionListDto,
+  type CollectionPageDto, type HomeDto, type PrintListDto, type PrintOfferDto, type SitemapDto,
+} from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CatalogService } from './catalog.service';
 
@@ -12,9 +15,36 @@ import { CatalogService } from './catalog.service';
 export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
 
+  /**
+   * Уся головна одним запитом. Порядок і склад блоків — рішення сервера:
+   * коли фронт збирає головну з пʼяти ендпоінтів, «що показувати першим»
+   * непомітно переїжджає в React-компонент.
+   */
+  @Get('home')
+  getHome(): Promise<HomeDto> {
+    return this.catalog.getHome();
+  }
+
+  /** Усі породи, включно з порожніми — сторінка без принтів усе одно працює. */
+  @Get('breeds')
+  listBreeds(): Promise<BreedListDto> {
+    return this.catalog.listBreeds();
+  }
+
+  @Get('collections')
+  listCollections(): Promise<CollectionListDto> {
+    return this.catalog.listCollections();
+  }
+
+  /** Плоскі списки slug-ів для sitemap.xml. */
+  @Get('sitemap')
+  getSitemap(): Promise<SitemapDto> {
+    return this.catalog.getSitemap();
+  }
+
   @Get('prints')
   @UsePipes(new ZodValidationPipe(CatalogQueryDto))
-  listPrints(@Query() query: CatalogQueryDto) {
+  listPrints(@Query() query: CatalogQueryDto): Promise<PrintListDto> {
     return this.catalog.listPrints(query);
   }
 
@@ -26,12 +56,12 @@ export class CatalogController {
 
   /** The long-tail SEO entry point: every print carrying this breed. */
   @Get('breeds/:slug')
-  getBreed(@Param('slug') slug: string) {
+  getBreed(@Param('slug') slug: string): Promise<BreedPageDto> {
     return this.catalog.getBreedPage(slug);
   }
 
   @Get('collections/:slug')
-  getCollection(@Param('slug') slug: string) {
+  getCollection(@Param('slug') slug: string): Promise<CollectionPageDto> {
     return this.catalog.getCollectionPage(slug);
   }
 }

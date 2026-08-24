@@ -252,7 +252,9 @@ TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... node apps/api/scripts/send-test.mjs
 ## Deployment notes
 
 - `pnpm run build:contracts` **має** йти перед збіркою застосунків.
-- Міграції — окремим кроком, до релізу застосунку.
+- Міграції — окремим кроком, до релізу застосунку: `prisma migrate deploy`.
+  Усе, що має доїхати до продакшну, має бути міграцією. Окремих SQL-скриптів
+  «накотити руками» більше немає — і не варто заводити знову.
 - Health-check для `/api/v1` треба додати перед першим деплоєм.
 - Реальні секрети — тільки в секрет-менеджері. `.env` у `.gitignore`.
 - Prisma-клієнт генерується під час збірки; без `prisma generate` typecheck
@@ -268,7 +270,7 @@ Prisma 5.22, macOS.
 - **Схема жива.** `prisma migrate dev` створив першу міграцію
   `20260821201808_init`: 21 таблиця, 11 енумів, 22 зовнішні ключі, 512 рядків
   SQL. `prisma generate` пройшов.
-- **CHECK-констрейнт на місці.** `prisma/checks.sql` накочено,
+- **CHECK-констрейнт на місці.** Міграція `variant_lead_time_check` накочена,
   `variant_lead_time_required` є в `pg_constraint`. Варіант «під замовлення»
   без строку в базу не потрапить.
 - **Сід відпрацював.** 16 кольорів, 3 ціни друку, 4 тканини, 2 вироби.
@@ -317,7 +319,7 @@ pnpm install
 pnpm run build:contracts
 docker compose up -d postgres          # redis поки не потрібен, його ніщо не використовує
 pnpm --filter @dt/api prisma generate
-pnpm --filter @dt/api run db:setup     # migrate dev + checks.sql + seed
+pnpm --filter @dt/api run db:setup     # migrate dev + seed
 pnpm run typecheck && pnpm -r test     # ось тепер typecheck справді щось значить
 ```
 
@@ -325,9 +327,11 @@ pnpm run typecheck && pnpm -r test     # ось тепер typecheck справ�
 `.env` лежить у корені монорепо. Без нього Prisma не бачить `DATABASE_URL`.
 `.env` у `.gitignore` за шаблоном без слеша, тож посилання в гіт не поїде.
 
-`db:checks` накатує `prisma/checks.sql` — CHECK-констрейнт, який Prisma не
-вміє описати в схемі. Він ідемпотентний, і його треба ганяти після кожної
-міграції, інакше `migrate reset` тихо його знесе.
+CHECK-констрейнт `variant_lead_time_required` живе в міграції
+`20260822160000_variant_lead_time_check`, а не в окремому скрипті. Це важливо:
+`prisma migrate deploy` — те, чим розгортають продакшн — застосовує міграції й
+нічого більше. Поки констрейнт лежав у `checks.sql`, продакшн його не
+отримував, а `migrate reset` тихо зносив.
 
 Далі — фаза 1 за планом робіт:
 

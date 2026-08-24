@@ -11,6 +11,10 @@ export interface MonobankWebhookBody {
   readonly invoiceId: string;
   readonly status: 'created' | 'processing' | 'hold' | 'success' | 'failure' | 'reversed' | 'expired';
   readonly failureReason?: string;
+  /** Наш orderId — його ми клали в `reference` при створенні рахунку. */
+  readonly reference?: string;
+  /** Сума в копійках, як її бачить Monobank. Звіряємо з тим, що виставляли. */
+  readonly amount?: number;
 }
 
 const STATUS_MAP: Record<MonobankWebhookBody['status'], PaymentStatus> = {
@@ -22,6 +26,29 @@ const STATUS_MAP: Record<MonobankWebhookBody['status'], PaymentStatus> = {
   reversed: 'REVERSED',
   expired: 'EXPIRED',
 };
+
+/**
+ * Порядок станів платежу. Monobank не гарантує порядок доставки вебхуків, тож
+ * без рангу пізній `processing`, що доїхав після `success`, відкотив би платіж
+ * назад — а наступний `success` надіслав би повідомлення вдруге.
+ *
+ * `reversed` вище за `success` навмисно: повернення коштів законно приходить
+ * саме після успішної оплати.
+ */
+const RANK: Record<PaymentStatus, number> = {
+  CREATED: 0,
+  PROCESSING: 1,
+  HOLD: 2,
+  SUCCESS: 3,
+  FAILURE: 3,
+  EXPIRED: 3,
+  REVERSED: 4,
+};
+
+/** Стани, з яких перехід у `next` є рухом уперед. */
+export function statusesBelow(next: PaymentStatus): PaymentStatus[] {
+  return (Object.keys(RANK) as PaymentStatus[]).filter((s) => RANK[s] < RANK[next]);
+}
 
 /** Only these payment outcomes move the order itself. Everything else (created/processing/hold) is in-flight. */
 const ORDER_STATUS_FOR: Partial<Record<PaymentStatus, OrderStatus>> = {
@@ -43,12 +70,9 @@ export class PaymentsWebhookService {
   constructor(private readonly prisma: PrismaService) {}
 
   async handle(body: MonobankWebhookBody): Promise<void> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { invoiceId: body.invoiceId },
-      select: { id: true, orderId: true, status: true },
-    });
+    const payment = await this.findPayment(body);
     if (!payment) {
-      // Nothing to reconcile against — log it, ack anyway so Monobank stops retrying.
+      // Немає з чим звіряти — логуємо й підтверджуємо, щоб Monobank не ретраїв вічно.
       this.logger.warn(`webhook.unknown_invoice invoiceId=${body.invoiceId}`);
       return;
     }
@@ -57,16 +81,36 @@ export class PaymentsWebhookService {
     if (!nextStatus) {
       throw new BadRequestException(`Unknown Monobank status: ${String(body.status)}`);
     }
-    const wasAlreadySuccess = payment.status === 'SUCCESS';
 
-    await this.prisma.payment.update({
-      where: { id: payment.id },
+    // Сума не змінює рішення (рахунок виставляв сервер), але розбіжність —
+    // це сигнал, який має бути видно, а не зникати мовчки.
+    if (typeof body.amount === 'number' && body.amount !== payment.amountMinor) {
+      this.logger.error(
+        `webhook.amount_mismatch invoiceId=${body.invoiceId} ` +
+        `expected=${payment.amountMinor} got=${body.amount}`,
+      );
+    }
+
+    // Один атомарний перехід замість «прочитати → вирішити → записати».
+    // Умова на статус робить і ідемпотентність, і заборону руху назад: два
+    // одночасні `success` не пройдуть обидва, а спізнілий `processing` не
+    // відкотить уже успішний платіж.
+    const { count } = await this.prisma.payment.updateMany({
+      where: { id: payment.id, status: { in: statusesBelow(nextStatus) } },
       data: {
         status: nextStatus,
         ...(body.failureReason ? { failureReason: body.failureReason } : {}),
         rawWebhook: body as unknown as Prisma.InputJsonValue,
       },
     });
+
+    if (count === 0) {
+      this.logger.log(
+        `webhook.ignored invoiceId=${body.invoiceId} from=${payment.status} to=${nextStatus} ` +
+        '(дубль або доставка не в порядку)',
+      );
+      return;
+    }
 
     const orderStatus = ORDER_STATUS_FOR[nextStatus];
     if (orderStatus) {
@@ -78,12 +122,44 @@ export class PaymentsWebhookService {
       (orderStatus ? ` orderStatus=${orderStatus}` : ''),
     );
 
-    // Idempotency: only the first transition into SUCCESS notifies. Monobank
-    // does not guarantee webhook delivery order, so this can arrive more than
-    // once — a second "success" webhook must not send a second message.
-    if (nextStatus === 'SUCCESS' && !wasAlreadySuccess) {
+    // Сюди можна дійти рівно один раз на платіж: перехід у SUCCESS відбувся
+    // саме в цьому запиті, бо `count === 1`.
+    if (nextStatus === 'SUCCESS') {
       await this.notifyPaid(payment.orderId);
     }
+  }
+
+  /**
+   * Пошук платежу за invoiceId, із запасним шляхом через `reference`.
+   *
+   * Запасний шлях закриває вузьке вікно: рахунок у Monobank уже створено, а
+   * записати його `invoiceId` у наш рядок Payment не встигли (падіння, розрив
+   * звʼязку). Без нього клієнт платить, вебхук не знаходить платіж, і
+   * замовлення назавжди лишається в PENDING_PAYMENT при списаних грошах.
+   */
+  private async findPayment(body: MonobankWebhookBody) {
+    const byInvoice = await this.prisma.payment.findUnique({
+      where: { invoiceId: body.invoiceId },
+      select: { id: true, orderId: true, status: true, amountMinor: true },
+    });
+    if (byInvoice) return byInvoice;
+    if (!body.reference) return null;
+
+    const byReference = await this.prisma.payment.findFirst({
+      where: { orderId: body.reference },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, orderId: true, status: true, amountMinor: true },
+    });
+    if (!byReference) return null;
+
+    // Знайшли — доклеюємо invoiceId, щоб наступні вебхуки йшли прямим шляхом.
+    await this.prisma.payment
+      .update({ where: { id: byReference.id }, data: { invoiceId: body.invoiceId } })
+      .catch(() => undefined);
+    this.logger.warn(
+      `webhook.recovered_by_reference invoiceId=${body.invoiceId} orderId=${body.reference}`,
+    );
+    return byReference;
   }
 
   private async notifyPaid(orderId: string): Promise<void> {
@@ -94,6 +170,7 @@ export class PaymentsWebhookService {
         totalMinor: true,
         note: true,
         customer: { select: { name: true, phone: true } },
+        _count: { select: { items: true } },
         items: {
           take: 1,
           select: {
@@ -112,6 +189,16 @@ export class PaymentsWebhookService {
     });
     const item = order?.items[0];
     if (!order || !item) return;
+
+    // Повідомлення показує першу позицію. Сьогодні кошика немає й позиція
+    // завжди одна — але коли зʼявиться друга, мовчазна неповна нотифікація
+    // гірша за гучну. Хай краще буде видно в логах.
+    if (order._count.items > 1) {
+      this.logger.warn(
+        `order.notification_truncated orderNumber=${order.number} items=${order._count.items} ` +
+        '(у Telegram піде лише перша позиція)',
+      );
+    }
 
     try {
       await sendToTelegram(formatOrderPaid({

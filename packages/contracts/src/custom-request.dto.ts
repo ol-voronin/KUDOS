@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GarmentType, ProductLine } from './enums';
+import { PhoneSchema } from './phone';
 
 /**
  * The brief for the "print from zero" stream.
@@ -13,14 +14,21 @@ import { GarmentType, ProductLine } from './enums';
 export const CustomRequestCreateDto = z.object({
   contact: z.object({
     name: z.string().min(2).max(120),
-    phone: z.string().regex(/^\+380\d{9}$/, 'Формат: +380XXXXXXXXX'),
+    phone: PhoneSchema,
     email: z.string().email().optional(),
   }),
   dog: z.object({
     name: z.string().min(1).max(80),
     breed: z.string().min(1).max(120),
-    /** Uploaded separately; these are storage keys, never raw data URLs. */
-    photoKeys: z.array(z.string().min(1)).min(1, 'Потрібне хоча б одне фото').max(10),
+    /**
+     * Ключі сховища, ніколи не сирі data-URL.
+     *
+     * Поки що необовʼязкові — ендпоінта завантаження ще немає, і вимога
+     * «хоча б одне фото» робила б увесь бриф недоступним. Фото приходять
+     * у Telegram під час підтвердження, тобто там, де ви й так спілкуєтесь
+     * із клієнтом. Коли зʼявиться завантаження — повернути `.min(1)`.
+     */
+    photoKeys: z.array(z.string().min(1)).max(10).default([]),
   }),
   brief: z.object({
     mood: z.string().min(1).max(400),
