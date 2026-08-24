@@ -11,7 +11,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `Усі принти — ${site.brand}`,
-  description: 'Каталог принтів із собаками на футболках, худі та світшотах. Друкуємо в Києві.',
+  description: `Каталог принтів із собаками на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`,
   alternates: { canonical: '/prints' },
 };
 
@@ -51,7 +51,7 @@ export default async function PrintsPage({ searchParams }: Search) {
               </p>
               <Link
                 href="/svoya-ideya"
-                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
+                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-accent px-5 text-sm font-semibold text-white"
               >
                 Замовити свій принт
               </Link>

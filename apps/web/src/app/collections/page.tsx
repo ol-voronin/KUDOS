@@ -44,7 +44,7 @@ export default async function CollectionsPage() {
               </p>
               <Link
                 href="/prints"
-                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
+                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-accent px-5 text-sm font-semibold text-white"
               >
                 Усі принти
               </Link>

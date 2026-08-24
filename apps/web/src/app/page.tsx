@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { HomeDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
+import { Section } from '@/components/section';
 import { PublicLeadForm } from '@/features/leads/public-lead-form';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import {
@@ -14,11 +15,11 @@ import { site } from '@/config/site';
 export const metadata: Metadata = {
   title: `${site.brand} — одяг з принтом вашої собаки`,
   description:
-    'Футболки, худі та світшоти з принтом вашої породи. Готові принти за породами або власний портрет із фото. Шиємо й друкуємо в Києві.',
+    `Футболки, худі та світшоти з принтом вашої породи. Готові принти за породами або власний портрет із фото. Шиємо й друкуємо ${site.cityIn}.`,
   alternates: { canonical: '/' },
   openGraph: {
     title: `${site.brand} — одяг з принтом вашої собаки`,
-    description: 'Готові принти за породами або власний портрет із фото. Київ.',
+    description: `Готові принти за породами або власний портрет із фото. ${site.city}.`,
     type: 'website',
   },
 };
@@ -35,34 +36,37 @@ export default async function HomePage() {
       <JsonLd data={faqJsonLd(FAQ_ITEMS)} />
 
       {/* ── Герой ─────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 pt-12 md:pt-16">
+      <Section tone="cream">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.11em] text-ink-subtle">
+            <p className="mb-3 inline-flex rounded-pill bg-accent-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.11em] text-accent-ink">
               Одяг для людей, а не для собак
             </p>
-            <h1 className="font-display text-hero font-bold text-ink">Ваш пес — на вашій футболці</h1>
+            <h1 className="font-display text-hero font-bold text-ink">
+              Ваш пес — <span className="text-accent">на вашій футболці</span>
+            </h1>
             <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
-              Готові принти за породами або власний портрет із фото. Друкуємо в Києві, шиємо самі.
+              Готові принти за породами або власний портрет із фото.
+              Шиємо й друкуємо {site.cityIn}, відправляємо по всій Україні.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="#породи"
-                className="flex min-h-12 items-center rounded-card bg-ink px-6 text-sm font-semibold text-surface transition hover:bg-ink/90"
+                className="flex min-h-12 items-center rounded-card bg-accent px-6 text-sm font-semibold text-white transition hover:bg-accent-strong"
               >
                 Знайти свою породу
               </Link>
               <Link
                 href="/svoya-ideya"
-                className="flex min-h-12 items-center rounded-card border border-line px-6 text-sm font-medium text-ink transition hover:border-ink"
+                className="flex min-h-12 items-center rounded-card border border-ink px-6 text-sm font-medium text-ink transition hover:bg-ink hover:text-surface"
               >
-                Свій принт із фото
+                Намалювати мого пса
               </Link>
             </div>
           </div>
 
-          <div className="flex aspect-[4/3] items-center justify-center rounded-card border border-line bg-surface-sunken">
-            <svg width="96" height="96" viewBox="0 0 96 96" fill="none" aria-hidden="true">
+          <div className="flex aspect-[4/3] items-center justify-center rounded-card border border-accent/25 bg-accent-soft">
+            <svg width="112" height="112" viewBox="0 0 96 96" fill="none" aria-hidden="true">
               <circle cx="48" cy="48" r="30" stroke="currentColor" strokeWidth="3" className="text-accent" />
               <circle cx="36" cy="42" r="3.5" fill="currentColor" className="text-accent" />
               <circle cx="60" cy="42" r="3.5" fill="currentColor" className="text-accent" />
@@ -71,10 +75,10 @@ export default async function HomePage() {
             </svg>
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* ── Породи: одразу під героєм, до каталогу ──────────────────── */}
-      <section id="породи" className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+      <Section id="породи">
         <SectionHead
           title="Знайдіть свою породу"
           subtitle="Найчастіше питання, з яким приходять. Відповідь — так, і якщо породи тут немає, намалюємо."
@@ -82,29 +86,29 @@ export default async function HomePage() {
         {home && home.breeds.length > 0
           ? <BreedStrip breeds={home.breeds} />
           : <EmptyBreeds />}
-      </section>
+      </Section>
 
       {/* ── Готові до відправки ────────────────────────────────────── */}
       {home && home.readyToShip.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+        <Section tone="cream">
           <SectionHead
             title="Готові до відправки"
             subtitle="Ці вироби вже є на складі — надрукуємо й відправимо за 1–2 дні, без очікування пошиття."
           />
           <PrintGrid prints={home.readyToShip} />
-        </section>
+        </Section>
       )}
 
       {/* ── Колекції ───────────────────────────────────────────────── */}
       {home && home.collections.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+        <Section tone="plum">
           <SectionHead title="Колекції" subtitle="Не за породою, а за настроєм: портрети, обкладинки, характери." />
           <CollectionStrip collections={home.collections} />
-        </section>
+        </Section>
       )}
 
       {/* ── Нові принти ────────────────────────────────────────────── */}
-      <section id="новинки" className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+      <Section id="новинки">
         <SectionHead
           title="Нові принти"
           {...(home && home.totalPrints > home.newPrints.length
@@ -114,33 +118,59 @@ export default async function HomePage() {
         {home && home.newPrints.length > 0
           ? <PrintGrid prints={home.newPrints} />
           : <EmptyCatalog />}
-      </section>
+      </Section>
 
       {/* ── Три шляхи: готовий / зміни / з нуля ────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+      <Section tone="cream">
         <SectionHead title="Три способи отримати свій принт" subtitle="Обирайте той, що ближчий — ціни й строки різні." />
         <ThreePaths />
-      </section>
+      </Section>
 
       {/* ── Своя ідея ──────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+      <Section tone="accent">
         <CustomBanner />
-      </section>
+      </Section>
 
       {/* ── Довіра ─────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+      <Section tone="teal">
+        <SectionHead
+          title="Що ви отримуєте"
+          subtitle="Чотири речі, через які купівля футболки з друком зазвичай і зривається."
+        />
         <TrustRow />
-      </section>
+      </Section>
+
+      {/* ── Співпраця ──────────────────────────────────────────────── */}
+      <Section tone="sun">
+        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-sun-ink">Для бізнесу</p>
+            <h2 className="mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">
+              Зоомагазин, вет-клініка, грумінг?
+            </h2>
+            <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">
+              Робимо мерч під вашим логотипом, партії від десяти штук, подарунки клієнтам
+              і спільні лінійки з притулками. Ціна на опт інша — порахуємо під тираж.
+            </p>
+          </div>
+          <Link
+            href="/spivpratsia"
+            className="flex min-h-12 items-center justify-center rounded-card bg-ink px-6 text-sm font-semibold text-surface transition hover:bg-ink/90 lg:w-56"
+          >
+            Умови співпраці
+          </Link>
+        </div>
+      </Section>
 
       {/* ── FAQ ────────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 md:pt-20">
+      <Section>
         <SectionHead title="Питання, які ставлять найчастіше" />
         <Faq />
-      </section>
+      </Section>
 
       {/* ── Заявка ─────────────────────────────────────────────────── */}
-      <section id="заявка" className="mx-auto max-w-6xl px-6 py-16 md:py-20">
-        <div className="grid gap-10 rounded-card border border-line bg-surface-raised p-6 sm:p-10 lg:grid-cols-[1fr_minmax(0,24rem)]">
+      <Section id="заявка" tone="cream">
+        <div className="grid gap-10 rounded-card border border-line bg-surface p-6 sm:p-10 lg:grid-cols-[1fr_minmax(0,24rem)]">
           <div>
             <h2 className="font-display text-2xl font-bold text-ink">Не знайшли свою породу?</h2>
             <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">
@@ -154,7 +184,7 @@ export default async function HomePage() {
           </div>
           <PublicLeadForm source="/" compact />
         </div>
-      </section>
+      </Section>
     </PublicShell>
   );
 }
@@ -175,7 +205,7 @@ function EmptyBreeds() {
       </p>
       <Link
         href="/svoya-ideya"
-        className="mt-5 inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
+        className="mt-5 inline-flex min-h-11 items-center rounded-card bg-accent px-5 text-sm font-semibold text-white"
       >
         Замовити свій принт
       </Link>
@@ -192,7 +222,7 @@ function EmptyCatalog() {
       </p>
       <Link
         href="/zayavka"
-        className="mt-5 inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
+        className="mt-5 inline-flex min-h-11 items-center rounded-card bg-accent px-5 text-sm font-semibold text-white"
       >
         Залишити заявку
       </Link>

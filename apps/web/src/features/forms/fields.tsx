@@ -171,8 +171,8 @@ export function SubmitButton({ pending, children }: { pending: boolean; children
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="w-full rounded-card bg-ink px-6 text-base font-semibold text-surface transition
-                 hover:bg-ink/90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2
+      className="w-full rounded-card bg-accent px-6 text-base font-semibold text-white transition
+                 hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2
                  disabled:cursor-not-allowed disabled:opacity-60"
       style={{ height: '56px' }}
     >

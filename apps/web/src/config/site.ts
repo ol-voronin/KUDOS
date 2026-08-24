@@ -17,7 +17,8 @@ export const site = {
   telegramUrl: 'https://t.me/kudos_print',
 
   email: '',
-  city: 'Київ',
+  city: 'Харків',
+  cityIn: 'у Харкові',            // місцевий відмінок з прийменником: «шиємо у Харкові»
   workingHours: '',
 } as const;
 

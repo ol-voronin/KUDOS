@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CollectionListDto, CollectionPageDto } from '@dt/contracts';
+import { CollectionListDto, BreedListDto, CollectionPageDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
+import { BreedStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
@@ -50,6 +51,12 @@ export default async function CollectionPage({ params }: Params) {
 
   const { collection, prints } = data;
 
+  // Порожня колекція — не тупик: показуємо породи як робочий лістинг,
+  // щоб людині було куди йти далі, а не просто «тут нічого немає».
+  const breeds = prints.length === 0
+    ? (await serverFetchOrNull('/catalog/breeds', BreedListDto, 3600))?.items ?? []
+    : [];
+
   return (
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(collection.title, prints, BASE)} />}
@@ -77,19 +84,40 @@ export default async function CollectionPage({ params }: Params) {
           {prints.length > 0 ? (
             <PrintGrid prints={prints} />
           ) : (
-            <div className="rounded-card border border-dashed border-line-strong bg-surface-sunken p-8 text-center">
-              <p className="font-medium text-ink">У цій колекції поки порожньо</p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-                Ми її наповнюємо. Загляньте в інші або замовте принт із нуля.
-              </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-3">
-                <Link href="/collections" className="inline-flex min-h-11 items-center rounded-card border border-line px-5 text-sm font-medium text-ink">
-                  Інші колекції
-                </Link>
-                <Link href="/svoya-ideya" className="inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface">
-                  Свій принт
-                </Link>
+            <div className="space-y-10">
+              <div className="rounded-card border border-accent/25 bg-accent-soft p-6 sm:p-8">
+                <h2 className="font-display text-xl font-bold text-ink">
+                  Готових принтів у цій колекції ще немає
+                </h2>
+                <p className="mt-2 max-w-prose leading-relaxed text-ink-muted">
+                  Але жанр робочий: надішліть фото свого пса — і намалюємо його саме в цьому
+                  стилі. Ціну називаємо після того, як побачили ідею.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href="/svoya-ideya"
+                    className="inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
+                  >
+                    Замовити в цьому стилі
+                  </Link>
+                  <Link
+                    href="/collections"
+                    className="inline-flex min-h-11 items-center rounded-card border border-accent-strong bg-surface px-5 text-sm font-medium text-accent-ink"
+                  >
+                    Інші колекції
+                  </Link>
+                </div>
               </div>
+
+              {breeds.length > 0 && (
+                <section>
+                  <SectionHead
+                    title="Або почніть з породи"
+                    subtitle="Ті самі принти, згруповані інакше — за тим, хто у вас удома."
+                  />
+                  <BreedStrip breeds={breeds} />
+                </section>
+              )}
             </div>
           )}
         </div>

@@ -50,7 +50,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
         <Link
           key={collection.id}
           href={`/collections/${collection.slug}`}
-          className="group flex flex-col rounded-card border border-line bg-surface-raised p-4 transition hover:border-ink focus:outline-none focus:ring-2 focus:ring-accent"
+          className="group flex flex-col rounded-card border border-plum/20 bg-surface p-4 transition hover:border-plum focus:outline-none focus:ring-2 focus:ring-plum"
         >
           <div className="flex gap-2">
             {(collection.previewUrls.length > 0 ? collection.previewUrls : [null, null, null])
@@ -119,11 +119,13 @@ export function ThreePaths() {
           key={path.title}
           className={[
             'flex flex-col rounded-card border p-6',
-            path.accent ? 'border-accent bg-accent-soft' : 'border-line bg-surface-raised',
+            path.accent ? 'border-accent bg-accent-soft' : 'border-line bg-surface',
           ].join(' ')}
         >
           <h3 className="font-display text-lg font-bold text-ink">{path.title}</h3>
-          <p className="mt-2 font-semibold text-ink">{path.price}</p>
+          <p className={`mt-2 font-display text-lg font-bold ${path.accent ? 'text-accent-ink' : 'text-accent'}`}>
+            {path.price}
+          </p>
           <p className="text-sm text-ink-muted">{path.time}</p>
           <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-muted">{path.text}</p>
           <Link
@@ -142,22 +144,51 @@ export function ThreePaths() {
 }
 
 /**
- * Довіра. Без вигаданих цифр: «10 000 задоволених клієнтів» на бренді, де
- * працює двоє людей, читається як брехня — а чесний масштаб тут продає краще.
+ * Довіра.
+ *
+ * Перша версія була списком того, що робимо ми: «шиємо самі», «друкуємо»,
+ * «оплата через Monobank». Читач не зобовʼязаний перекладати це на свою
+ * користь — і не перекладає: чотири заголовки без контексту виглядають як
+ * дрібний шрифт унизу договору.
+ *
+ * Тепер кожна плитка починається з побоювання покупця, а наш процес іде
+ * доказом. «Принт не злізе після прання» — це те, чого людина боїться,
+ * купуючи футболку з друком за 1 200 грн. «DTF і DTG» — це чому не злізе.
+ *
+ * Без вигаданих цифр: «10 000 задоволених клієнтів» на бренді, де працює
+ * двоє людей, читається як брехня — чесний масштаб продає краще.
  */
 const TRUST = [
-  { title: 'Шиємо самі', text: 'Власне виробництво в Києві. Друга лінійка — органічна бавовна Native Spirit.' },
-  { title: 'Друкуємо в Києві', text: 'DTF і DTG. Принт не тріскається після третього прання — це те, за що ми відповідаємо.' },
-  { title: 'Кожне замовлення — руками', text: 'Нас двоє. Ми пишемо вам самі, підтверджуємо деталі й ведемо замовлення до відправки.' },
-  { title: 'Оплата через Monobank', text: 'Гроші списуються після підтвердження. Картка вводиться на стороні банку, не в нас.' },
+  {
+    title: 'Принт не злізе після прання',
+    text: 'Друкуємо DTF і DTG на промисловому обладнанні. Трісне з нашої вини — переробимо або повернемо гроші.',
+  },
+  {
+    title: 'Виріб, який не соромно носити',
+    text: 'Шиємо самі, тому відповідаємо і за тканину, і за крій. Друга лінійка — органічна бавовна Native Spirit.',
+  },
+  {
+    title: 'З вами говорить людина',
+    text: 'Нас двоє. Ми пишемо самі, підтверджуємо деталі й ведемо замовлення до відправки. Без чат-ботів і черг.',
+  },
+  {
+    title: 'Гроші під захистом банку',
+    text: 'Картку вводите на стороні Monobank, не в нас. Списуємо після того, як підтвердили замовлення.',
+  },
 ] as const;
 
 export function TrustRow() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      {TRUST.map((item) => (
-        <div key={item.title}>
-          <h3 className="font-medium text-ink">{item.title}</h3>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {TRUST.map((item, i) => (
+        <div key={item.title} className="rounded-card border border-teal/20 bg-surface p-5">
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 items-center justify-center rounded-pill bg-teal text-sm font-bold text-white"
+          >
+            {i + 1}
+          </span>
+          <h3 className="mt-3 font-display font-bold text-ink">{item.title}</h3>
           <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{item.text}</p>
         </div>
       ))}
@@ -209,9 +240,9 @@ export function Faq() {
 /** Широкий блок «своя ідея» — потоку з найбільшим чеком потрібне місце. */
 export function CustomBanner() {
   return (
-    <div className="grid gap-8 rounded-card border border-line bg-surface-sunken p-6 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+    <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
       <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-accent">Принт з нуля</p>
+        <p className="text-sm font-bold uppercase tracking-wide text-accent-ink">Принт з нуля</p>
         <h2 className="mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">
           Намалюємо саме вашого пса
         </h2>
@@ -232,7 +263,7 @@ export function CustomBanner() {
           href={site.telegramUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex min-h-12 items-center justify-center rounded-card border border-line px-6 text-sm font-medium text-ink transition hover:border-ink"
+          className="flex min-h-12 items-center justify-center rounded-card border border-accent-strong bg-surface px-6 text-sm font-medium text-accent-ink transition hover:bg-accent-soft"
         >
           Спитати в Telegram
         </a>

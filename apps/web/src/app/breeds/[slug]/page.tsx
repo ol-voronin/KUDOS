@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { BreedListDto, BreedPageDto } from '@dt/contracts';
+import { BreedListDto, BreedPageDto, CollectionListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PublicLeadForm } from '@/features/leads/public-lead-form';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
+import { CollectionStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
@@ -40,8 +41,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const count = data.prints.length;
   const title = `Футболки й худі з принтом ${name} — ${site.brand}`;
   const description = count > 0
-    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо в Києві, шиємо самі.`
-    : `Принта з ${name} ще немає в каталозі — намалюємо з вашого фото. Друкуємо в Києві.`;
+    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}, шиємо самі.`
+    : `Принта з ${name} ще немає в каталозі — намалюємо з вашого фото. Друкуємо ${site.cityIn}.`;
 
   return {
     title,
@@ -69,6 +70,13 @@ export default async function BreedPage({ params }: Params) {
 
   const { breed, prints, garmentTypes, relatedBreeds } = data;
 
+  // Порода без принтів — усе одно сторінка каталогу, а не одна форма.
+  // Показуємо жанри, у яких малюємо: людина бачить, ЩО саме отримає, а не
+  // просто поле «телефон» і обіцянку.
+  const collections = prints.length === 0
+    ? (await serverFetchOrNull('/catalog/collections', CollectionListDto, 3600))?.items ?? []
+    : [];
+
   return (
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(breed.name, prints, BASE)} />}
@@ -86,7 +94,7 @@ export default async function BreedPage({ params }: Params) {
 
         <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
           {prints.length > 0
-            ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Друкуємо в Києві на власних виробах і на органічній бавовні Native Spirit.</>
+            ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Друкуємо {site.cityIn} на власних виробах і на органічній бавовні Native Spirit.</>
             : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме вашого пса з фото.</>}
         </p>
 
@@ -108,7 +116,9 @@ export default async function BreedPage({ params }: Params) {
         )}
 
         <div className="mt-10">
-          {prints.length > 0 ? <PrintGrid prints={prints} /> : <EmptyBreed name={breed.name} />}
+          {prints.length > 0
+            ? <PrintGrid prints={prints} />
+            : <EmptyBreed name={breed.name} collections={collections} />}
         </div>
 
         {/* Міст у «свою ідею» — навіть коли принти є: свій пес завжди свій. */}
@@ -158,21 +168,37 @@ export default async function BreedPage({ params }: Params) {
  * немає жодного принта. Так вона працює з першого дня: людина приходить із
  * пошуку, бачить, що ми вміємо саме її породу, і лишає заявку.
  */
-function EmptyBreed({ name }: { name: string }) {
+function EmptyBreed({
+  name, collections,
+}: { name: string; collections: readonly CollectionListDto['items'][number][] }) {
   return (
-    <div className="grid gap-8 rounded-card border border-line bg-surface-raised p-6 sm:p-10 lg:grid-cols-[1fr_minmax(0,24rem)]">
-      <div>
-        <h2 className="font-display text-xl font-bold text-ink">Намалюємо {name.toLowerCase()} з вашого фото</h2>
-        <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">
-          Готового принта ще немає, але саме з цього ми й починали: портрет із фото,
-          у будь-якому стилі — від ренесансу до обкладинки журналу.
-        </p>
-        <p className="mt-3 max-w-prose text-sm leading-relaxed text-ink-muted">
-          Ціну називаємо після того, як побачили ідею. Хочете відразу детально —
-          заповніть <Link href="/svoya-ideya" className="font-medium text-ink underline">бриф</Link>.
-        </p>
+    <div className="space-y-10">
+      <div className="grid gap-8 rounded-card border border-accent/25 bg-accent-soft p-6 sm:p-10 lg:grid-cols-[1fr_minmax(0,24rem)]">
+        <div>
+          <h2 className="font-display text-xl font-bold text-ink">Намалюємо {name.toLowerCase()} з вашого фото</h2>
+          <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">
+            Готового принта ще немає, але саме з цього ми й починали: портрет із фото,
+            у будь-якому стилі — від ренесансу до обкладинки журналу.
+          </p>
+          <p className="mt-3 max-w-prose text-sm leading-relaxed text-ink-muted">
+            Ціну називаємо після того, як побачили ідею. Хочете відразу детально —
+            заповніть <Link href="/svoya-ideya" className="font-medium text-ink underline">бриф</Link>.
+          </p>
+        </div>
+        <PublicLeadForm source={`/breeds/${name}`} compact />
       </div>
-      <PublicLeadForm source={`/breeds/${name}`} compact />
+
+      {collections.length > 0 && (
+        <section>
+          <SectionHead
+            title={`У якому жанрі намалювати вашого ${name.toLowerCase()}`}
+            subtitle="Це напрями, у яких ми працюємо. Оберіть настрій — решту зробимо з вашого фото."
+            href="/collections"
+            hrefLabel="Усі колекції"
+          />
+          <CollectionStrip collections={collections} />
+        </section>
+      )}
     </div>
   );
 }

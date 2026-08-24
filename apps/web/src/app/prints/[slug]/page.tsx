@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!offer) return { title: 'Принт не знайдено' };
 
   const title = `${offer.print.title} — принт на футболці й худі | ${site.brand}`;
-  const description = `${offer.print.title}: друк на футболці, худі або світшоті. Друкуємо в Києві, шиємо самі.`;
+  const description = `${offer.print.title}: друк на футболці, худі або світшоті. Друкуємо ${site.cityIn}, шиємо самі.`;
 
   return {
     title,

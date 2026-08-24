@@ -3,28 +3,38 @@ import type { Config } from 'tailwindcss';
 /**
  * Tokens only — no raw hex in components.
  *
- * База біла. Попередній теплий беж (#f0ece3) на великих площинах читався як
- * «брудно»: кремовий фон під фото товару підмішує жовтизну в білі футболки,
- * а їх у Native Spirit половина асортименту. Тепло лишилось там, де воно
- * працює — у вохряному акценті й у ледь теплих нейтралях ліній і заливок.
+ * Палітра свідомо яскравіша за першу версію: чорний текст на білому читався
+ * як технічна документація, а не як магазин одягу. Але яскравість тут не в
+ * заливці великих площин кольором — вона в трьох насичених акцентах, які
+ * розводять секції за змістом:
  *
- * Картки тепер відділяються рамкою, а не заливкою: `surface` і
- * `surface.raised` обидва білі. Це навмисно — так виглядає більшість
- * сучасних магазинів, і фото товару не змагається з фоном.
+ *   accent  (теракота) — дія: кнопки, ціни, «купити»
+ *   teal    (смарагд)  — довіра: гарантії, оплата, B2B
+ *   sun     (вохра)    — радість: подарунки, новинки, «весела» частина
+ *   plum    (слива)    — колекції: жанри, творчість
+ *
+ * Фон під фото товару лишається білим: кремовий підмішує жовтизну в білі
+ * футболки, а їх у Native Spirit половина асортименту. Кольорові зони —
+ * лише під текстовими секціями, де фото немає.
  */
 export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: '#1a1714', muted: '#645c51', subtle: '#8d8578' },
+        ink: { DEFAULT: '#17120e', muted: '#5b5248', subtle: '#8a8175' },
         /** raised === DEFAULT навмисно: картку тримає рамка, не заливка. */
-        surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#f7f6f3' },
-        line: { DEFAULT: '#e6e3dc', strong: '#cfcabf' },
-        accent: { DEFAULT: '#c2622e', soft: '#f6e4d6', strong: '#9c4d23' },
+        surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#faf6f0' },
+        line: { DEFAULT: '#e8e2d8', strong: '#cfc6b7' },
+
+        accent: { DEFAULT: '#d9531e', soft: '#ffe9dc', strong: '#ad3d11', ink: '#6f2708' },
+        teal:   { DEFAULT: '#0f7368', soft: '#dcf3ef', strong: '#0a5850', ink: '#06342f' },
+        sun:    { DEFAULT: '#c98a00', soft: '#fdf0cf', strong: '#a06d00', ink: '#5a3d00' },
+        plum:   { DEFAULT: '#7b2d5e', soft: '#fae4f1', strong: '#5f2149', ink: '#3a1330' },
+
         info: { DEFAULT: '#3a5a85', soft: '#e6ecf3' },
         danger: { DEFAULT: '#a83226', soft: '#f8e7e3' },
-        ok: { DEFAULT: '#3f6b48', soft: '#e7f1e9' },
+        ok: { DEFAULT: '#0f7368', soft: '#dcf3ef' },
       },
       spacing: { '4.5': '1.125rem', '18': '4.5rem' },
       borderRadius: { card: '0.25rem', pill: '9999px' },
@@ -39,4 +49,3 @@ export default {
   },
   plugins: [],
 } satisfies Config;
-
