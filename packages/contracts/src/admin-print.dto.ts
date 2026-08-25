@@ -60,15 +60,19 @@ export type PrintImageDto = z.infer<typeof PrintImageDto>;
  */
 export const MAX_UPLOAD_BYTES = 2.5 * 1024 * 1024;
 
-/** Заголовок із назвою файлу: у тілі запиту самі байти, місця для імені немає. */
-export const UPLOAD_FILENAME_HEADER = 'x-upload-filename';
-
-export const AdminPrintImageQueryDto = z.object({
-  /** Оригінальна назва файлу — тільки щоб зібрати читабельний шлях у сховищі. */
-  filename: z.string().trim().min(1).max(200).default('photo'),
+/**
+ * Реєстрація вже залитого файлу.
+ *
+ * Заливає вебзастосунок, а не API — тільки в нього є `BLOB_READ_WRITE_TOKEN`.
+ * Сюди приходить результат: адреса й ключ. API лишається власником даних і
+ * взагалі не знає про сховище.
+ */
+export const AdminPrintImageCreateDto = z.object({
+  url: z.string().trim().url(),
+  pathname: z.string().trim().min(1).max(500),
   alt: z.string().trim().max(200).default(''),
 });
-export type AdminPrintImageQueryDto = z.infer<typeof AdminPrintImageQueryDto>;
+export type AdminPrintImageCreateDto = z.infer<typeof AdminPrintImageCreateDto>;
 
 /** Новий порядок фото: повний список id у потрібній послідовності. */
 export const AdminPrintImageReorderDto = z.object({

@@ -1,11 +1,10 @@
 import {
   AdminPrintDto, AdminPrintListDto, CatalogOptionDto,
-  type AdminPrintCreateInput, type AdminPrintUpdateInput, type AdminBreedCreateDto,
+  type AdminPrintCreateInput, type AdminPrintImageCreateDto, type AdminPrintUpdateInput,
+  type AdminBreedCreateDto,
 } from '@dt/contracts';
 import { z } from 'zod';
-import { ApiErrorDto } from '@dt/contracts';
 import { apiFetch, ApiError } from '@/lib/api-client';
-import { BROWSER_API_URL } from '@/lib/api-origin';
 
 export interface PrintFilters {
   q?: string;
@@ -56,32 +55,47 @@ export function createBreed(dto: AdminBreedCreateDto): Promise<CatalogOptionDto>
 // Повертати частину означало б лишити форму з несвіжими даними.
 
 /**
- * Завантаження фото: тіло запиту — самі байти, назва файлу в параметрі.
+ * Завантаження фото — два кроки, і обидва потрібні.
  *
- * Не через `apiFetch`, бо той примусово ставить `content-type: application/json`
- * — а тут саме content-type файлу вирішує, як сервер його прийме.
+ *  1. Байти йдуть у маршрут вебзастосунку: тільки в нього Vercel видав
+ *     `BLOB_READ_WRITE_TOKEN`. Він заливає файл у сховище серверним викликом
+ *     (у Blob API немає CORS для браузера) і повертає адресу.
+ *  2. Адреса реєструється в API, який лишається власником даних.
  */
-export async function addPrintImage(
-  printId: string,
+export async function uploadPrintPhoto(
+  slug: string,
   file: Blob,
   filename: string,
-): Promise<AdminPrintDto> {
-  const query = new URLSearchParams({ filename });
-  const res = await fetch(`${BROWSER_API_URL}/admin/prints/${printId}/images?${query.toString()}`, {
+): Promise<AdminPrintImageCreateDto> {
+  const query = new URLSearchParams({ slug, filename });
+  const res = await fetch(`/admin/api/print-photo?${query.toString()}`, {
     method: 'POST',
     headers: { 'content-type': file.type },
     body: file,
-    credentials: 'include',
   });
 
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    const parsed = ApiErrorDto.safeParse(body);
-    throw parsed.success
-      ? new ApiError(parsed.data.statusCode, parsed.data.code, parsed.data.message)
-      : new ApiError(res.status, 'INTERNAL', 'Не вдалося завантажити фото');
+    const message = typeof body === 'object' && body !== null && 'message' in body
+      ? String((body as { message: unknown }).message)
+      : 'Не вдалося завантажити фото';
+    throw new ApiError(res.status, 'INTERNAL', message);
   }
-  return AdminPrintDto.parse(body);
+  const parsed = body as { url: string; pathname: string };
+  return { url: parsed.url, pathname: parsed.pathname, alt: '' };
+}
+
+export function addPrintImage(printId: string, dto: AdminPrintImageCreateDto): Promise<AdminPrintDto> {
+  return apiFetch(`/admin/prints/${printId}/images`, AdminPrintDto, {
+    method: 'POST',
+    body: JSON.stringify(dto),
+  });
+}
+
+/** Прибирає файл зі сховища. Викликається після того, як API видалив рядок. */
+export async function deletePrintPhotoBlob(pathname: string): Promise<void> {
+  await fetch(`/admin/api/print-photo?pathname=${encodeURIComponent(pathname)}`, { method: 'DELETE' })
+    .catch(() => undefined);
 }
 
 export function removePrintImage(printId: string, imageId: string): Promise<AdminPrintDto> {

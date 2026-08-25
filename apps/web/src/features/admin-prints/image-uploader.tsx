@@ -7,16 +7,21 @@ import {
 } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { compressImage } from './compress-image';
-import { addPrintImage, removePrintImage, reorderPrintImages } from './api';
+import {
+  addPrintImage, deletePrintPhotoBlob, removePrintImage, reorderPrintImages, uploadPrintPhoto,
+} from './api';
 
 /**
  * Фото принта: завантаження, порядок, видалення.
  *
- * Фото стискається в браузері (2000 px, WebP) і йде через наш API. Перша
- * версія вантажила файл із браузера прямо у сховище, щоб обійти ліміт тіла
- * запиту 4.5 МБ, — але браузер до Blob API не пускають: preflight не отримує
- * CORS-заголовків, PUT падає з 400. Після стиснення фото важить 200–800 КБ,
- * тож ліміт перестав бути проблемою, а каталог заодно став швидшим.
+ * Шлях файлу: стиснення в браузері (2000 px, WebP) → маршрут вебзастосунку,
+ * який заливає його у сховище → API, який реєструє адресу.
+ *
+ * Дві попередні спроби пояснюють, чому саме так. Завантаження напряму з
+ * браузера у сховище не працює: у Blob API немає CORS, preflight не проходить.
+ * Завантаження через API не працює теж: Vercel видав токен сховища тільки
+ * проєкту `kudos-web`, а `kudos-api` підключений через OIDC і токена не має.
+ * Тому файли обробляє той, у кого є ключ, а дані лишаються за API.
  *
  * Порядок важливий: перше фото — обкладинка в каталозі. Тому тут не «галерея»,
  * а список зі стрілками: перетягування мишею на телефоні не працює, а
@@ -67,12 +72,12 @@ export function PrintImageUploader({
       // одночасні запити могли б проскочити повз нього вдвох.
       for (const [index, file] of files.entries()) {
         const { blob, filename } = await compressImage(file);
-        latest = await withTimeout(
-          addPrintImage(print.id, blob, filename),
+        const stored = await withTimeout(
+          uploadPrintPhoto(print.slug, blob, filename),
           UPLOAD_TIMEOUT_MS,
-          `«${file.name}» не завантажився за ${UPLOAD_TIMEOUT_MS / 1000} секунд. `
-            + 'Відкрийте консоль браузера (Cmd+Option+J) — там буде причина.',
+          `«${file.name}» не завантажився за ${UPLOAD_TIMEOUT_MS / 1000} секунд.`,
         );
+        latest = await addPrintImage(print.id, stored);
         setProgress({ done: index + 1, total: files.length });
       }
       onChange(latest);
@@ -111,7 +116,10 @@ export function PrintImageUploader({
     setBusy(true);
     setError(null);
     try {
+      // Спершу рядок у базі, потім файл. Зворотний порядок дав би покупцеві
+      // картку з битим зображенням; так найгірше — осиротілий файл у сховищі.
       onChange(await removePrintImage(print.id, image.id));
+      await deletePrintPhotoBlob(image.pathname);
     } catch (err) {
       setError(messageOf(err));
     } finally {

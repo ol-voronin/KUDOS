@@ -1,11 +1,10 @@
 import {
-  BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param,
-  ParseUUIDPipe, Patch, Post, Query, Req, UseGuards, UsePipes,
+  Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post,
+  Query, UseGuards, UsePipes,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import {
-  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageQueryDto,
+  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
   AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
   type CatalogOptionDto,
 } from '@dt/contracts';
@@ -65,30 +64,18 @@ export class PrintsAdminController {
   }
 
   /**
-   * Завантаження фото.
+   * Реєстрація фото, яке вже лежить у сховищі.
    *
-   * Тіло запиту — самі байти файлу, `Content-Type: image/*`. Не multipart:
-   * заради одного ендпоїнта тягнути multer немає сенсу, а назва файлу
-   * спокійно їде параметром запиту.
-   *
-   * Браузер стискає фото перед відправкою, тому 4.5 МБ ліміту тіла запиту у
-   * Vercel вистачає із запасом.
+   * Заливає вебзастосунок: тільки в нього є `BLOB_READ_WRITE_TOKEN`. API про
+   * сховище не знає нічого — він власник даних, не файлів.
    */
   @Post(':id/images')
   @HttpCode(HttpStatus.CREATED)
   addImage(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Query(new ZodValidationPipe(AdminPrintImageQueryDto)) query: AdminPrintImageQueryDto,
-    @Req() req: Request,
+    @Body(new ZodValidationPipe(AdminPrintImageCreateDto)) dto: AdminPrintImageCreateDto,
   ): Promise<AdminPrintDto> {
-    const body: unknown = req.body;
-    if (!Buffer.isBuffer(body)) {
-      throw new BadRequestException({
-        code: 'VALIDATION_FAILED',
-        message: 'Очікуються байти файлу з Content-Type: image/…',
-      });
-    }
-    return this.prints.addImage(id, body, req.headers['content-type'] ?? '', query);
+    return this.prints.addImage(id, dto);
   }
 
   @Patch(':id/images/order')

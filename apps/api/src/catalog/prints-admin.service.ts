@@ -1,15 +1,13 @@
 import {
-  BadGatewayException, BadRequestException, ConflictException, Injectable, Logger,
-  NotFoundException,
+  BadRequestException, ConflictException, Injectable, Logger, NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { del, put } from '@vercel/blob';
 import type {
-  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageQueryDto,
+  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
   AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
   CatalogOptionDto,
 } from '@dt/contracts';
-import { ErrorCode, MAX_PRINT_IMAGES, MAX_UPLOAD_BYTES, PRINT_IMAGE_CONTENT_TYPES } from '@dt/contracts';
+import { ErrorCode, MAX_PRINT_IMAGES } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 
 /** Один select на всі відповіді — щоб форма й таблиця бачили однакову форму даних. */
@@ -207,52 +205,17 @@ export class PrintsAdminService {
   // 4.5 МБ — фото на 6 МБ через наш сервер не доїхало б). Сюди приходить уже
   // результат: адреса й ключ. Тому «завантаження» тут — це вставка рядка.
 
-  async addImage(
-    printId: string,
-    file: Buffer,
-    contentType: string,
-    query: AdminPrintImageQueryDto,
-  ): Promise<AdminPrintDto> {
-    if (!PRINT_IMAGE_CONTENT_TYPES.includes(contentType as never)) {
-      throw new BadRequestException({
-        code: ErrorCode.VALIDATION_FAILED,
-        message: `Формат ${contentType} не приймаємо. Потрібен JPEG, PNG, WebP або AVIF.`,
-      });
-    }
-    if (file.length === 0) {
-      throw new BadRequestException({ code: ErrorCode.VALIDATION_FAILED, message: 'Порожній файл' });
-    }
-    if (file.length > MAX_UPLOAD_BYTES) {
-      throw new BadRequestException({
-        code: ErrorCode.VALIDATION_FAILED,
-        message: `Файл завеликий: ${(file.length / 1024 / 1024).toFixed(1)} МБ.`,
-      });
-    }
-
-    const print = await this.prisma.print.findUnique({
-      where: { id: printId },
-      select: { id: true, slug: true },
-    });
-    if (!print) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
-
-    const count = await this.prisma.printImage.count({ where: { printId } });
-    if (count >= MAX_PRINT_IMAGES) {
-      throw new ConflictException({
-        code: ErrorCode.CONFLICT,
-        message: `Більше ${MAX_PRINT_IMAGES} фото на принт не можна. Видаліть зайве.`,
-      });
-    }
-
-    // Заливаємо ДО транзакції: мережевий виклик усередині транзакції тримав
-    // би зʼєднання з базою відкритим на весь час завантаження.
-    const uploaded = await this.uploadBlob(print.slug, query.filename, contentType, file);
-
+  async addImage(printId: string, dto: AdminPrintImageCreateDto): Promise<AdminPrintDto> {
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const print = await tx.print.findUnique({ where: { id: printId }, select: { id: true } });
+      if (!print) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
+
       const existing = await tx.printImage.findMany({
         where: { printId },
         select: { id: true, position: true },
         orderBy: { position: 'asc' },
       });
+
       // Read committed не захищає від двох одночасних вставок: обидві можуть
       // побачити по чотири. Для адмінки, де працює одна людина й браузер
       // вантажить файли послідовно, цього досить; блокувати рядок принта
@@ -268,16 +231,16 @@ export class PrintsAdminService {
       await tx.printImage.create({
         data: {
           printId,
-          url: uploaded.url,
-          pathname: uploaded.pathname,
-          alt: query.alt,
+          url: dto.url,
+          pathname: dto.pathname,
+          alt: dto.alt,
           position: nextPosition,
         },
       });
 
       // Перше фото стає обкладинкою. Далі обкладинку міняє тільки порядок.
       if (existing.length === 0) {
-        await tx.print.update({ where: { id: printId }, data: { previewUrl: uploaded.url } });
+        await tx.print.update({ where: { id: printId }, data: { previewUrl: dto.url } });
       }
     });
 
@@ -286,16 +249,15 @@ export class PrintsAdminService {
   }
 
   /**
-   * Видалення фото прибирає і рядок, і файл.
-   *
-   * Порядок навмисний: спершу база, потім сховище. Якщо впаде видалення файлу,
-   * лишиться осиротілий блоб — це коштує копійки й видно в консолі Vercel.
-   * Зворотний порядок дав би картку з битим зображенням, що бачить покупець.
+   * Видаляє рядок фото. Сам файл прибирає вебзастосунок — тільки в нього є
+   * токен сховища. Адмінка робить це одразу після успішної відповіді звідси:
+   * спершу база, потім файл. Зворотний порядок дав би покупцеві картку з
+   * битим зображенням, а так найгірший наслідок — осиротілий блоб.
    */
   async removeImage(printId: string, imageId: string): Promise<AdminPrintDto> {
     const image = await this.prisma.printImage.findFirst({
       where: { id: imageId, printId },
-      select: { id: true, pathname: true },
+      select: { id: true },
     });
     if (!image) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Фото не знайдено' });
 
@@ -304,7 +266,6 @@ export class PrintsAdminService {
       await this.syncCover(tx, printId);
     });
 
-    await this.deleteBlob(image.pathname);
     this.logger.log(`print.image.removed printId=${printId} imageId=${imageId}`);
     return this.get(printId);
   }
@@ -356,64 +317,6 @@ export class PrintsAdminService {
         ...(cover === '' ? { isPublished: false } : {}),
       },
     });
-  }
-
-  /**
-   * Заливка у сховище.
-   *
-   * Перша версія вантажила файл із браузера напряму, щоб обійти ліміт тіла
-   * запиту 4.5 МБ. Виявилось, що браузер до Blob API не пускають: preflight
-   * не отримує CORS-заголовків, PUT падає з 400. Тому файл іде через нас —
-   * а щоб він вліз у ліміт, браузер стискає його перед відправкою.
-   *
-   * Токен передаємо, лише якщо він є: без нього SDK автентифікується через
-   * OIDC, як і роблять проєкти, підключені до сховища у Vercel.
-   */
-  private async uploadBlob(
-    slug: string,
-    filename: string,
-    contentType: string,
-    file: Buffer,
-  ): Promise<{ url: string; pathname: string }> {
-    const token = process.env['BLOB_READ_WRITE_TOKEN'];
-    const safeName = filename.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'photo';
-
-    try {
-      const blob = await put(`prints/${slug}/${safeName}`, file, {
-        access: 'public',
-        contentType,
-        // Двоє фото можуть називатись «photo.jpg» — без суфікса друге
-        // перезаписало б перше.
-        addRandomSuffix: true,
-        ...(token ? { token } : {}),
-      });
-      return { url: blob.url, pathname: blob.pathname };
-    } catch (error) {
-      this.logger.error(`blob.put.failed slug=${slug} name=${safeName}: ${String(error)}`);
-      throw new BadGatewayException({
-        code: ErrorCode.INTERNAL,
-        message: 'Сховище не прийняло файл. Перевірте, чи підключене Blob-сховище до проєкту.',
-      });
-    }
-  }
-
-  /**
-   * Видалення файлу зі сховища.
-   *
-   * Токен передаємо, тільки якщо він є. Без нього SDK сам іде через OIDC —
-   * так автентифікуються проєкти, підключені до сховища у Vercel, і окремий
-   * read-write токен їм не потрібен (потрібен лише `BLOB_STORE_ID`, який
-   * Vercel виставляє при підключенні).
-   */
-  private async deleteBlob(pathname: string): Promise<void> {
-    const token = process.env['BLOB_READ_WRITE_TOKEN'];
-    try {
-      await del(pathname, token ? { token } : {});
-    } catch (error) {
-      // Не валимо запит: рядок уже видалено, картка в адмінці має оновитись.
-      // Осиротілий файл коштує копійки й видно тут, у логах.
-      this.logger.error(`blob.delete.failed pathname=${pathname}: ${String(error)}`);
-    }
   }
 
   private async assertSlugFree(slug: string, exceptId: string | null): Promise<void> {
