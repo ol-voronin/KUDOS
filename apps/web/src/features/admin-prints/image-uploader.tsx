@@ -63,16 +63,24 @@ export function PrintImageUploader({
       // Послідовно, а не паралельно: ліміт «пʼять» перевіряє сервер, і три
       // одночасні запити могли б проскочити повз нього вдвох.
       for (const [index, file] of files.entries()) {
-        const blob = await upload(`prints/${print.slug}/${file.name}`, file, {
-          access: 'public',
-          handleUploadUrl: '/admin/api/blob-upload',
-          contentType: file.type,
-        });
+        const blob = await withTimeout(
+          upload(`prints/${print.slug}/${file.name}`, file, {
+            access: 'public',
+            handleUploadUrl: '/admin/api/blob-upload',
+            contentType: file.type,
+          }),
+          UPLOAD_TIMEOUT_MS,
+          `«${file.name}» не завантажився за ${UPLOAD_TIMEOUT_MS / 1000} секунд. `
+            + 'Відкрийте консоль браузера (Cmd+Option+J) — там буде причина.',
+        );
         latest = await addPrintImage(print.id, { url: blob.url, pathname: blob.pathname, alt: '' });
         setProgress({ done: index + 1, total: files.length });
       }
       onChange(latest);
     } catch (err) {
+      // У консоль — повний об'єкт: повідомлення в інтерфейсі коротке, а
+      // причина зависання зазвичай у полях, яких у ньому немає.
+      console.error('Не вдалося завантажити фото', err);
       setError(messageOf(err));
     } finally {
       setBusy(false);
@@ -218,6 +226,25 @@ function IconButton({
       {children}
     </button>
   );
+}
+
+/**
+ * Скільки чекати на одне фото, перш ніж визнати, що воно не долетить.
+ *
+ * Завантаження, яке зависло, гірше за помилку: людина дивиться на «Завантажуємо
+ * 1 з 1…» і не знає, чекати їй чи перезавантажити сторінку. Півтори хвилини —
+ * із запасом навіть для повільного мобільного інтернету.
+ */
+const UPLOAD_TIMEOUT_MS = 90_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error: unknown) => { clearTimeout(timer); reject(error instanceof Error ? error : new Error(String(error))); },
+    );
+  });
 }
 
 function mb(bytes: number): string {
