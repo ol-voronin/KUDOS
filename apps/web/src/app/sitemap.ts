@@ -20,6 +20,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/collections`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE}/svoya-ideya`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE}/spivpratsia`, changeFrequency: 'monthly', priority: 0.7 },
+    // Оферта індексується свідомо: Monobank при підключенні еквайрингу
+    // перевіряє, що вона опублікована й доступна ззовні.
+    { url: `${BASE}/oferta`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${BASE}/pryvatnist`, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
   ];
 

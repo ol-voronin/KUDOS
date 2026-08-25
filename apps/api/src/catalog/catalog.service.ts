@@ -58,6 +58,10 @@ export class CatalogService {
       where: { slug, isPublished: true },
       select: {
         id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
+        images: {
+          select: { url: true, alt: true },
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+        },
         collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
         breeds: { select: { breed: { select: { slug: true } } } },
       },
@@ -142,6 +146,12 @@ export class CatalogService {
         previewUrl: print.previewUrl,
         isPublished: print.isPublished,
       },
+      images: print.images.map((img: { url: string; alt: string }) => ({
+        url: img.url,
+        // Порожній alt у базі — норма: підпис необовʼязковий. Для доступності
+        // потрібен осмислений текст, тому підставляємо назву принта.
+        alt: img.alt === '' ? print.title : img.alt,
+      })),
       garments: garments.map((g) => ({
         id: g.id,
         slug: g.slug,

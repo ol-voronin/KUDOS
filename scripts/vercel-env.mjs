@@ -75,7 +75,7 @@ const vars = {
   JWT_ACCESS_SECRET: keepOrMake('JWT_ACCESS_SECRET'),
   JWT_REFRESH_SECRET: keepOrMake('JWT_REFRESH_SECRET'),
 };
-for (const key of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN']) {
+for (const key of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN', 'BLOB_READ_WRITE_TOKEN']) {
   const value = local[key];
   if (value && value !== '__replace_me__') vars[key] = value;
 }
@@ -86,5 +86,5 @@ writeFileSync(join(root, 'vercel-api-env.txt'), body, { mode: 0o600 });
 console.log('Готово: vercel-api-env.txt');
 console.log('Змінні у файлі:');
 for (const key of Object.keys(vars)) console.log(`  ${key}`);
-const skipped = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN'].filter((k) => !vars[k]);
+const skipped = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN', 'BLOB_READ_WRITE_TOKEN'].filter((k) => !vars[k]);
 if (skipped.length) console.log(`Не знайдено в .env, додай вручну: ${skipped.join(', ')}`);

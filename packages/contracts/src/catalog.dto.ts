@@ -93,6 +93,11 @@ export type PrintDto = z.infer<typeof PrintDto>;
 /** What the product page actually renders: one print, its offerable variants. */
 export const PrintOfferDto = z.object({
   print: PrintDto,
+  /**
+   * Галерея. Перший елемент дублює `print.previewUrl` — це та сама обкладинка;
+   * сторінка товару показує всі, сітки каталогу — тільки обкладинку.
+   */
+  images: z.array(z.object({ url: z.string().url(), alt: z.string() })),
   garments: z.array(GarmentDto),
   variants: z.array(VariantDto),
   colours: z.array(ColourDto),

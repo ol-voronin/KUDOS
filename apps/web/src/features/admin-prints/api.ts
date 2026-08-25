@@ -1,6 +1,7 @@
 import {
   AdminPrintDto, AdminPrintListDto, CatalogOptionDto,
-  type AdminPrintCreateDto, type AdminPrintUpdateDto, type AdminBreedCreateDto,
+  type AdminPrintCreateInput, type AdminPrintImageCreateDto, type AdminPrintUpdateInput,
+  type AdminBreedCreateDto,
 } from '@dt/contracts';
 import { z } from 'zod';
 import { apiFetch } from '@/lib/api-client';
@@ -22,11 +23,11 @@ export function getPrint(id: string): Promise<AdminPrintDto> {
   return apiFetch(`/admin/prints/${id}`, AdminPrintDto);
 }
 
-export function createPrint(dto: AdminPrintCreateDto): Promise<AdminPrintDto> {
+export function createPrint(dto: AdminPrintCreateInput): Promise<AdminPrintDto> {
   return apiFetch('/admin/prints', AdminPrintDto, { method: 'POST', body: JSON.stringify(dto) });
 }
 
-export function updatePrint(id: string, dto: AdminPrintUpdateDto): Promise<AdminPrintDto> {
+export function updatePrint(id: string, dto: AdminPrintUpdateInput): Promise<AdminPrintDto> {
   return apiFetch(`/admin/prints/${id}`, AdminPrintDto, { method: 'PATCH', body: JSON.stringify(dto) });
 }
 
@@ -45,4 +46,28 @@ export function getPrintOptions() {
 
 export function createBreed(dto: AdminBreedCreateDto): Promise<CatalogOptionDto> {
   return apiFetch('/admin/prints/breeds', CatalogOptionDto, { method: 'POST', body: JSON.stringify(dto) });
+}
+
+// ── Фото ──────────────────────────────────────────────────────────────────
+//
+// Усі три ендпоїнти повертають принт цілком, а не саме фото: після зміни
+// набору змінюється ще й обкладинка (`previewUrl`) і, можливо, публікація.
+// Повертати частину означало б лишити форму з несвіжими даними.
+
+export function addPrintImage(printId: string, dto: AdminPrintImageCreateDto): Promise<AdminPrintDto> {
+  return apiFetch(`/admin/prints/${printId}/images`, AdminPrintDto, {
+    method: 'POST',
+    body: JSON.stringify(dto),
+  });
+}
+
+export function removePrintImage(printId: string, imageId: string): Promise<AdminPrintDto> {
+  return apiFetch(`/admin/prints/${printId}/images/${imageId}`, AdminPrintDto, { method: 'DELETE' });
+}
+
+export function reorderPrintImages(printId: string, ids: string[]): Promise<AdminPrintDto> {
+  return apiFetch(`/admin/prints/${printId}/images/order`, AdminPrintDto, {
+    method: 'PATCH',
+    body: JSON.stringify({ ids }),
+  });
 }

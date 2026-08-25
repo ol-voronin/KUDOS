@@ -4,8 +4,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
-  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintListDto,
-  AdminPrintListQueryDto, AdminPrintUpdateDto, type CatalogOptionDto,
+  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
+  AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
+  type CatalogOptionDto,
 } from '@dt/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -60,5 +61,37 @@ export class PrintsAdminController {
   @Delete(':id')
   remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<{ ok: true }> {
     return this.prints.remove(id);
+  }
+
+  /**
+   * Реєстрація завантаженого фото.
+   *
+   * Сам файл сюди не приходить: браузер вантажить його прямо у сховище, а
+   * токен на це видає вебзастосунок, перевіривши сесію. Сюди летить лише
+   * адреса й ключ, тому 4.5 МБ ліміту тіла запиту у Vercel не заважають.
+   */
+  @Post(':id/images')
+  @HttpCode(HttpStatus.CREATED)
+  addImage(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(AdminPrintImageCreateDto)) dto: AdminPrintImageCreateDto,
+  ): Promise<AdminPrintDto> {
+    return this.prints.addImage(id, dto);
+  }
+
+  @Patch(':id/images/order')
+  reorderImages(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(AdminPrintImageReorderDto)) dto: AdminPrintImageReorderDto,
+  ): Promise<AdminPrintDto> {
+    return this.prints.reorderImages(id, dto);
+  }
+
+  @Delete(':id/images/:imageId')
+  removeImage(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('imageId', new ParseUUIDPipe()) imageId: string,
+  ): Promise<AdminPrintDto> {
+    return this.prints.removeImage(id, imageId);
   }
 }

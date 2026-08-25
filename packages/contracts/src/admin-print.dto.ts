@@ -20,6 +20,53 @@ export const CatalogOptionDto = z.object({
 });
 export type CatalogOptionDto = z.infer<typeof CatalogOptionDto>;
 
+/**
+ * Скільки фото можна повісити на один принт.
+ *
+ * Пʼять — це не технічна межа, а межа уваги: далі покупець не гортає, а
+ * адмінка перетворюється на файлообмінник. Число живе тут, бо його однаково
+ * перевіряють і форма, і сервер.
+ */
+export const MAX_PRINT_IMAGES = 5;
+
+/** Дозволені формати. HEIC свідомо немає: браузери його не показують. */
+export const PRINT_IMAGE_CONTENT_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/avif',
+] as const;
+
+/** Максимальний розмір одного файлу — 8 МБ. Фото товару більшим бути не має. */
+export const MAX_PRINT_IMAGE_BYTES = 8 * 1024 * 1024;
+
+export const PrintImageDto = z.object({
+  id: z.string().uuid(),
+  url: z.string().url(),
+  /** Ключ у сховищі. Публічному сайту не потрібен, адмінці — так. */
+  pathname: z.string(),
+  alt: z.string(),
+  position: z.number().int().nonnegative(),
+});
+export type PrintImageDto = z.infer<typeof PrintImageDto>;
+
+/**
+ * Реєстрація вже завантаженого файлу.
+ *
+ * Файл летить у сховище напряму з браузера, повз наш сервер: у Vercel ліміт
+ * тіла запиту 4.5 МБ, і фото на 6 МБ просто не доїхало б. Сюди приходить уже
+ * результат — адреса й ключ.
+ */
+export const AdminPrintImageCreateDto = z.object({
+  url: z.string().trim().url(),
+  pathname: z.string().trim().min(1).max(500),
+  alt: z.string().trim().max(200).default(''),
+});
+export type AdminPrintImageCreateDto = z.infer<typeof AdminPrintImageCreateDto>;
+
+/** Новий порядок фото: повний список id у потрібній послідовності. */
+export const AdminPrintImageReorderDto = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(MAX_PRINT_IMAGES),
+});
+export type AdminPrintImageReorderDto = z.infer<typeof AdminPrintImageReorderDto>;
+
 export const AdminPrintDto = z.object({
   id: z.string().uuid(),
   slug: z.string(),
@@ -28,6 +75,7 @@ export const AdminPrintDto = z.object({
   previewUrl: z.string(),
   artworkKey: z.string(),
   isPublished: z.boolean(),
+  images: z.array(PrintImageDto),
   breeds: z.array(CatalogOptionDto),
   collections: z.array(CatalogOptionDto),
   createdAt: z.coerce.date(),
@@ -65,10 +113,11 @@ export const AdminPrintCreateDto = z.object({
   slug: slugField,
   sizeTier: PrintSizeTier,
   /**
-   * Поки завантаження немає — це посилання на зображення. Коли зʼявиться
-   * upload, поле лишається тим самим, просто поруч буде кнопка.
+   * Обкладинку більше не вводять руками — її ставить перше завантажене фото.
+   * Поле лишається в контракті, бо цим самим DTO користується імпорт, але
+   * форма його не надсилає, і принт створюється без жодного зображення.
    */
-  previewUrl: z.string().trim().url('Потрібне повне посилання, з https://'),
+  previewUrl: z.string().trim().url().or(z.literal('')).default(''),
   /**
    * Де лежить продакшн-макет: шлях у вашому хмарному диску, назва файлу —
    * будь-що, що допоможе його знайти. У публічний API не виходить ніколи.
@@ -79,10 +128,18 @@ export const AdminPrintCreateDto = z.object({
   collectionIds: z.array(z.string().uuid()).max(20).default([]),
 });
 export type AdminPrintCreateDto = z.infer<typeof AdminPrintCreateDto>;
+/**
+ * Те, що надсилає форма — до застосування дефолтів.
+ *
+ * `z.infer` описує форму ПІСЛЯ парсингу, де поля з `.default()` уже
+ * обовʼязкові. Клієнт їх не надсилає, тому йому потрібен саме вхідний тип.
+ */
+export type AdminPrintCreateInput = z.input<typeof AdminPrintCreateDto>;
 
 /** Часткове оновлення: форма надсилає лише те, що змінилось. */
 export const AdminPrintUpdateDto = AdminPrintCreateDto.partial();
 export type AdminPrintUpdateDto = z.infer<typeof AdminPrintUpdateDto>;
+export type AdminPrintUpdateInput = z.input<typeof AdminPrintUpdateDto>;
 
 /**
  * Створення породи прямо з форми принта.

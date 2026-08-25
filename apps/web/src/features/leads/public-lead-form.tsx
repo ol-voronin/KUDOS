@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { site } from '@/config/site';
 import { ApiError } from '@/lib/api-client';
@@ -91,8 +92,9 @@ export function PublicLeadForm({ source, compact = false }: { source: string; co
       )}
 
       <Consent id="lead-consent" checked={consent} onChange={setConsent} error={errors['consent']}>
-        Погоджуюсь на обробку імені й телефону, щоб ви відповіли на цю заявку.
-        Дані йдуть у ваш Telegram і зберігаються у вас.
+        Погоджуюсь на обробку імені й телефону, щоб ви відповіли на цю заявку —
+        згідно з <Link href="/pryvatnist" className="underline">політикою конфіденційності</Link>.
+        Дані приходять нам у Telegram.
       </Consent>
       <Consent id="lead-marketing" checked={marketing} onChange={setMarketing}>
         Можна писати мені про нові принти й акції. Не обовʼязково.

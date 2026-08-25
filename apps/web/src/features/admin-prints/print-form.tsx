@@ -8,6 +8,7 @@ import { slugify, SLUG_PATTERN } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { PrintThumb } from '@/components/print-thumb';
 import { Field, Select, SubmitButton } from '@/features/forms/fields';
+import { PrintImageUploader } from './image-uploader';
 import { createBreed, createPrint, deletePrint, getPrintOptions, updatePrint } from './api';
 
 const SIZE_TIERS: ReadonlyArray<{ value: PrintSizeTier; label: string }> = [
@@ -35,8 +36,13 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [sizeTier, setSizeTier] = useState<string>(initial?.sizeTier ?? 'MEDIUM');
-  const [previewUrl, setPreviewUrl] = useState(initial?.previewUrl ?? '');
   const [artworkKey, setArtworkKey] = useState(initial?.artworkKey ?? '');
+  /**
+   * Фото живуть окремо від решти форми: вони зберігаються одразу, своїми
+   * запитами, і не чекають кнопки «Зберегти». Тому тут — актуальний принт,
+   * який завантажувач оновлює після кожної дії.
+   */
+  const [current, setCurrent] = useState<AdminPrintDto | undefined>(initial);
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
   const [breedIds, setBreedIds] = useState<string[]>(initial?.breeds.map((b) => b.id) ?? []);
   const [collectionIds, setCollectionIds] = useState<string[]>(initial?.collections.map((c) => c.id) ?? []);
@@ -56,7 +62,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
         title: title.trim(),
         slug: slug.trim(),
         sizeTier: sizeTier as PrintSizeTier,
-        previewUrl: previewUrl.trim(),
+        // previewUrl не надсилаємо: обкладинку тримає перше фото.
         artworkKey: artworkKey.trim(),
         isPublished,
         breedIds,
@@ -85,7 +91,9 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
     const next: Record<string, string> = {};
     if (title.trim().length < 2) next['title'] = 'Назва принта';
     if (!SLUG_PATTERN.test(slug.trim())) next['slug'] = 'Тільки маленькі латинські літери, цифри й дефіси';
-    if (!/^https?:\/\/.+/.test(previewUrl.trim())) next['previewUrl'] = 'Потрібне повне посилання, з https://';
+    if (isPublished && (current?.images.length ?? 0) === 0) {
+      next['images'] = 'Не можна опублікувати принт без жодного фото — у каталозі буде порожня картка';
+    }
     if (isPublished && breedIds.length === 0) {
       next['breeds'] = 'Без породи принт не потрапить у породну сторінку — головний вхід із пошуку';
     }
@@ -123,12 +131,20 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
           value={sizeTier} onChange={setSizeTier} options={SIZE_TIERS}
         />
 
-        <Field
-          id="print-preview" label="Посилання на зображення" required
-          value={previewUrl} onChange={setPreviewUrl} error={errors['previewUrl']}
-          placeholder="https://…"
-          hint="Завантаження файлів ще робимо. Поки що — пряме посилання на картинку."
-        />
+        {current ? (
+          <PrintImageUploader print={current} onChange={setCurrent} />
+        ) : (
+          <p className="rounded-card border border-dashed border-line-strong bg-surface-sunken p-4 text-sm leading-relaxed text-ink-muted">
+            Фото завантажите одразу після створення принта — файл треба до чогось
+            прикріпити, тому спочатку має зʼявитися сам принт.
+          </p>
+        )}
+
+        {errors['images'] && (
+          <p role="alert" className="rounded-card border border-danger bg-danger-soft p-3 text-sm font-medium text-danger">
+            {errors['images']}
+          </p>
+        )}
 
         <Field
           id="print-artwork" label="Де лежить продакшн-макет"
@@ -159,7 +175,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
       <aside className="space-y-5 lg:sticky lg:top-8">
         <div className="rounded-card border border-line bg-surface-raised p-4">
           <p className="mb-3 text-xs font-bold uppercase tracking-wide text-ink-subtle">Як побачить покупець</p>
-          <PrintThumb src={previewUrl.trim() || null} alt={title || 'Принт'} />
+          <PrintThumb src={current?.previewUrl || null} alt={title || 'Принт'} />
           <p className="mt-3 font-medium text-ink">{title || 'Без назви'}</p>
           <p className="text-xs text-ink-subtle">/prints/{slug || '…'}</p>
         </div>

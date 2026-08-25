@@ -93,6 +93,8 @@ export function PublicFooter() {
           <p className="font-medium text-ink">Компанія</p>
           <Link href="/spivpratsia" className="text-ink-muted transition hover:text-accent">Співпраця та опт</Link>
           <Link href="/zayavka" className="text-ink-muted transition hover:text-accent">Залишити заявку</Link>
+          <Link href="/oferta" className="text-ink-muted transition hover:text-accent">Публічна оферта</Link>
+          <Link href="/pryvatnist" className="text-ink-muted transition hover:text-accent">Конфіденційність</Link>
         </nav>
 
         <div className="flex flex-col gap-2">
@@ -110,6 +112,23 @@ export function PublicFooter() {
           >
             Telegram: @{site.telegram}
           </a>
+          {site.email && (
+            <a href={`mailto:${site.email}`} className="text-ink-muted transition hover:text-accent">
+              {site.email}
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/*
+        Реквізити продавця. Без них оферта посилається на сторону, якої на
+        сайті ніде не видно — а покупець має розуміти, з ким має справу,
+        не відкриваючи окремий документ.
+      */}
+      <div className="border-t border-line">
+        <div className="mx-auto max-w-6xl px-6 py-5 text-sm text-ink-subtle">
+          {site.legalEntityName}
+          {site.taxNumber ? <> · РНОКПП {site.taxNumber}</> : null}
         </div>
       </div>
     </footer>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
+import { PrintThumb } from '@/components/print-thumb';
 import { useCheckoutReadyPrint } from '../hooks/useCheckoutReadyPrint';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
@@ -108,8 +109,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
   return (
     <div className="grid gap-10 md:grid-cols-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={data.print.previewUrl} alt={data.print.title} className="w-full rounded-card border border-line object-cover" />
+      <Gallery images={data.images} fallback={data.print.previewUrl} title={data.print.title} />
 
       <div>
         <h1 className="text-2xl text-ink">{data.print.title}</h1>
@@ -239,6 +239,56 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Галерея товару.
+ *
+ * Без сторонніх бібліотек і без каруселі: пʼять фото — це рівно той обсяг,
+ * який показується мініатюрами без гортання. Карусель тут додала б анімацію,
+ * свайпи й клавіатурну навігацію на порожньому місці.
+ */
+function Gallery({
+  images, fallback, title,
+}: { images: ReadonlyArray<{ url: string; alt: string }>; fallback: string; title: string }) {
+  const list = images.length > 0
+    ? images
+    : (fallback ? [{ url: fallback, alt: title }] : []);
+  const [active, setActive] = useState(0);
+  const current = list[Math.min(active, list.length - 1)];
+
+  if (!current) return <PrintThumb src={null} alt={title} />;
+
+  return (
+    <div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={current.url}
+        alt={current.alt}
+        className="aspect-square w-full rounded-card border border-line object-cover"
+      />
+      {list.length > 1 && (
+        <div className="mt-3 flex gap-2">
+          {list.map((image, index) => (
+            <button
+              key={image.url}
+              type="button"
+              onClick={() => setActive(index)}
+              aria-label={`Фото ${index + 1} з ${list.length}`}
+              aria-current={index === active}
+              className={[
+                'w-1/5 overflow-hidden rounded-card border transition',
+                index === active ? 'border-accent ring-2 ring-accent' : 'border-line hover:border-ink',
+              ].join(' ')}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image.url} alt="" className="aspect-square w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

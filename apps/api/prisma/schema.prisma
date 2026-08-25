@@ -341,7 +341,8 @@ model Print {
   slug       String        @unique
   title      String
   sizeTier   PrintSizeTier
-  previewUrl String
+  /// Обкладинка. Заповнюється автоматично з першого фото — див. PrintImage.
+  previewUrl String        @default("")
   /// Production artwork location. Never exposed through the public API.
   artworkKey String
 
@@ -350,12 +351,38 @@ model Print {
   collections PrintCollection[]
   breeds      PrintBreed[]
   orderItems  OrderItem[]
+  images      PrintImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([isPublished])
   @@index([sizeTier])
+}
+
+/// Фотографії принта на виробі. До пʼяти на принт.
+///
+/// Обмеження «не більше пʼяти» тримає сервіс, а не база: CHECK не вміє
+/// рахувати рядки в іншій таблиці, а тригер заради цього — надто дорого для
+/// правила, яке міняється разом із дизайном картки.
+///
+/// `previewUrl` у Print лишається обкладинкою й дублює url першого фото
+/// навмисно: усі читальні шляхи каталогу вже беруть його одним полем без
+/// join-а, а картка товару рендериться в чотирьох різних сітках.
+model PrintImage {
+  id      String @id @default(uuid()) @db.Uuid
+  printId String @db.Uuid
+  print   Print  @relation(fields: [printId], references: [id], onDelete: Cascade)
+
+  url String
+  /// Ключ у сховищі. Без нього рядок можна видалити, а файл лишиться назавжди.
+  pathname String
+  alt      String @default("")
+  position Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([printId, position])
 }
 
 model PrintCollection {
