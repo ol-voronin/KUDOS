@@ -4,6 +4,7 @@ export * from './catalog.dto';
 export * from './blocks.dto';
 export * from './page.dto';
 export * from './admin-page.dto';
+export * from './media.dto';
 export * from './home.dto';
 export * from './custom-request.dto';
 export * from './auth.dto';

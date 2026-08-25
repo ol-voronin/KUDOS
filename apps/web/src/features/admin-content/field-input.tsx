@@ -1,6 +1,7 @@
 'use client';
 
 import { emptyItem, type Field } from './fields';
+import { ImageDropTarget } from './image-drop-target';
 
 /**
  * Одне поле форми, побудоване з опису.
@@ -160,12 +161,18 @@ export function FieldInput({
       return (
         <fieldset className="rounded-card border border-line p-3">
           <legend className={labelCls}>{field.label}</legend>
-          <div className="flex flex-col gap-2">
-            <input
-              type="text" className={inputCls} placeholder="Адреса картинки"
-              value={asString(img['url'])}
-              onChange={(e) => onChange({ ...img, url: e.target.value })}
-            />
+          <ImageDropTarget
+            url={asString(img['url'])}
+            alt={asString(img['alt'])}
+            onPick={(asset) => onChange({
+              ...img, url: asset.url,
+              // Опис підставляємо з медіатеки, але не затираємо вже написаний:
+              // у блоці він може бути точнішим за загальний.
+              alt: asString(img['alt']) || asset.alt,
+            })}
+            onClear={() => onChange({ ...img, url: '' })}
+          />
+          <div className="mt-2 flex flex-col gap-2">
             <input
               type="text" className={inputCls} placeholder="Опис для тих, хто не бачить картинку"
               value={asString(img['alt'])}
@@ -177,9 +184,6 @@ export function FieldInput({
               onChange={(e) => onChange({ ...img, caption: e.target.value })}
             />
           </div>
-          <p className="mt-2 text-xs text-ink-subtle">
-            Опис обовʼязковий: його читають вголос екранні читалки й показує Google, коли картинка не завантажилась.
-          </p>
         </fieldset>
       );
     }
@@ -195,10 +199,14 @@ export function FieldInput({
               return (
                 <div key={i} className="flex gap-2">
                   <div className="flex flex-1 flex-col gap-2">
-                    <input
-                      type="text" className={inputCls} placeholder="Адреса картинки"
-                      value={asString(img['url'])}
-                      onChange={(e) => ops.set(i, { ...img, url: e.target.value })}
+                    <ImageDropTarget
+                      url={asString(img['url'])}
+                      alt={asString(img['alt'])}
+                      compact
+                      onPick={(asset) => ops.set(i, {
+                        ...img, url: asset.url, alt: asString(img['alt']) || asset.alt,
+                      })}
+                      onClear={() => ops.set(i, { ...img, url: '' })}
                     />
                     <input
                       type="text" className={inputCls} placeholder="Опис картинки"

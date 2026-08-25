@@ -566,6 +566,34 @@ model PageVersion {
   @@index([pageId, status])
 }
 
+/// Картинка у сховищі.
+///
+/// Таблиця потрібна не для того, щоб «зберігати файли» — файли лежать у
+/// Vercel Blob. Вона потрібна, щоб та сама картинка не заливалася вдесяте:
+/// без реєстру єдиний спосіб поставити фото у два блоки — завантажити його
+/// двічі, і потім вони житимуть як два різні файли з двома різними описами.
+///
+/// `pathname` окремо від `url` — без нього рядок можна видалити, а файл
+/// лишиться у сховищі назавжди.
+model MediaAsset {
+  id       String @id @default(uuid()) @db.Uuid
+  url      String
+  pathname String @unique
+  filename String
+  mimeType String
+  bytes    Int
+  /// Опис для тих, хто не бачить картинку. Заповнюється в медіатеці один
+  /// раз і підставляється всюди, де картинку вставили.
+  alt String @default("")
+
+  uploadedById String?    @db.Uuid
+  uploadedBy   AdminUser? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 /// Стара адреса → нова. Створюється автоматично при перейменуванні сторінки.
 ///
 /// Без цього перейменування slug стирає все, що пошук знав про сторінку, і
@@ -763,6 +791,7 @@ model AdminUser {
   /// Хто зберіг версію сторінки. `SetNull` — бо видалення адміна не має
   /// стирати історію правок разом із ним.
   pageVersions PageVersion[]
+  mediaAssets  MediaAsset[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

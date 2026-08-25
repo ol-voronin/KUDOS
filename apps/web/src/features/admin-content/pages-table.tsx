@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AdminPageSummaryDto } from '@dt/contracts';
+import { slugify, type AdminPageSummaryDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { createPage, listPages } from './api';
 
@@ -12,26 +12,6 @@ const KEY = ['admin-pages'];
 const KIND_LABEL: Record<string, string> = {
   PAGE: 'Сторінка', ARTICLE: 'Матеріал', SYSTEM: 'Системна',
 };
-
-/** Латиниця з кирилиці — щоб адресу не доводилося вигадувати вручну. */
-const TRANSLIT: Readonly<Record<string, string>> = {
-  а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ie', ж: 'zh', з: 'z',
-  и: 'y', і: 'i', ї: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p',
-  р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh',
-  щ: 'shch', ь: '', ю: 'iu', я: 'ia',
-  // Апостроф в українській набирають чотирма різними символами, і кожен із
-  // них має зникнути, а не стати рискою: «мʼякі» — це `miaki`, не `m-iaki`.
-  "'": '', '’': '', 'ʼ': '', '‘': '', '`': '',
-};
-
-export function slugify(title: string): string {
-  return title.toLowerCase().split('')
-    .map((ch) => TRANSLIT[ch] ?? ch)
-    .join('')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
 
 export function PagesTable() {
   const qc = useQueryClient();
