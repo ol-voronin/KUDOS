@@ -49,6 +49,15 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
+  /** Опублікувати можна лише те, у чого є обкладинка. */
+  const canPublish = (current?.images.length ?? 0) > 0;
+
+  // Якщо останнє фото видалили, принт уже знявся з публікації на сервері —
+  // форма має показувати те саме, а не стару галочку.
+  useEffect(() => {
+    if (!canPublish && isPublished) setIsPublished(false);
+  }, [canPublish, isPublished]);
+
   // Slug слідує за назвою, поки його не зачепили руками.
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(title));
@@ -91,9 +100,6 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
     const next: Record<string, string> = {};
     if (title.trim().length < 2) next['title'] = 'Назва принта';
     if (!SLUG_PATTERN.test(slug.trim())) next['slug'] = 'Тільки маленькі латинські літери, цифри й дефіси';
-    if (isPublished && (current?.images.length ?? 0) === 0) {
-      next['images'] = 'Не можна опублікувати принт без жодного фото — у каталозі буде порожня картка';
-    }
     if (isPublished && breedIds.length === 0) {
       next['breeds'] = 'Без породи принт не потрапить у породну сторінку — головний вхід із пошуку';
     }
@@ -135,14 +141,11 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
           <PrintImageUploader print={current} onChange={setCurrent} />
         ) : (
           <p className="rounded-card border border-dashed border-line-strong bg-surface-sunken p-4 text-sm leading-relaxed text-ink-muted">
-            Фото завантажите одразу після створення принта — файл треба до чогось
-            прикріпити, тому спочатку має зʼявитися сам принт.
-          </p>
-        )}
-
-        {errors['images'] && (
-          <p role="alert" className="rounded-card border border-danger bg-danger-soft p-3 text-sm font-medium text-danger">
-            {errors['images']}
+            <span className="font-medium text-ink">Фото — на наступному кроці.</span>{' '}
+            Файл треба до чогось прикріпити, тому спочатку створюємо сам принт:
+            натисніть «Створити й додати фото», і одразу опинитесь на екрані,
+            де їх можна завантажити. Принт до того часу лишається чернеткою і на
+            сайті не показується.
           </p>
         )}
 
@@ -180,15 +183,35 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
           <p className="text-xs text-ink-subtle">/prints/{slug || '…'}</p>
         </div>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-card border border-line bg-surface-raised p-4">
+        {/*
+          Публікація недоступна, поки немає фото. Раніше тут була помилка
+          валідації — і разом із підказкою «фото додасте після створення» вона
+          читалась як глухий кут: опублікувати не можна, а фото нікуди додати.
+          Правильно не пояснювати неможливий стан, а не давати в нього зайти.
+        */}
+        <label
+          className={[
+            'flex items-start gap-3 rounded-card border p-4',
+            canPublish ? 'cursor-pointer border-line bg-surface-raised' : 'border-line bg-surface-sunken',
+          ].join(' ')}
+        >
           <input
-            type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 rounded-card border-line text-accent focus:ring-2 focus:ring-accent"
+            type="checkbox"
+            checked={isPublished}
+            disabled={!canPublish}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded-card border-line text-accent focus:ring-2 focus:ring-accent disabled:opacity-40"
           />
           <span className="text-sm">
-            <span className="font-medium text-ink">Показувати на сайті</span>
+            <span className={canPublish ? 'font-medium text-ink' : 'font-medium text-ink-subtle'}>
+              Показувати на сайті
+            </span>
             <span className="mt-1 block leading-relaxed text-ink-muted">
-              Чернетку видно тільки тут. Опублікований принт одразу зʼявляється в каталозі.
+              {canPublish
+                ? 'Чернетку видно тільки тут. Опублікований принт одразу зʼявляється в каталозі.'
+                : current
+                  ? 'Спершу завантажте хоча б одне фото — без обкладинки в каталозі буде порожня картка.'
+                  : 'Стане доступним після створення принта, коли завантажите фото.'}
             </span>
           </span>
         </label>
@@ -199,7 +222,9 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
           </p>
         )}
 
-        <SubmitButton pending={save.isPending}>{isEdit ? 'Зберегти' : 'Створити принт'}</SubmitButton>
+        <SubmitButton pending={save.isPending}>
+          {isEdit ? 'Зберегти' : 'Створити й додати фото'}
+        </SubmitButton>
 
         {isEdit && (
           <button
