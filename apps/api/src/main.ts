@@ -6,6 +6,9 @@ import { Logger, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+// express — пряма залежність apps/api, а не «те, що приніс platform-express».
+// У pnpm сувора розкладка: недекларований пакет не резолвиться в рантаймі,
+// хоч `@types/express` і робить tsc щасливим.
 import { raw } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';

@@ -6,7 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
+    "typecheck": "node scripts/check-imports.mjs && tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -17,7 +17,8 @@
     "create-admin": "node scripts/create-admin.mjs",
     "db:seed:catalog": "tsx prisma/seed-catalog.ts",
     "db:deploy": "prisma migrate deploy",
-    "db:publish:garments": "tsx prisma/publish-garments.ts"
+    "db:publish:garments": "tsx prisma/publish-garments.ts",
+    "check:imports": "node scripts/check-imports.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -35,6 +36,7 @@
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.5",
+    "express": "^4.21.2",
     "helmet": "^8.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
