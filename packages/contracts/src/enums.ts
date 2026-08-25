@@ -85,3 +85,27 @@ export type MeasurementKey = z.infer<typeof MeasurementKey>;
 /** Where a lead sits in the admin's follow-up workflow. */
 export const LeadStatus = z.enum(['NEW', 'CONTACTED', 'CONVERTED', 'LOST']);
 export type LeadStatus = z.infer<typeof LeadStatus>;
+
+/**
+ * Мова вмісту.
+ *
+ * Значення поки одне, і це навмисно: поле є в кожній таблиці вмісту з
+ * першого дня, тож друга мова — це новий варіант enum і нові рядки, а не
+ * міграція всієї бази й переписування кожної адмін-форми. Ціна зараз —
+ * одна колонка; ціна потім — тиждень.
+ */
+export const Locale = z.enum(['UK']);
+export type Locale = z.infer<typeof Locale>;
+
+/**
+ * PAGE    — довільна сторінка: «Доставка», «Про нас».
+ * ARTICLE — матеріал: має дату, обкладинку й живе в стрічці.
+ * SYSTEM  — головна, оферта, політика. Редагуються, але не видаляються,
+ *           і адресу їм міняти не можна: на них посилається код і закон.
+ */
+export const PageKind = z.enum(['PAGE', 'ARTICLE', 'SYSTEM']);
+export type PageKind = z.infer<typeof PageKind>;
+
+/** Версія сторінки. Одна DRAFT і одна PUBLISHED на сторінку — це стежить база. */
+export const PageVersionStatus = z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
+export type PageVersionStatus = z.infer<typeof PageVersionStatus>;

@@ -6,6 +6,7 @@ import { HealthController } from './common/health.controller';
 import { PrismaService } from './common/prisma.service';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { ContentModule } from './content/content.module';
 import { CustomRequestsModule } from './custom-requests/custom-requests.module';
 import { LeadsModule } from './leads/leads.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -16,6 +17,7 @@ import { PaymentsModule } from './payments/payments.module';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     AuthModule,
     CatalogModule,
+    ContentModule,
     CustomRequestsModule,
     LeadsModule,
     PaymentsModule,

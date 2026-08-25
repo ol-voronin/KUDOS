@@ -1,5 +1,19 @@
 import { ApiErrorDto } from '@dt/contracts';
-import type { ZodSchema } from 'zod';
+/**
+ * Схема тут описана структурно, а не як `ZodSchema<T>`, і це не дрібниця.
+ *
+ * `ZodSchema<T>` вимагає, щоб тип на вході й на виході збігався. Щойно в
+ * схемі зʼявляється `.default()`, вони перестають збігатися: на вході поле
+ * необовʼязкове, на виході — обовʼязкове. TypeScript тоді підбирає T за
+ * входом, і виклик повертає тип, у якому половина полів `| undefined` —
+ * тобто рівно те, від чого `.default()` мав захистити.
+ *
+ * `parse(data: unknown): T` описує лише те, що нам справді потрібно, і T
+ * завжди виявляється вихідним типом.
+ */
+interface Parser<T> {
+  parse(data: unknown): T;
+}
 
 import { BROWSER_API_URL } from './api-origin';
 
@@ -26,7 +40,7 @@ export class ApiError extends Error {
  */
 export async function apiFetch<T>(
   path: string,
-  schema: ZodSchema<T>,
+  schema: Parser<T>,
   init?: RequestInit,
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

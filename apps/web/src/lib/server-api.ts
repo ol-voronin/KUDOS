@@ -1,4 +1,18 @@
-import type { ZodSchema } from 'zod';
+/**
+ * Схема тут описана структурно, а не як `ZodSchema<T>`, і це не дрібниця.
+ *
+ * `ZodSchema<T>` вимагає, щоб тип на вході й на виході збігався. Щойно в
+ * схемі зʼявляється `.default()`, вони перестають збігатися: на вході поле
+ * необовʼязкове, на виході — обовʼязкове. TypeScript тоді підбирає T за
+ * входом, і виклик повертає тип, у якому половина полів `| undefined` —
+ * тобто рівно те, від чого `.default()` мав захистити.
+ *
+ * `parse(data: unknown): T` описує лише те, що нам справді потрібно, і T
+ * завжди виявляється вихідним типом.
+ */
+interface Parser<T> {
+  parse(data: unknown): T;
+}
 import { SERVER_API_URL } from './api-origin';
 
 /**
@@ -14,7 +28,7 @@ import { SERVER_API_URL } from './api-origin';
  */
 export async function serverFetch<T>(
   path: string,
-  schema: ZodSchema<T>,
+  schema: Parser<T>,
   revalidate = 60,
 ): Promise<T> {
   const res = await fetch(`${SERVER_API_URL}${path}`, {
@@ -28,7 +42,7 @@ export async function serverFetch<T>(
 /** Те саме, але «немає» — це нормальний результат, а не аварія (404 сторінки). */
 export async function serverFetchOrNull<T>(
   path: string,
-  schema: ZodSchema<T>,
+  schema: Parser<T>,
   revalidate = 60,
 ): Promise<T | null> {
   try {

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { SitemapDto } from '@dt/contracts';
+import { PageListDto, SitemapDto } from '@dt/contracts';
 import { serverFetchOrNull } from '@/lib/server-api';
 
 const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
@@ -12,7 +12,10 @@ const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
  * рівно на другому принті.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const data = await serverFetchOrNull('/catalog/sitemap', SitemapDto, 3600);
+  const [data, pages] = await Promise.all([
+    serverFetchOrNull('/catalog/sitemap', SitemapDto, 3600),
+    serverFetchOrNull('/content/pages', PageListDto, 3600),
+  ]);
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, changeFrequency: 'weekly', priority: 1 },
@@ -22,19 +25,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // наміром купити, і вони не про принт. Сторінка асортименту єдина на них
     // відповідає, тож у карті вона стоїть нарівні з каталогом.
     { url: `${BASE}/vyroby`, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${BASE}/svoya-ideya`, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${BASE}/spivpratsia`, changeFrequency: 'monthly', priority: 0.7 },
-    // Оферта індексується свідомо: Monobank при підключенні еквайрингу
-    // перевіряє, що вона опублікована й доступна ззовні.
-    { url: `${BASE}/oferta`, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${BASE}/pryvatnist`, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
   ];
 
-  if (!data) return staticPages;
+  /**
+   * Сторінки з CMS. Раніше цей перелік був списком у коді, і кожна нова
+   * сторінка мовчки лишалася поза картою сайту, доки хтось не згадає.
+   *
+   * Оферта потрапляє сюди свідомо: Monobank при підключенні еквайрингу
+   * перевіряє, що вона опублікована й доступна ззовні.
+   */
+  const contentPages: MetadataRoute.Sitemap = (pages?.items ?? []).map((p) => ({
+    url: `${BASE}/${p.slug}`,
+    lastModified: p.updatedAt,
+    changeFrequency: p.kind === 'ARTICLE' ? ('monthly' as const) : ('yearly' as const),
+    priority: p.kind === 'ARTICLE' ? 0.7 : 0.5,
+  }));
+
+  if (!data) return [...staticPages, ...contentPages];
 
   return [
     ...staticPages,
+    ...contentPages,
     // Породні — головний вхід із пошуку, тому пріоритет вищий за картки.
     ...data.breeds.map((b) => ({
       url: `${BASE}/breeds/${b.slug}`, lastModified: b.updatedAt,

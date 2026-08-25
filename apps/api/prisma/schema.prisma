@@ -125,6 +125,24 @@ enum LeadStatus {
   LOST
 }
 
+/// Мова вмісту. Значення поки одне — див. коментар у контрактах: колонка
+/// існує з першого дня саме для того, щоб друга мова не стала міграцією.
+enum Locale {
+  UK
+}
+
+enum PageKind {
+  PAGE
+  ARTICLE
+  SYSTEM
+}
+
+enum PageVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum MeasurementKey {
   WIDTH
   LENGTH
@@ -467,6 +485,78 @@ model PrintPrice {
 }
 
 // ---------------------------------------------------------------------------
+// Вміст — сторінки, матеріали, блоки
+// ---------------------------------------------------------------------------
+
+/// Сторінка — це адреса й тип. Усе, що на ній написано, лежить у версіях.
+///
+/// Розділення не косметичне. Поки редактор править сторінку, у базі мусить
+/// водночас існувати те, що бачать люди, і те, що ще пишеться. Якби блоки
+/// були рядками зі статусом, публікація означала б оновити двадцять рядків
+/// одночасно, і між першим і двадцятим відвідувач упіймав би сторінку
+/// наполовину зміненою. Тут публікація — це один UPDATE статусу версії.
+model Page {
+  id     String   @id @default(uuid()) @db.Uuid
+  kind   PageKind @default(PAGE)
+  locale Locale   @default(UK)
+  slug   String
+
+  /// Системну сторінку не можна видалити й не можна перейменувати: на
+  /// `/oferta` посилається Monobank, на `/pryvatnist` — закон, на головну —
+  /// код. Прапорець ставить сідер, адмінка його не показує.
+  isSystem Boolean @default(false)
+
+  /// Момент першої публікації. Дата матеріалу в стрічці береться звідси,
+  /// а не з `createdAt`: чернетку можуть писати два тижні.
+  publishedAt DateTime?
+  position    Int       @default(0)
+
+  versions PageVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([locale, slug])
+  @@index([kind, publishedAt])
+}
+
+/// Знімок сторінки цілком. `blocks` — масив, перевірений тим самим zod-union,
+/// що й форма в адмінці.
+///
+/// Обмеження «одна чернетка й одна опублікована версія на сторінку» тримають
+/// часткові унікальні індекси в міграції, а не код. Prisma їх не вміє
+/// описати, тому вони написані руками — так само, як CHECK на leadTimeDays.
+model PageVersion {
+  id     String            @id @default(uuid()) @db.Uuid
+  pageId String            @db.Uuid
+  page   Page              @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  number Int
+  status PageVersionStatus @default(DRAFT)
+
+  title          String
+  excerpt        String  @default("")
+  coverUrl       String  @default("")
+  seoTitle       String  @default("")
+  seoDescription String  @default("")
+  noindex        Boolean @default(false)
+
+  blocks Json
+  /// Покоління схеми блоків. Коли поле в блоці перейменується, це буде
+  /// міграція, яку можна написати, а не археологія по JSON.
+  schemaVersion Int @default(1)
+
+  authorId String?    @db.Uuid
+  author   AdminUser? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  /// Що змінено — рядок від автора, видно в історії.
+  note String @default("")
+
+  createdAt DateTime @default(now())
+
+  @@unique([pageId, number])
+  @@index([pageId, status])
+}
+
+// ---------------------------------------------------------------------------
 // Orders — the cart stream
 // ---------------------------------------------------------------------------
 
@@ -641,6 +731,10 @@ model AdminUser {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
   lastLoginAt         DateTime?
+
+  /// Хто зберіг версію сторінки. `SetNull` — бо видалення адміна не має
+  /// стирати історію правок разом із ним.
+  pageVersions PageVersion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
