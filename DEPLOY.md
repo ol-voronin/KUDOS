@@ -212,9 +212,13 @@ git push
 
 ## 6 · Перевірка після деплою
 
-1. `curl https://<API>/api/v1/health` → `{"status":"ok","database":true}`.
+1. `curl https://<API>/api/v1/health` → `{"status":"ok","database":true,"migration":"…"}`.
    `"database":false` = не той `DATABASE_URL` або Neon спить.
    HTML замість JSON = не вимкнена Vercel Authentication.
+   Поле `migration` — остання накочена міграція. Якщо вона старіша за останню
+   папку в `apps/api/prisma/migrations/`, значить забули `pnpm run setup:neon`,
+   і код звертається до таблиць, яких у базі ще немає. Симптом — 500 у
+   випадкових місцях адмінки без жодного пояснення.
 2. `https://<WEB>` відкривається, головна не порожня.
 3. `https://<WEB>/api/v1/health` віддає той самий JSON — значить проксі живий.
    Це найважливіша перевірка: якщо тут 404, адмінка не працюватиме.
