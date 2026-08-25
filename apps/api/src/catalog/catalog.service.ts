@@ -105,7 +105,14 @@ export class CatalogService {
       select: {
         id: true, slug: true, line: true, type: true, fit: true, name: true,
         lengthAdjustable: true, basePriceMinor: true, isPublished: true, description: true,
-        fabrics: { select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } } },
+        // Основна тканина — перша. Сторінка товару бере `fabrics[0]` як вибір
+        // за замовчуванням, а порядок без `orderBy` не гарантований нічим:
+        // випадкова прив'язка від старого довідника могла опинитися попереду
+        // й зустріти покупця тканиною, у якій цей виріб не шиється.
+        fabrics: {
+          orderBy: { isDefault: 'desc' },
+          select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } },
+        },
         sizes: {
           orderBy: { position: 'asc' },
           select: { id: true, label: true, position: true, measurements: { select: { key: true, value: true } } },
@@ -213,7 +220,14 @@ export class CatalogService {
         select: {
           id: true, slug: true, line: true, type: true, fit: true, name: true,
           lengthAdjustable: true, basePriceMinor: true, description: true,
-          fabrics: { select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } } },
+          // Основна тканина — перша. Сторінка товару бере `fabrics[0]` як вибір
+        // за замовчуванням, а порядок без `orderBy` не гарантований нічим:
+        // випадкова прив'язка від старого довідника могла опинитися попереду
+        // й зустріти покупця тканиною, у якій цей виріб не шиється.
+        fabrics: {
+          orderBy: { isDefault: 'desc' },
+          select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } },
+        },
           sizes: {
             orderBy: { position: 'asc' },
             select: { id: true, label: true, position: true, measurements: { select: { key: true, value: true } } },

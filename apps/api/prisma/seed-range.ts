@@ -30,8 +30,34 @@ function sku(garmentSlug: string, colourCode: string, sizeLabel: string): string
   return `${garmentSlug}--${colourCode}--${size}`;
 }
 
+/**
+ * Куди саме ми зараз пишемо.
+ *
+ * Не косметика. Скрипт запускають двома способами: через
+ * `scripts/setup-neon.sh`, який підставляє продові дані з `.env.neon`, і
+ * напряму через `pnpm db:seed:range`, який бере `.env` — а там локальна база
+ * для розробки. Переплутати їх легко, а наслідки різні за тяжкістю: у
+ * кращому випадку скрипт падає з незрозумілим `P2022` про відсутню колонку,
+ * у гіршому — тихо й успішно заливає асортимент не в ту базу, і людина
+ * потім гадає, чому на сайті нічого не змінилося.
+ *
+ * Пароль сюди не потрапляє: з рядка підключення береться тільки хост і назва
+ * бази.
+ */
+function targetSummary(): string {
+  const raw = process.env['DATABASE_URL'] ?? '';
+  if (raw === '') return 'DATABASE_URL не задано';
+  try {
+    const url = new URL(raw);
+    return `${url.hostname}${url.pathname}`;
+  } catch {
+    return 'нерозбірливий DATABASE_URL';
+  }
+}
+
 async function main(): Promise<void> {
   const notes: string[] = [];
+  console.info(`база: ${targetSummary()}`);
 
   // ── тканини ───────────────────────────────────────────────────────────────
   const fabricIdByKey = new Map<string, string>();
@@ -91,6 +117,34 @@ async function main(): Promise<void> {
       update: { isDefault: true },
       create: { garmentId: garment.id, fabricId, isDefault: true },
     });
+
+    // Чужі тканини на цьому виробі.
+    //
+    // Виріб міг дістатися нам від попереднього довідника разом зі своєю
+    // тканиною — «Класична футболка» приїхала з «Куліром». Прив'язка
+    // лишалася, варіантів на ній не було, і на сторінці товару з'являвся
+    // вибір тканини, у якому один із варіантів веде в нікуди: обрав —
+    // і немає ні кольорів, ні розмірів, ні кнопки. Порядок тканин у
+    // відповіді ніхто не гарантує, тому мертва могла стати ще й тією,
+    // що вибрана за замовчуванням.
+    const foreign = await prisma.garmentFabric.findMany({
+      where: { garmentId: garment.id, fabricId: { not: fabricId } },
+      select: { fabricId: true, fabric: { select: { name: true } } },
+    });
+    for (const link of foreign) {
+      const blocking = await prisma.orderItem.count({
+        where: { variant: { garmentId: garment.id, fabricId: link.fabricId } },
+      });
+      if (blocking > 0) {
+        notes.push(`${g.slug}: тканина «${link.fabric.name}» більше не в асортименті, але є в ${blocking} позиціях замовлень — лишаю`);
+        continue;
+      }
+      await prisma.variant.deleteMany({ where: { garmentId: garment.id, fabricId: link.fabricId } });
+      await prisma.garmentFabric.delete({
+        where: { garmentId_fabricId: { garmentId: garment.id, fabricId: link.fabricId } },
+      });
+      notes.push(`${g.slug}: відв'язано чужу тканину «${link.fabric.name}»`);
+    }
 
     // ── розміри ─────────────────────────────────────────────────────────────
     // `position` унікальний у межах виробу, тому канонічні позиції не можна
@@ -201,6 +255,16 @@ async function main(): Promise<void> {
     data: { isPublished: false },
   });
   if (retired.count > 0) notes.push(`знято з вітрини застарілих виробів: ${retired.count}`);
+
+  // Страховка на випадок, коли список канонічних slug-ів розійдеться з
+  // реальністю: виріб без жодного варіанта не можна показувати незалежно від
+  // того, як він називається. Обрати в ньому нічого, а на сторінці принта він
+  // виглядає як повноцінний варіант вибору з власною ціною.
+  const empty = await prisma.garment.updateMany({
+    where: { isPublished: true, variants: { none: {} } },
+    data: { isPublished: false },
+  });
+  if (empty.count > 0) notes.push(`знято з вітрини виробів без варіантів: ${empty.count}`);
 
   // ── звіт ──────────────────────────────────────────────────────────────────
   const printPrices = await prisma.printPrice.findMany({ orderBy: { tier: 'asc' } });
