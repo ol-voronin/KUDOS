@@ -48,18 +48,27 @@ export const PrintImageDto = z.object({
 export type PrintImageDto = z.infer<typeof PrintImageDto>;
 
 /**
- * Реєстрація вже завантаженого файлу.
+ * Розмір файлу ПІСЛЯ стиснення в браузері.
  *
- * Файл летить у сховище напряму з браузера, повз наш сервер: у Vercel ліміт
- * тіла запиту 4.5 МБ, і фото на 6 МБ просто не доїхало б. Сюди приходить уже
- * результат — адреса й ключ.
+ * Ліміт тіла запиту у Vercel — 4.5 МБ, і саме через нього перша версія
+ * вантажила файл напряму з браузера у сховище, повз наш сервер. Виявилось,
+ * що браузер туди й не пускають: preflight не проходить, PUT отримує 400.
+ *
+ * Тому файл іде через наш API, а щоб він гарантовано вліз — браузер спершу
+ * стискає його до 2000 px і WebP. Фото виробу після цього важить 200–800 КБ,
+ * тож 2.5 МБ тут — стеля з великим запасом, а не робочий розмір.
  */
-export const AdminPrintImageCreateDto = z.object({
-  url: z.string().trim().url(),
-  pathname: z.string().trim().min(1).max(500),
+export const MAX_UPLOAD_BYTES = 2.5 * 1024 * 1024;
+
+/** Заголовок із назвою файлу: у тілі запиту самі байти, місця для імені немає. */
+export const UPLOAD_FILENAME_HEADER = 'x-upload-filename';
+
+export const AdminPrintImageQueryDto = z.object({
+  /** Оригінальна назва файлу — тільки щоб зібрати читабельний шлях у сховищі. */
+  filename: z.string().trim().min(1).max(200).default('photo'),
   alt: z.string().trim().max(200).default(''),
 });
-export type AdminPrintImageCreateDto = z.infer<typeof AdminPrintImageCreateDto>;
+export type AdminPrintImageQueryDto = z.infer<typeof AdminPrintImageQueryDto>;
 
 /** Новий порядок фото: повний список id у потрібній послідовності. */
 export const AdminPrintImageReorderDto = z.object({

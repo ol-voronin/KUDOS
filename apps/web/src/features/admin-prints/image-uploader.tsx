@@ -1,20 +1,22 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
 import type { AdminPrintDto, PrintImageDto } from '@dt/contracts';
 import {
   MAX_PRINT_IMAGE_BYTES, MAX_PRINT_IMAGES, PRINT_IMAGE_CONTENT_TYPES,
 } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
+import { compressImage } from './compress-image';
 import { addPrintImage, removePrintImage, reorderPrintImages } from './api';
 
 /**
  * Фото принта: завантаження, порядок, видалення.
  *
- * Файл іде в сховище напряму з браузера, повз наш сервер — у Vercel тіло
- * запиту до функції обмежене 4.5 МБ, а фото з телефона регулярно більше.
- * Токен на завантаження видає `/admin/api/blob-upload`, перевіривши сесію.
+ * Фото стискається в браузері (2000 px, WebP) і йде через наш API. Перша
+ * версія вантажила файл із браузера прямо у сховище, щоб обійти ліміт тіла
+ * запиту 4.5 МБ, — але браузер до Blob API не пускають: preflight не отримує
+ * CORS-заголовків, PUT падає з 400. Після стиснення фото важить 200–800 КБ,
+ * тож ліміт перестав бути проблемою, а каталог заодно став швидшим.
  *
  * Порядок важливий: перше фото — обкладинка в каталозі. Тому тут не «галерея»,
  * а список зі стрілками: перетягування мишею на телефоні не працює, а
@@ -56,6 +58,7 @@ export function PrintImageUploader({
       return;
     }
 
+
     setBusy(true);
     setProgress({ done: 0, total: files.length });
     try {
@@ -63,17 +66,13 @@ export function PrintImageUploader({
       // Послідовно, а не паралельно: ліміт «пʼять» перевіряє сервер, і три
       // одночасні запити могли б проскочити повз нього вдвох.
       for (const [index, file] of files.entries()) {
-        const blob = await withTimeout(
-          upload(`prints/${print.slug}/${file.name}`, file, {
-            access: 'public',
-            handleUploadUrl: '/admin/api/blob-upload',
-            contentType: file.type,
-          }),
+        const { blob, filename } = await compressImage(file);
+        latest = await withTimeout(
+          addPrintImage(print.id, blob, filename),
           UPLOAD_TIMEOUT_MS,
           `«${file.name}» не завантажився за ${UPLOAD_TIMEOUT_MS / 1000} секунд. `
             + 'Відкрийте консоль браузера (Cmd+Option+J) — там буде причина.',
         );
-        latest = await addPrintImage(print.id, { url: blob.url, pathname: blob.pathname, alt: '' });
         setProgress({ done: index + 1, total: files.length });
       }
       onChange(latest);

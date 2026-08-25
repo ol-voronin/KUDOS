@@ -1,10 +1,11 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query,
-  UseGuards, UsePipes,
+  BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param,
+  ParseUUIDPipe, Patch, Post, Query, Req, UseGuards, UsePipes,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import {
-  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
+  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageQueryDto,
   AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
   type CatalogOptionDto,
 } from '@dt/contracts';
@@ -64,19 +65,30 @@ export class PrintsAdminController {
   }
 
   /**
-   * Реєстрація завантаженого фото.
+   * Завантаження фото.
    *
-   * Сам файл сюди не приходить: браузер вантажить його прямо у сховище, а
-   * токен на це видає вебзастосунок, перевіривши сесію. Сюди летить лише
-   * адреса й ключ, тому 4.5 МБ ліміту тіла запиту у Vercel не заважають.
+   * Тіло запиту — самі байти файлу, `Content-Type: image/*`. Не multipart:
+   * заради одного ендпоїнта тягнути multer немає сенсу, а назва файлу
+   * спокійно їде параметром запиту.
+   *
+   * Браузер стискає фото перед відправкою, тому 4.5 МБ ліміту тіла запиту у
+   * Vercel вистачає із запасом.
    */
   @Post(':id/images')
   @HttpCode(HttpStatus.CREATED)
   addImage(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(AdminPrintImageCreateDto)) dto: AdminPrintImageCreateDto,
+    @Query(new ZodValidationPipe(AdminPrintImageQueryDto)) query: AdminPrintImageQueryDto,
+    @Req() req: Request,
   ): Promise<AdminPrintDto> {
-    return this.prints.addImage(id, dto);
+    const body: unknown = req.body;
+    if (!Buffer.isBuffer(body)) {
+      throw new BadRequestException({
+        code: 'VALIDATION_FAILED',
+        message: 'Очікуються байти файлу з Content-Type: image/…',
+      });
+    }
+    return this.prints.addImage(id, body, req.headers['content-type'] ?? '', query);
   }
 
   @Patch(':id/images/order')

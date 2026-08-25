@@ -1,14 +1,15 @@
 import {
-  BadRequestException, ConflictException, Injectable, Logger, NotFoundException,
+  BadGatewayException, BadRequestException, ConflictException, Injectable, Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { del } from '@vercel/blob';
+import { del, put } from '@vercel/blob';
 import type {
-  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
+  AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageQueryDto,
   AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
   CatalogOptionDto,
 } from '@dt/contracts';
-import { ErrorCode, MAX_PRINT_IMAGES } from '@dt/contracts';
+import { ErrorCode, MAX_PRINT_IMAGES, MAX_UPLOAD_BYTES, PRINT_IMAGE_CONTENT_TYPES } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 
 /** Один select на всі відповіді — щоб форма й таблиця бачили однакову форму даних. */
@@ -206,11 +207,47 @@ export class PrintsAdminService {
   // 4.5 МБ — фото на 6 МБ через наш сервер не доїхало б). Сюди приходить уже
   // результат: адреса й ключ. Тому «завантаження» тут — це вставка рядка.
 
-  async addImage(printId: string, dto: AdminPrintImageCreateDto): Promise<AdminPrintDto> {
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const print = await tx.print.findUnique({ where: { id: printId }, select: { id: true } });
-      if (!print) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
+  async addImage(
+    printId: string,
+    file: Buffer,
+    contentType: string,
+    query: AdminPrintImageQueryDto,
+  ): Promise<AdminPrintDto> {
+    if (!PRINT_IMAGE_CONTENT_TYPES.includes(contentType as never)) {
+      throw new BadRequestException({
+        code: ErrorCode.VALIDATION_FAILED,
+        message: `Формат ${contentType} не приймаємо. Потрібен JPEG, PNG, WebP або AVIF.`,
+      });
+    }
+    if (file.length === 0) {
+      throw new BadRequestException({ code: ErrorCode.VALIDATION_FAILED, message: 'Порожній файл' });
+    }
+    if (file.length > MAX_UPLOAD_BYTES) {
+      throw new BadRequestException({
+        code: ErrorCode.VALIDATION_FAILED,
+        message: `Файл завеликий: ${(file.length / 1024 / 1024).toFixed(1)} МБ.`,
+      });
+    }
 
+    const print = await this.prisma.print.findUnique({
+      where: { id: printId },
+      select: { id: true, slug: true },
+    });
+    if (!print) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
+
+    const count = await this.prisma.printImage.count({ where: { printId } });
+    if (count >= MAX_PRINT_IMAGES) {
+      throw new ConflictException({
+        code: ErrorCode.CONFLICT,
+        message: `Більше ${MAX_PRINT_IMAGES} фото на принт не можна. Видаліть зайве.`,
+      });
+    }
+
+    // Заливаємо ДО транзакції: мережевий виклик усередині транзакції тримав
+    // би зʼєднання з базою відкритим на весь час завантаження.
+    const uploaded = await this.uploadBlob(print.slug, query.filename, contentType, file);
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const existing = await tx.printImage.findMany({
         where: { printId },
         select: { id: true, position: true },
@@ -229,12 +266,18 @@ export class PrintsAdminService {
 
       const nextPosition = existing.reduce((max, img) => Math.max(max, img.position), -1) + 1;
       await tx.printImage.create({
-        data: { printId, url: dto.url, pathname: dto.pathname, alt: dto.alt, position: nextPosition },
+        data: {
+          printId,
+          url: uploaded.url,
+          pathname: uploaded.pathname,
+          alt: query.alt,
+          position: nextPosition,
+        },
       });
 
       // Перше фото стає обкладинкою. Далі обкладинку міняє тільки порядок.
       if (existing.length === 0) {
-        await tx.print.update({ where: { id: printId }, data: { previewUrl: dto.url } });
+        await tx.print.update({ where: { id: printId }, data: { previewUrl: uploaded.url } });
       }
     });
 
@@ -313,6 +356,45 @@ export class PrintsAdminService {
         ...(cover === '' ? { isPublished: false } : {}),
       },
     });
+  }
+
+  /**
+   * Заливка у сховище.
+   *
+   * Перша версія вантажила файл із браузера напряму, щоб обійти ліміт тіла
+   * запиту 4.5 МБ. Виявилось, що браузер до Blob API не пускають: preflight
+   * не отримує CORS-заголовків, PUT падає з 400. Тому файл іде через нас —
+   * а щоб він вліз у ліміт, браузер стискає його перед відправкою.
+   *
+   * Токен передаємо, лише якщо він є: без нього SDK автентифікується через
+   * OIDC, як і роблять проєкти, підключені до сховища у Vercel.
+   */
+  private async uploadBlob(
+    slug: string,
+    filename: string,
+    contentType: string,
+    file: Buffer,
+  ): Promise<{ url: string; pathname: string }> {
+    const token = process.env['BLOB_READ_WRITE_TOKEN'];
+    const safeName = filename.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'photo';
+
+    try {
+      const blob = await put(`prints/${slug}/${safeName}`, file, {
+        access: 'public',
+        contentType,
+        // Двоє фото можуть називатись «photo.jpg» — без суфікса друге
+        // перезаписало б перше.
+        addRandomSuffix: true,
+        ...(token ? { token } : {}),
+      });
+      return { url: blob.url, pathname: blob.pathname };
+    } catch (error) {
+      this.logger.error(`blob.put.failed slug=${slug} name=${safeName}: ${String(error)}`);
+      throw new BadGatewayException({
+        code: ErrorCode.INTERNAL,
+        message: 'Сховище не прийняло файл. Перевірте, чи підключене Blob-сховище до проєкту.',
+      });
+    }
   }
 
   /**

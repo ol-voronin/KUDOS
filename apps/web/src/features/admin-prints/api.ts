@@ -1,10 +1,11 @@
 import {
   AdminPrintDto, AdminPrintListDto, CatalogOptionDto,
-  type AdminPrintCreateInput, type AdminPrintImageCreateDto, type AdminPrintUpdateInput,
-  type AdminBreedCreateDto,
+  type AdminPrintCreateInput, type AdminPrintUpdateInput, type AdminBreedCreateDto,
 } from '@dt/contracts';
 import { z } from 'zod';
-import { apiFetch } from '@/lib/api-client';
+import { ApiErrorDto } from '@dt/contracts';
+import { apiFetch, ApiError } from '@/lib/api-client';
+import { BROWSER_API_URL } from '@/lib/api-origin';
 
 export interface PrintFilters {
   q?: string;
@@ -54,11 +55,33 @@ export function createBreed(dto: AdminBreedCreateDto): Promise<CatalogOptionDto>
 // набору змінюється ще й обкладинка (`previewUrl`) і, можливо, публікація.
 // Повертати частину означало б лишити форму з несвіжими даними.
 
-export function addPrintImage(printId: string, dto: AdminPrintImageCreateDto): Promise<AdminPrintDto> {
-  return apiFetch(`/admin/prints/${printId}/images`, AdminPrintDto, {
+/**
+ * Завантаження фото: тіло запиту — самі байти, назва файлу в параметрі.
+ *
+ * Не через `apiFetch`, бо той примусово ставить `content-type: application/json`
+ * — а тут саме content-type файлу вирішує, як сервер його прийме.
+ */
+export async function addPrintImage(
+  printId: string,
+  file: Blob,
+  filename: string,
+): Promise<AdminPrintDto> {
+  const query = new URLSearchParams({ filename });
+  const res = await fetch(`${BROWSER_API_URL}/admin/prints/${printId}/images?${query.toString()}`, {
     method: 'POST',
-    body: JSON.stringify(dto),
+    headers: { 'content-type': file.type },
+    body: file,
+    credentials: 'include',
   });
+
+  const body: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const parsed = ApiErrorDto.safeParse(body);
+    throw parsed.success
+      ? new ApiError(parsed.data.statusCode, parsed.data.code, parsed.data.message)
+      : new ApiError(res.status, 'INTERNAL', 'Не вдалося завантажити фото');
+  }
+  return AdminPrintDto.parse(body);
 }
 
 export function removePrintImage(printId: string, imageId: string): Promise<AdminPrintDto> {

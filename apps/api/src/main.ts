@@ -6,6 +6,7 @@ import { Logger, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { raw } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
@@ -39,6 +40,11 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(cookieParser());
+  // Фото приходять сирими байтами з Content-Type: image/*. Окремий парсер, бо
+  // json-парсер таке тіло проігнорує, а multipart тягнув би за собою multer
+  // заради єдиного ендпоїнта. Ліміт трохи більший за MAX_UPLOAD_BYTES —
+  // осмислену помилку має віддавати наш код, а не body-parser.
+  app.use(raw({ type: 'image/*', limit: '3mb' }));
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.useGlobalFilters(new HttpExceptionFilter());
