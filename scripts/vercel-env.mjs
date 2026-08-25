@@ -1,10 +1,14 @@
-// Готує блок змінних для вставки у Vercel -> kudos-api -> Environment Variables.
+// Готує блоки змінних для вставки у Vercel — окремо для API, окремо для вебу.
 //
 //   node scripts/vercel-env.mjs
 //
-// Читає рядки Neon з .env.neon, решту — з .env, генерує JWT-секрети
-// і складає все у vercel-api-env.txt. Обидва вихідні файли в .gitignore.
-// Скрипт НІКОЛИ не друкує значення — тільки імена змінних.
+// Читає рядки Neon з .env.neon, решту — з .env, генерує секрети і складає
+// все у vercel-api-env.txt і vercel-web-env.txt. Обидва вихідні файли в
+// .gitignore. Скрипт НІКОЛИ не друкує значення — тільки імена змінних.
+//
+// REVALIDATE_SECRET навмисно потрапляє в ОБИДВА файли з тим самим значенням:
+// API ним підписує прохання «перечитай сторінку», веб ним це прохання
+// перевіряє. Розійдуться — публікація мовчки перестане оновлювати сайт.
 
 import { randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -69,11 +73,22 @@ const secret = () => randomBytes(48).toString('base64url');
 const previous = readEnvFile('vercel-api-env.txt') ?? {};
 const keepOrMake = (key) => previous[key] || secret();
 
+// Адреса сайту потрібна API, щоб було куди стукати після публікації.
+// Коли зʼявиться власний домен — поміняти тут і в обох проєктах Vercel.
+const webUrl = local['WEB_URL']
+  || local['NEXT_PUBLIC_SITE_URL']
+  || previous['WEB_URL']
+  || 'https://kudos-web-ten.vercel.app';
+
 const vars = {
   DATABASE_URL: forPrismaPool(neon['DATABASE_URL']),
   DIRECT_DATABASE_URL: forPrismaDirect(neon['DIRECT_DATABASE_URL']),
   JWT_ACCESS_SECRET: keepOrMake('JWT_ACCESS_SECRET'),
   JWT_REFRESH_SECRET: keepOrMake('JWT_REFRESH_SECRET'),
+  WEB_URL: webUrl,
+  // base64url дає лише латиницю, цифри, «-» і «_» — рівно те, що можна
+  // покласти в HTTP-заголовок. Кирилиця там фізично не проходить.
+  REVALIDATE_SECRET: keepOrMake('REVALIDATE_SECRET'),
 };
 for (const key of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN', 'BLOB_READ_WRITE_TOKEN']) {
   const value = local[key];
@@ -83,8 +98,18 @@ for (const key of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN', '
 const body = Object.entries(vars).map(([k, v]) => `${k}=${v}`).join('\n') + '\n';
 writeFileSync(join(root, 'vercel-api-env.txt'), body, { mode: 0o600 });
 
-console.log('Готово: vercel-api-env.txt');
-console.log('Змінні у файлі:');
+// Вебу потрібен рівно один секрет — той самий.
+const webVars = {
+  REVALIDATE_SECRET: vars.REVALIDATE_SECRET,
+  NEXT_PUBLIC_SITE_URL: webUrl,
+};
+const webBody = Object.entries(webVars).map(([k, v]) => `${k}=${v}`).join('\n') + '\n';
+writeFileSync(join(root, 'vercel-web-env.txt'), webBody, { mode: 0o600 });
+
+console.log('Готово: vercel-api-env.txt і vercel-web-env.txt');
+console.log('kudos-api:');
 for (const key of Object.keys(vars)) console.log(`  ${key}`);
+console.log('kudos-web:');
+for (const key of Object.keys(webVars)) console.log(`  ${key}`);
 const skipped = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'MONOBANK_TOKEN', 'BLOB_READ_WRITE_TOKEN'].filter((k) => !vars[k]);
 if (skipped.length) console.log(`Не знайдено в .env, додай вручну: ${skipped.join(', ')}`);

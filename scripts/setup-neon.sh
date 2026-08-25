@@ -104,5 +104,10 @@ echo "==> блок змінних для Vercel"
 node scripts/vercel-env.mjs
 
 echo
-echo "Готово. Далі: відкрити vercel-api-env.txt, скопіювати весь текст"
-echo "і вставити у Vercel -> kudos-api -> Environment Variables -> Add -> поле Key."
+echo "Готово. Далі два файли, по одному на проєкт Vercel:"
+echo "  vercel-api-env.txt  ->  kudos-api  -> Environment Variables -> Add -> поле Key"
+echo "  vercel-web-env.txt  ->  kudos-web  -> Environment Variables -> Add -> поле Key"
+echo
+echo "REVALIDATE_SECRET має бути ОДНАКОВИЙ у обох — саме ним API просить сайт"
+echo "перечитати сторінку після публікації. Без нього публікація спрацює, але"
+echo "сторінка лишиться старою, і адмінка про це скаже."

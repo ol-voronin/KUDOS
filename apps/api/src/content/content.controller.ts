@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { PageKind, type PageDto, type PageListDto } from '@dt/contracts';
+import { PageKind, type PageDto, type PageListDto, type RedirectDto } from '@dt/contracts';
 import { ContentService } from './content.service';
 
 /**
@@ -17,6 +17,12 @@ export class ContentController {
   list(@Query('kind') kind?: string): Promise<PageListDto> {
     const parsed = PageKind.safeParse(kind);
     return this.content.listPages(parsed.success ? parsed.data : undefined);
+  }
+
+  /** Питається лише тоді, коли сторінки за адресою немає. */
+  @Get('redirects/:slug')
+  redirect(@Param('slug') slug: string): Promise<RedirectDto> {
+    return this.content.resolveRedirect(slug);
   }
 
   @Get('pages/:slug')

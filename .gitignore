@@ -11,4 +11,5 @@ coverage
 # Рядки підключення Neon і згенерований блок для Vercel — ніколи в git.
 .env.neon
 vercel-api-env.txt
+vercel-web-env.txt
 admin-credentials.txt

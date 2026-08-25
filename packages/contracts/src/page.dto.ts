@@ -44,3 +44,9 @@ export const PageListDto = z.object({
   items: z.array(PageCardDto),
 });
 export type PageListDto = z.infer<typeof PageListDto>;
+
+/** Куди вести зі старої адреси. Порожньо — редіректу немає. */
+export const RedirectDto = z.object({
+  toSlug: Slug,
+});
+export type RedirectDto = z.infer<typeof RedirectDto>;

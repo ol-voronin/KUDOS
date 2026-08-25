@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { PageDto } from '@dt/contracts';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { PageDto, RedirectDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { BlockRenderer } from '@/features/content/block-renderer';
 import { substitute } from '@/features/content/inline';
@@ -54,7 +54,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function ContentPage({ params }: Params) {
   const page = await load(params.slug);
-  if (!page) notFound();
+
+  if (!page) {
+    // Сторінки немає — можливо, її перейменували. 301 на нову адресу зберігає
+    // і позиції в пошуку, і чужі посилання; 404 стирає й те, й те.
+    const moved = await serverFetchOrNull(`/content/redirects/${params.slug}`, RedirectDto, 3600);
+    if (moved) permanentRedirect(`/${moved.toSlug}`);
+    notFound();
+  }
 
   // Розмітка FAQ збирається з блоків, а не пишеться редактором окремо:
   // два джерела питань розійшлися б на першій же правці.

@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AnyBlock, ErrorCode, type PageDto, type PageKind, type PageListDto } from '@dt/contracts';
+import { AnyBlock, ErrorCode, type PageDto, type PageKind, type PageListDto, type RedirectDto } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 
 /** Рядок версії так, як його віддає Prisma. Виноситься, щоб не повторювати select. */
@@ -73,6 +73,23 @@ export class ContentService {
       publishedAt: page.publishedAt?.toISOString() ?? null,
       blocks: this.parseBlocks(version.blocks, page.slug),
     };
+  }
+
+  /**
+   * Куди вести зі старої адреси.
+   *
+   * Окремий запит, і робиться він лише тоді, коли сторінки не знайшлося —
+   * тобто на щасливому шляху не коштує нічого. Ланцюжків тут не буває за
+   * побудовою: при перейменуванні всі редіректи на стару адресу одразу
+   * переписуються на нову.
+   */
+  async resolveRedirect(slug: string): Promise<RedirectDto> {
+    const row = await this.prisma.redirect.findUnique({
+      where: { locale_fromSlug: { locale: 'UK', fromSlug: slug } },
+      select: { toSlug: true },
+    });
+    if (!row) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Редіректу немає' });
+    return { toSlug: row.toSlug };
   }
 
   /** Список опублікованих сторінок: стрічка матеріалів і карта сайту. */

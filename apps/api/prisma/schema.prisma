@@ -511,6 +511,16 @@ model Page {
   publishedAt DateTime?
   position    Int       @default(0)
 
+  /// Коли сайт востаннє перечитав цю сторінку після публікації, і що пішло
+  /// не так, якщо пішло.
+  ///
+  /// Публікація змінює базу миттєво, але сторінку віддає кеш Next — і поки
+  /// йому не сказати «перечитай», людина бачить старе. Мовчазна помилка тут
+  /// читається як «CMS не працює», тож стан скидання кешу — це дані, які
+  /// адмінка показує поруч зі сторінкою, а не рядок у логах Vercel.
+  revalidatedAt   DateTime?
+  revalidateError String    @default("")
+
   versions PageVersion[]
 
   createdAt DateTime @default(now())
@@ -554,6 +564,24 @@ model PageVersion {
 
   @@unique([pageId, number])
   @@index([pageId, status])
+}
+
+/// Стара адреса → нова. Створюється автоматично при перейменуванні сторінки.
+///
+/// Без цього перейменування slug стирає все, що пошук знав про сторінку, і
+/// кожне посилання на неї з чужого сайту стає 404. Запис вічний: посилання
+/// в чиємусь дописі трирічної давнини має вести куди треба й через три роки.
+model Redirect {
+  id     String @id @default(uuid()) @db.Uuid
+  locale Locale @default(UK)
+  /// Без початкового слеша — той самий вигляд, що й `Page.slug`.
+  fromSlug String
+  toSlug   String
+
+  createdAt DateTime @default(now())
+
+  @@unique([locale, fromSlug])
+  @@index([toSlug])
 }
 
 // ---------------------------------------------------------------------------
