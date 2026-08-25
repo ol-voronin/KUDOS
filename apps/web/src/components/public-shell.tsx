@@ -13,6 +13,7 @@ import { SearchForm } from '@/features/search/search-form';
  */
 const NAV = [
   { href: '/prints', label: 'Каталог' },
+  { href: '/vyroby', label: 'Вироби' },
   { href: '/collections', label: 'Колекції' },
   { href: '/svoya-ideya', label: 'Свій принт' },
   { href: '/spivpratsia', label: 'Співпраця' },
@@ -86,6 +87,7 @@ export function PublicFooter() {
           <p className="font-medium text-ink">Каталог</p>
           <Link href="/prints" className="text-ink-muted transition hover:text-accent">Усі принти</Link>
           <Link href="/collections" className="text-ink-muted transition hover:text-accent">Колекції</Link>
+          <Link href="/vyroby" className="text-ink-muted transition hover:text-accent">Вироби, тканини, розміри</Link>
           <Link href="/svoya-ideya" className="text-ink-muted transition hover:text-accent">Свій принт із фото</Link>
         </nav>
 

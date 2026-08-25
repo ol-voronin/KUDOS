@@ -12,9 +12,9 @@ export type ProductLine = z.infer<typeof ProductLine>;
 export const GarmentFit = z.enum([
   'CLASSIC',        // прямий крій
   'OVERSIZE',       // real оверсайз
-  'OVERSIZE_WOMEN', // вкорочений жіночий оверсайз (NS)
+  'OVERSIZE_WOMEN', // вкорочений жіночий оверсайз
   'COMFORT',        // модель Комфорт (власне виробництво, верх)
-  'HYBRID',         // гібрид футболка-світшот / футболка-худі (NS)
+  'HYBRID',         // гібрид світшот-футболка / худі-футболка
   'KIDS',
 ]);
 export type GarmentFit = z.infer<typeof GarmentFit>;

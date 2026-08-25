@@ -7,7 +7,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.spec.ts'],
+    include: ['src/**/*.spec.ts', 'prisma/**/*.spec.ts'],
     coverage: { provider: 'v8', reportsDirectory: './coverage', thresholds: { lines: 80, functions: 80 } },
   },
 });

@@ -66,13 +66,30 @@ export class CheckoutService {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Варіант не знайдено' });
     }
 
-    // Same structural check as the catalogue read: a print is only offerable
-    // on a garment through an explicit PrintGarmentRule.
+    // Та сама перевірка, що й на читанні каталогу, і вона МУСИТЬ давати той
+    // самий результат: якщо сторінка запропонувала виріб, а каса його не
+    // визнала, людина натискає «Оплатити» і отримує помилку без пояснення.
+    //
+    // Правило: друкуємо на всьому, доки колекція явно не звузила вибір;
+    // точкова заборона на принті прибирає конкретний виріб.
     const collectionIds = print.collections.map((c: { collectionId: string }) => c.collectionId);
-    const rule = collectionIds.length === 0 ? null : await this.prisma.printGarmentRule.findFirst({
-      where: { garmentId: variant.garmentId, collectionId: { in: collectionIds } },
-      select: { id: true },
-    });
+
+    const [restrictions, exclusion] = await Promise.all([
+      collectionIds.length === 0
+        ? Promise.resolve([] as Array<{ garmentId: string }>)
+        : this.prisma.printGarmentRule.findMany({
+          where: { collectionId: { in: collectionIds } },
+          select: { garmentId: true },
+        }),
+      this.prisma.printGarmentExclusion.findUnique({
+        where: { printId_garmentId: { printId: print.id, garmentId: variant.garmentId } },
+        select: { printId: true },
+      }),
+    ]);
+
+    const offerable = exclusion === null
+      && (restrictions.length === 0
+        || restrictions.some((r: { garmentId: string }) => r.garmentId === variant.garmentId));
 
     const priceRows = await this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true } });
     const priceTable = Object.fromEntries(
@@ -92,7 +109,7 @@ export class CheckoutService {
       priceOverrideMinor: variant.priceOverrideMinor === null ? null : minor(variant.priceOverrideMinor),
     };
 
-    const offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, rule !== null);
+    const offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, offerable);
     if (!offer.purchasable) {
       throw new BadRequestException({
         code: ErrorCode.VARIANT_NOT_PURCHASABLE,

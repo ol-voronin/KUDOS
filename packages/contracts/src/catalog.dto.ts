@@ -7,6 +7,20 @@ import {
 const Slug = z.string().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'kebab-case slug');
 const MinorAmount = z.number().int().nonnegative();
 
+/**
+ * Посилання на картинку: або абсолютний URL (сховище), або шлях від кореня
+ * сайту (`/garments/hudi-klasychnyi/chornyi.webp`).
+ *
+ * Раніше тут стояло просто `z.string().url()`, і це коштувало нам цілої
+ * сторінки: принт без завантаженого фото має `previewUrl = ''`, zod валив
+ * усю відповідь, `serverFetch` кидав, сторінка віддавала 404. Порожня
+ * обкладинка — це косметична вада картки, а не причина ховати товар.
+ */
+const ImageRef = z.string().refine(
+  (v) => v === '' || v.startsWith('/') || /^https?:\/\//.test(v),
+  { message: 'must be empty, a site-root path, or an http(s) URL' },
+);
+
 export const ColourDto = z.object({
   id: z.string().uuid(),
   /** Native Spirit has these; own production is only numbered, so null here. */
@@ -15,7 +29,7 @@ export const ColourDto = z.object({
   supplierCode: z.string().min(1),
   /** #RRGGBB for the swatch. Null means "we have not digitised it yet". */
   hex: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable(),
-  imageUrl: z.string().url().nullable(),
+  imageUrl: ImageRef.nullable(),
 });
 export type ColourDto = z.infer<typeof ColourDto>;
 
@@ -54,6 +68,8 @@ export const GarmentDto = z.object({
   /** Own production can shorten the garment. No blank can. Real selling point. */
   lengthAdjustable: z.boolean(),
   basePriceMinor: MinorAmount,
+  /** Один-два рядки з паспорта виробу: крій, кому пасує. */
+  description: z.string(),
   fabrics: z.array(FabricDto).min(1),
   sizes: z.array(SizeDto).min(1),
 });
@@ -85,7 +101,7 @@ export const PrintDto = z.object({
   sizeTier: PrintSizeTier,
   collectionSlugs: z.array(Slug),
   breedSlugs: z.array(Slug),
-  previewUrl: z.string().url(),
+  previewUrl: ImageRef,
   isPublished: z.boolean(),
 });
 export type PrintDto = z.infer<typeof PrintDto>;
@@ -97,7 +113,7 @@ export const PrintOfferDto = z.object({
    * Галерея. Перший елемент дублює `print.previewUrl` — це та сама обкладинка;
    * сторінка товару показує всі, сітки каталогу — тільки обкладинку.
    */
-  images: z.array(z.object({ url: z.string().url(), alt: z.string() })),
+  images: z.array(z.object({ url: ImageRef, alt: z.string() })),
   garments: z.array(GarmentDto),
   variants: z.array(VariantDto),
   colours: z.array(ColourDto),
@@ -161,3 +177,35 @@ export const PrintListDto = z.object({
   perPage: z.number().int().positive(),
 });
 export type PrintListDto = z.infer<typeof PrintListDto>;
+
+// ---------------------------------------------------------------------------
+// Асортимент — сторінка «Вироби»
+// ---------------------------------------------------------------------------
+
+/**
+ * Один виріб у вітрині асортименту.
+ *
+ * Це не те саме, що `GarmentDto` у пропозиції принта. Там виріб — це варіант
+ * вибору всередині товару; тут він сам є товаром, який людина розглядає
+ * окремо: «а що ви взагалі шиєте, з чого і в яких кольорах». Тому тут є
+ * кольори (у пропозиції вони спільні для всіх виробів) і немає варіантів.
+ */
+export const RangeColourDto = ColourDto.extend({
+  /** Чи є фото цього виробу саме в цьому кольорі. Керує показом свотча. */
+  hasPhoto: z.boolean(),
+});
+export type RangeColourDto = z.infer<typeof RangeColourDto>;
+
+export const RangeGarmentDto = GarmentDto.extend({
+  colours: z.array(RangeColourDto),
+  /** Найкоротший строк виготовлення серед варіантів виробу, у днях. */
+  leadTimeDays: z.number().int().positive().nullable(),
+});
+export type RangeGarmentDto = z.infer<typeof RangeGarmentDto>;
+
+export const RangeDto = z.object({
+  garments: z.array(RangeGarmentDto),
+  /** Ціна друку за розміром — щоб сторінка показала «виріб + друк = від». */
+  printPrices: z.array(z.object({ tier: PrintSizeTier, priceMinor: MinorAmount })),
+});
+export type RangeDto = z.infer<typeof RangeDto>;

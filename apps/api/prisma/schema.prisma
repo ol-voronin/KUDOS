@@ -205,6 +205,10 @@ model Garment {
   /// This is a selling point, not a footnote — it belongs in the data.
   lengthAdjustable Boolean @default(false)
 
+  /// Короткий опис із паспорта виробу: крій, кому пасує. Порожній рядок —
+  /// припустимо; сторінка просто не малює абзац.
+  description String @default("")
+
   basePriceMinor Int
   isPublished    Boolean @default(false)
 
@@ -212,6 +216,7 @@ model Garment {
   sizes    Size[]
   variants Variant[]
   rules    PrintGarmentRule[]
+  exclusions PrintGarmentExclusion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -352,6 +357,7 @@ model Print {
   breeds      PrintBreed[]
   orderItems  OrderItem[]
   images      PrintImage[]
+  exclusions  PrintGarmentExclusion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -407,8 +413,16 @@ model PrintBreed {
   @@index([breedId])
 }
 
-/// "Портрети — тільки оверсайз" as data instead of as a rule in someone's head.
-/// A collection allows a set of garments; anything not listed is not offered.
+/// Обмеження «портрети — тільки оверсайз», записане як дані, а не як правило
+/// в чиїйсь голові.
+///
+/// ВАЖЛИВО про семантику. Раніше правило читалося так: «виріб пропонується,
+/// лише якщо він явно дозволений колекцією». Наслідок — принт без колекції
+/// не продавався взагалі, і сторінка товару виглядала зламаною при
+/// цілком коректних даних. Тепер правило звужує вибір лише тоді, коли воно
+/// є: колекція без жодного рядка тут не обмежує нічого, а принт без
+/// колекції друкується на всьому опублікованому асортименті. Заборони —
+/// у `PrintGarmentExclusion`.
 model PrintGarmentRule {
   id           String @id @default(uuid()) @db.Uuid
   collectionId String @db.Uuid
@@ -418,6 +432,26 @@ model PrintGarmentRule {
   garment    Garment    @relation(fields: [garmentId], references: [id], onDelete: Cascade)
 
   @@unique([collectionId, garmentId])
+  @@index([garmentId])
+}
+
+/// Точкова заборона: цей принт не друкуємо на цьому виробі.
+///
+/// Живе на принті, а не на колекції, бо причина завжди конкретна — макет
+/// не лізе в поле друку саме цієї моделі. Колекційне правило такого не
+/// висловлює: воно про цілий жанр.
+model PrintGarmentExclusion {
+  printId   String @db.Uuid
+  garmentId String @db.Uuid
+  /// Для адмінки: чому заборонено. Порожній рядок припустимий.
+  reason    String @default("")
+
+  print   Print   @relation(fields: [printId], references: [id], onDelete: Cascade)
+  garment Garment @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([printId, garmentId])
   @@index([garmentId])
 }
 

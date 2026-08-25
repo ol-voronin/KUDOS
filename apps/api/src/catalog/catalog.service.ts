@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
   BreedListDto, BreedPageDto, CatalogQueryDto, CollectionListDto, CollectionPageDto,
-  HomeDto, PrintListDto, PrintOfferDto, SearchResultDto, SitemapDto,
+  HomeDto, PrintListDto, PrintOfferDto, RangeColourDto, RangeDto, SearchResultDto, SitemapDto,
 } from '@dt/contracts';
 import { ErrorCode, minor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { blockReasonFor, printPriceFor, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
-import { garmentTypesFor, toPrintCard, type OfferableGarment, type PrintRow } from './print-card';
+import { garmentTypesFor, toPrintCard, type OfferContext, type OfferableGarment, type PrintRow } from './print-card';
 
 /** Скільки карток показувати в блоці на головній. */
 const HOME_BLOCK_SIZE = 8;
@@ -29,8 +29,8 @@ export class CatalogService {
       ...(query.breed ? { breeds: { some: { breed: { slug: query.breed } } } } : {}),
     };
 
-    const [garments, printPrices] = await Promise.all([
-      this.loadOfferableGarments(),
+    const [offer, printPrices] = await Promise.all([
+      this.loadOfferContext(),
       this.loadPrintPrices(),
     ]);
 
@@ -46,7 +46,7 @@ export class CatalogService {
     ]);
 
     return {
-      items: rows.map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices)),
+      items: rows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices)),
       total,
       page: query.page,
       perPage: query.perPage,
@@ -64,22 +64,47 @@ export class CatalogService {
         },
         collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
         breeds: { select: { breed: { select: { slug: true } } } },
+        exclusions: { select: { garmentId: true } },
       },
     });
     if (!print) {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
     }
 
-    // A print is offerable on a garment only through an explicit
-    // PrintGarmentRule row on one of its collections — "портрети тільки
-    // оверсайз" as data, not as a rule someone has to remember.
+    // На чому цей принт можна надрукувати.
+    //
+    // Раніше тут стояв дозвільний принцип: виріб пропонується, лише якщо
+    // якась колекція принта явно його дозволила рядком `PrintGarmentRule`.
+    // Виглядало це строго, а на практиці означало, що принт без колекції не
+    // продавався взагалі — сторінка товару відкривалася порожньою при
+    // повністю коректних даних. Кожен новий принт мусив пройти крок, про
+    // який ніде не написано.
+    //
+    // Тепер навпаки: за замовчуванням друкуємо на всьому опублікованому
+    // асортименті. Правило колекції звужує вибір лише тоді, коли воно
+    // справді заведене («портрети — тільки оверсайз»), а точкова заборона
+    // на конкретному принті прибирає окремий виріб.
     const collectionIds = print.collections.map((c: { collectionId: string }) => c.collectionId);
+    const excludedGarmentIds = print.exclusions.map((e: { garmentId: string }) => e.garmentId);
 
-    const garments = collectionIds.length === 0 ? [] : await this.prisma.garment.findMany({
-      where: { isPublished: true, rules: { some: { collectionId: { in: collectionIds } } } },
+    const restrictingRules = collectionIds.length === 0 ? [] : await this.prisma.printGarmentRule.findMany({
+      where: { collectionId: { in: collectionIds } },
+      select: { garmentId: true },
+    });
+    const allowedGarmentIds = [...new Set(restrictingRules.map((r: { garmentId: string }) => r.garmentId))];
+
+    const garments = await this.prisma.garment.findMany({
+      where: {
+        isPublished: true,
+        id: {
+          ...(allowedGarmentIds.length > 0 ? { in: allowedGarmentIds } : {}),
+          ...(excludedGarmentIds.length > 0 ? { notIn: excludedGarmentIds } : {}),
+        },
+      },
+      orderBy: { basePriceMinor: 'asc' },
       select: {
         id: true, slug: true, line: true, type: true, fit: true, name: true,
-        lengthAdjustable: true, basePriceMinor: true, isPublished: true,
+        lengthAdjustable: true, basePriceMinor: true, isPublished: true, description: true,
         fabrics: { select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } } },
         sizes: {
           orderBy: { position: 'asc' },
@@ -161,6 +186,7 @@ export class CatalogService {
         name: g.name,
         lengthAdjustable: g.lengthAdjustable,
         basePriceMinor: g.basePriceMinor,
+        description: g.description,
         fabrics: g.fabrics.map((f) => f.fabric),
         sizes: g.sizes,
       })),
@@ -170,24 +196,101 @@ export class CatalogService {
     };
   }
 
+  /**
+   * Асортимент: сім виробів як самостійна вітрина.
+   *
+   * Це не той самий зріз, що в пропозиції принта. Там виріб — варіант вибору
+   * всередині товару; тут він сам товар, який розглядають окремо: «а що ви
+   * взагалі шиєте, з чого і в яких кольорах». Тому тут є кольори по кожному
+   * виробу й немає варіантів — покупцеві на цій сторінці не треба знати, що
+   * така сутність існує.
+   */
+  async getRange(): Promise<RangeDto> {
+    const [garments, printPrices] = await Promise.all([
+      this.prisma.garment.findMany({
+        where: { isPublished: true },
+        orderBy: { basePriceMinor: 'asc' },
+        select: {
+          id: true, slug: true, line: true, type: true, fit: true, name: true,
+          lengthAdjustable: true, basePriceMinor: true, description: true,
+          fabrics: { select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } } },
+          sizes: {
+            orderBy: { position: 'asc' },
+            select: { id: true, label: true, position: true, measurements: { select: { key: true, value: true } } },
+          },
+          variants: {
+            select: {
+              leadTimeDays: true,
+              colour: { select: { id: true, name: true, supplierCode: true, hex: true, imageUrl: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true } }),
+    ]);
+
+    return {
+      garments: garments.map((g) => {
+        // Кольори виробу виводяться з варіантів, а не з тканини. Тканина може
+        // ткатися в кольорі, якого ми в цьому крої не шиємо — і саме варіант
+        // є твердженням «оце ми справді робимо».
+        const byId = new Map<string, RangeColourDto>();
+        for (const v of g.variants) {
+          if (byId.has(v.colour.id)) continue;
+          byId.set(v.colour.id, {
+            ...v.colour,
+            hasPhoto: v.colour.imageUrl !== null,
+          });
+        }
+        const leadTimes = g.variants
+          .map((v) => v.leadTimeDays)
+          .filter((d): d is number => d !== null && d > 0);
+
+        return {
+          id: g.id,
+          slug: g.slug,
+          line: g.line,
+          type: g.type,
+          fit: g.fit,
+          name: g.name,
+          lengthAdjustable: g.lengthAdjustable,
+          basePriceMinor: g.basePriceMinor,
+          description: g.description,
+          fabrics: g.fabrics.map((f) => f.fabric),
+          sizes: g.sizes,
+          colours: [...byId.values()],
+          leadTimeDays: leadTimes.length > 0 ? Math.min(...leadTimes) : null,
+        };
+      }),
+      printPrices,
+    };
+  }
+
   // ---------------------------------------------------------------------------
   // Спільна основа для всіх сіток. Вироби вантажаться ОДИН раз на запит, а не
   // на кожен принт — саме тут інакше зʼявляється N+1.
   // ---------------------------------------------------------------------------
 
-  private async loadOfferableGarments(): Promise<OfferableGarment[]> {
-    const garments = await this.prisma.garment.findMany({
-      where: { isPublished: true },
-      select: {
-        id: true, basePriceMinor: true, type: true,
-        rules: { select: { collectionId: true } },
-        // Один рядок достатньо, щоб відповісти «чи є склад» — повний список
-        // варіантів тут не потрібен і коштував би дорого.
-        variants: { where: { availability: 'IN_STOCK' }, select: { id: true }, take: 1 },
-      },
-    });
+  private async loadOfferContext(): Promise<OfferContext> {
+    const [rows, rules, exclusions] = await Promise.all([
+      this.prisma.garment.findMany({
+        where: { isPublished: true },
+        select: {
+          id: true, basePriceMinor: true, type: true,
+          rules: { select: { collectionId: true } },
+          // Один рядок достатньо, щоб відповісти «чи є склад» — повний список
+          // варіантів тут не потрібен і коштував би дорого.
+          variants: { where: { availability: 'IN_STOCK' }, select: { id: true }, take: 1 },
+        },
+      }),
+      // Уся таблиця правил і вся таблиця заборон — це десятки рядків, і вони
+      // потрібні цілком: без них не відрізнити «обмежень немає» від «обмеження
+      // є, але вони нікуди не ведуть». Читати їх посторінково нічого не дає.
+      this.prisma.printGarmentRule.findMany({ select: { collectionId: true } }),
+      this.prisma.printGarmentExclusion.findMany({ select: { printId: true, garmentId: true } }),
+    ]);
 
-    return garments.map((g: {
+    const garments: OfferableGarment[] = rows.map((g: {
       id: string; basePriceMinor: number; type: string;
       rules: Array<{ collectionId: string }>; variants: Array<{ id: string }>;
     }) => ({
@@ -197,6 +300,19 @@ export class CatalogService {
       collectionIds: g.rules.map((r) => r.collectionId),
       hasStock: g.variants.length > 0,
     }));
+
+    const exclusionsByPrint = new Map<string, Set<string>>();
+    for (const e of exclusions as Array<{ printId: string; garmentId: string }>) {
+      const set = exclusionsByPrint.get(e.printId);
+      if (set) set.add(e.garmentId);
+      else exclusionsByPrint.set(e.printId, new Set([e.garmentId]));
+    }
+
+    return {
+      garments,
+      restrictedCollectionIds: new Set(rules.map((r: { collectionId: string }) => r.collectionId)),
+      exclusionsByPrint,
+    };
   }
 
   /**
@@ -256,8 +372,8 @@ export class CatalogService {
    * сторінці: склад головної живе на сервері, а не збирається на клієнті.
    */
   async getHome(): Promise<HomeDto> {
-    const [garments, printPrices, breedCounts, collectionCounts] = await Promise.all([
-      this.loadOfferableGarments(),
+    const [offer, printPrices, breedCounts, collectionCounts] = await Promise.all([
+      this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
       this.collectionPrintCounts(),
@@ -290,7 +406,7 @@ export class CatalogService {
       this.prisma.print.count({ where: { isPublished: true } }),
     ]);
 
-    const newPrints = newRows.map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices));
+    const newPrints = newRows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices));
 
     // «Готові до відправки» замість розпродажу: дефіцит справжній, бо власне
     // виробництво гарантує лише один колір на складі. Беремо ширше вікно й
@@ -302,7 +418,7 @@ export class CatalogService {
       take: HOME_BLOCK_SIZE * 6,
     });
     const readyToShip = stockCandidates
-      .map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices))
+      .map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices))
       .filter((card) => card.inStock)
       .slice(0, HOME_BLOCK_SIZE);
 
@@ -376,8 +492,8 @@ export class CatalogService {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Породу не знайдено' });
     }
 
-    const [garments, printPrices, breedCounts, rows, related] = await Promise.all([
-      this.loadOfferableGarments(),
+    const [offer, printPrices, breedCounts, rows, related] = await Promise.all([
+      this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
       this.prisma.print.findMany({
@@ -394,8 +510,8 @@ export class CatalogService {
     const printRows = rows.map(CatalogService.toRow);
     return {
       breed,
-      prints: printRows.map((p) => toPrintCard(p, garments, printPrices)),
-      garmentTypes: garmentTypesFor(printRows, garments) as BreedPageDto['garmentTypes'],
+      prints: printRows.map((p) => toPrintCard(p, offer, printPrices)),
+      garmentTypes: garmentTypesFor(printRows, offer) as BreedPageDto['garmentTypes'],
       relatedBreeds: related
         .map((b) => ({ id: b.id, slug: b.slug, name: b.name, printCount: breedCounts.get(b.id) ?? 0 }))
         .filter((b) => b.printCount > 0)
@@ -413,8 +529,8 @@ export class CatalogService {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Колекцію не знайдено' });
     }
 
-    const [garments, printPrices, rows] = await Promise.all([
-      this.loadOfferableGarments(),
+    const [offer, printPrices, rows] = await Promise.all([
+      this.loadOfferContext(),
       this.loadPrintPrices(),
       this.prisma.print.findMany({
         where: { isPublished: true, collections: { some: { collectionId: collection.id } } },
@@ -425,7 +541,7 @@ export class CatalogService {
 
     return {
       collection,
-      prints: rows.map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices)),
+      prints: rows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices)),
     };
   }
 
@@ -450,8 +566,8 @@ export class CatalogService {
     }
     const lower = query.toLowerCase();
 
-    const [garments, printPrices, breedCounts, collectionCounts] = await Promise.all([
-      this.loadOfferableGarments(),
+    const [offer, printPrices, breedCounts, collectionCounts] = await Promise.all([
+      this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
       this.collectionPrintCounts(),
@@ -515,7 +631,7 @@ export class CatalogService {
       printCount: collectionCounts.get(c.id) ?? 0,
       previewUrls: c.prints.map((p) => p.print.previewUrl),
     }));
-    const prints = printRows.map((p) => toPrintCard(CatalogService.toRow(p), garments, printPrices));
+    const prints = printRows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices));
 
     return { query, breeds, collections, prints, total: breeds.length + collections.length + prints.length };
   }

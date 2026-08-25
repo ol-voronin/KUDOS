@@ -7,6 +7,7 @@ export * from './auth.dto';
 export * from './phone';
 export * from './slug';
 export * from './admin-print.dto';
+export * from './admin-garment.dto';
 export * from './lead.dto';
 export * from './checkout.dto';
 export * from './payment.dto';

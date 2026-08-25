@@ -18,6 +18,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/`, changeFrequency: 'weekly', priority: 1 },
     { url: `${BASE}/prints`, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${BASE}/collections`, changeFrequency: 'weekly', priority: 0.8 },
+    // «футболка оверсайз жіноча», «худі 350 розмірна сітка» — це запити з
+    // наміром купити, і вони не про принт. Сторінка асортименту єдина на них
+    // відповідає, тож у карті вона стоїть нарівні з каталогом.
+    { url: `${BASE}/vyroby`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/svoya-ideya`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE}/spivpratsia`, changeFrequency: 'monthly', priority: 0.7 },
     // Оферта індексується свідомо: Monobank при підключенні еквайрингу

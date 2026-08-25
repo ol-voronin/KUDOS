@@ -77,10 +77,10 @@ pnpm exec prisma migrate deploy
 echo "==> базові довідники"
 pnpm exec tsx prisma/seed.ts
 
-echo "==> публікація базових виробів"
-pnpm exec tsx prisma/publish-garments.ts
+echo "==> асортимент: тканини, кольори, вироби, розміри, варіанти"
+pnpm exec tsx prisma/seed-range.ts
 
-echo "==> каталог: породи, колекції, правила принтів"
+echo "==> каталог: породи й колекції"
 pnpm exec tsx prisma/seed-catalog.ts
 
 echo "==> адмін"

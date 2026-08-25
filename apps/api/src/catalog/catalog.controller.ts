@@ -3,7 +3,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   CatalogQueryDto, type BreedListDto, type BreedPageDto, type CollectionListDto,
   type CollectionPageDto, type HomeDto, type PrintListDto, type PrintOfferDto,
-  type SearchResultDto, type SitemapDto,
+  type RangeDto, type SearchResultDto, type SitemapDto,
 } from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CatalogService } from './catalog.service';
@@ -24,6 +24,18 @@ export class CatalogController {
   @Get('home')
   getHome(): Promise<HomeDto> {
     return this.catalog.getHome();
+  }
+
+  /**
+   * Асортимент: що ми шиємо, з чого, в яких кольорах і розмірах.
+   *
+   * Окремий ендпоінт, а не поле в /home: цю сторінку відкривають до вибору
+   * принта («покажіть спершу, що у вас узагалі є») і після нього («а ця
+   * футболка мені підійде?»). Обидва входи мають працювати без принта.
+   */
+  @Get('range')
+  getRange(): Promise<RangeDto> {
+    return this.catalog.getRange();
   }
 
   /** Усі породи, включно з порожніми — сторінка без принтів усе одно працює. */

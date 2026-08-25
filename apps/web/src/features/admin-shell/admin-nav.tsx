@@ -9,10 +9,11 @@ const NAV_ITEMS = [
   { href: '/admin', label: 'Огляд' },
   { href: '/admin/leads', label: 'Заявки', badge: true },
   { href: '/admin/prints', label: 'Принти' },
+  { href: '/admin/tsiny', label: 'Ціни' },
 ];
 
 /** Not yet built — shown for the real information architecture, not clickable. */
-const SOON_ITEMS = ['Замовлення', 'Товари', 'Колекції', 'Сторінки', 'Налаштування'];
+const SOON_ITEMS = ['Замовлення', 'Колекції', 'Сторінки', 'Налаштування'];
 
 export function AdminNav() {
   const pathname = usePathname();

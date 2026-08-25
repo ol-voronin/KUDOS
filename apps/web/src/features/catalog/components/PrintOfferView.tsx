@@ -9,7 +9,9 @@ import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
+import { GarmentPreview } from './GarmentPreview';
 import { SizeButton } from './SizeButton';
+import { SizeChart } from './SizeChart';
 
 const PHONE_PATTERN = /^\+380\d{9}$/;
 
@@ -61,6 +63,8 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     setSizeId((current) => (current && sizes.some((s) => s.id === current) ? current : sizes[0]?.id ?? null));
   }, [sizes]);
 
+  const selectedColour = colours.find((c) => c.id === colourId);
+  const selectedFabric = garment?.fabrics.find((f) => f.id === fabricId);
   const selectedSize = sizes.find((s) => s.id === sizeId);
   const variant = garment && fabricId && colourId && sizeId
     ? findVariant(data?.variants ?? [], garment.id, fabricId, colourId, sizeId)
@@ -76,7 +80,10 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     return (
       <div>
         <h1 className="text-2xl text-ink">{data.print.title}</h1>
-        <p className="mt-4 text-ink-muted">Цей принт поки що не доступний на жодному виробі.</p>
+        <p className="mt-4 text-ink-muted">
+          Поки що немає жодного виробу у вітрині, тож замовити цей принт нема на чому.
+          Напишіть нам — зробимо вручну.
+        </p>
       </div>
     );
   }
@@ -138,6 +145,12 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
                   ].join(' ')}
                 >
                   {g.name}
+                  {/* Ціна поруч із назвою, бо саме вона робить вибір виробом,
+                      а не вгадуванням: різниця між футболкою й худі тут у
+                      два з половиною рази. */}
+                  <span className={g.id === garment?.id ? 'ml-2 opacity-70' : 'ml-2 text-ink-subtle'}>
+                    {formatUAH(minor(g.basePriceMinor + data.printPriceMinor))}
+                  </span>
                 </button>
               ))}
             </div>
@@ -177,6 +190,17 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </fieldset>
         )}
 
+        {garment && selectedColour && (
+          <GarmentPreview
+            garmentSlug={garment.slug}
+            garmentName={garment.name}
+            colourCode={selectedColour.supplierCode}
+            colourName={selectedColour.name}
+            colourHex={selectedColour.hex}
+            fabric={selectedFabric}
+          />
+        )}
+
         {sizes.length > 0 && (
           <fieldset className="mt-6">
             <legend id="size-label" className="mb-2 text-sm font-medium text-ink-muted">Розмір</legend>
@@ -187,6 +211,8 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
             </div>
           </fieldset>
         )}
+
+        {garment && <SizeChart sizes={garment.sizes} highlight={sizeId} />}
 
         {selectedSize && (
           <div className="mt-6" aria-live="polite">
