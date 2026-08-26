@@ -30,6 +30,12 @@ export const FALLBACK_SETTINGS: SiteSettingsDto = {
   workingHours: site.workingHours,
   freeShippingFromMinor: site.freeShippingFromMinor,
   returnDays: site.returnDays,
+  defaultOgImage: '',
+  googleSiteVerification: '',
+  // У запасному варіанті індексація вимкнена свідомо: якщо API мовчить, ми
+  // не знаємо, чи можна індексувати цей сайт, і мовчазне «можна» — гірша з
+  // двох помилок.
+  allowIndexing: false,
 };
 
 /**

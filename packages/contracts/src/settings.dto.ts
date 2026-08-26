@@ -64,6 +64,22 @@ export const SiteSettingsDto = z.object({
   workingHours: ShortText,
   freeShippingFromMinor: z.number().int().nonnegative(),
   returnDays: z.number().int().min(0).max(365),
+
+  /** Превʼю в месенджерах, коли у сторінки немає своєї картинки. */
+  defaultOgImage: z.string().max(1000).refine(
+    (v) => v === '' || /^(\/|https?:\/\/)/.test(v),
+    { message: 'адреса картинки має починатися з / або https://' },
+  ),
+  /** Значення `content` для Search Console — без тега. */
+  googleSiteVerification: ShortText,
+  /**
+   * Головний вимикач індексації.
+   *
+   * Поки він вимкнений, `robots.txt` забороняє все, а сторінки віддають
+   * `noindex`. Вмикати треба тоді, коли на сайті остаточна назва й свій
+   * домен: вийти в пошук зі старою назвою в заголовках дорожче, ніж зачекати.
+   */
+  allowIndexing: z.boolean(),
 });
 export type SiteSettingsDto = z.infer<typeof SiteSettingsDto>;
 
@@ -129,3 +145,42 @@ export function tokenValues(s: SiteSettingsDto): Readonly<Record<string, string>
 export function substituteTokens(text: string, values: Readonly<Record<string, string>>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (whole, key: string) => values[key] ?? whole);
 }
+
+// ---------------------------------------------------------------------------
+// Перевірка SEO
+// ---------------------------------------------------------------------------
+
+export const SeoLevel = z.enum(['error', 'warning', 'info']);
+export type SeoLevel = z.infer<typeof SeoLevel>;
+
+/**
+ * Один дефект із адресою й дією.
+ *
+ * Свідомо не «оцінка зі ста»: бал не каже, що робити, і його можна підняти,
+ * нічого не полагодивши. Список дефектів або порожній, або з нього видно,
+ * куди йти.
+ */
+export const SeoFindingDto = z.object({
+  level: SeoLevel,
+  code: z.string(),
+  message: z.string(),
+  fix: z.string(),
+  /** null — дефект стосується сайту цілком, а не сторінки. */
+  pageId: z.string().uuid().nullable(),
+  pageTitle: z.string(),
+  pageSlug: z.string(),
+});
+export type SeoFindingDto = z.infer<typeof SeoFindingDto>;
+
+export const SeoAuditDto = z.object({
+  findings: z.array(SeoFindingDto),
+  summary: z.object({
+    published: z.number().int().nonnegative(),
+    /** Скільки з них справді можуть потрапити в пошук. */
+    indexable: z.number().int().nonnegative(),
+    errors: z.number().int().nonnegative(),
+    warnings: z.number().int().nonnegative(),
+    allowIndexing: z.boolean(),
+  }),
+});
+export type SeoAuditDto = z.infer<typeof SeoAuditDto>;

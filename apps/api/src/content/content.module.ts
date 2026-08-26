@@ -9,6 +9,7 @@ import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 import { RevalidateService } from './revalidate.service';
 import { SettingsAdminController, SiteChromeController } from './settings.controller';
+import { SeoService } from './seo.service';
 import { SettingsService } from './settings.service';
 
 @Module({
@@ -19,7 +20,7 @@ import { SettingsService } from './settings.service';
   ],
   providers: [
     ContentService, ContentAdminService, MediaService, RevalidateService,
-    SettingsService, PrismaService,
+    SettingsService, SeoService, PrismaService,
   ],
   exports: [ContentService, SettingsService],
 })

@@ -105,6 +105,53 @@ export function breadcrumbJsonLd(
   };
 }
 
+/**
+ * Товар.
+ *
+ * `AggregateOffer`, а не `Offer`, і це не формальність: один принт продається
+ * на семи виробах у різних цінах, тож єдиної ціни в нього немає. Вигадати її
+ * означало б показати в пошуку суму, якої немає в кошику — а це той самий
+ * дефект, що й ціна, яка не сходиться на касі, тільки помітний раніше.
+ *
+ * `availability` рахується з варіантів: якщо хоч щось є на складі — InStock,
+ * інакше PreOrder. Писати InStock завжди — найшвидший спосіб отримати санкції
+ * за невідповідність даних у Merchant Center.
+ */
+export function productJsonLd(product: {
+  name: string;
+  description: string;
+  images: readonly string[];
+  url: string;
+  lowPriceMinor: number;
+  highPriceMinor: number;
+  inStock: boolean;
+  offerCount: number;
+}, baseUrl: string, site: SiteSettingsDto) {
+  const absolute = (u: string) => (u.startsWith('http') ? u : `${baseUrl}${u}`);
+  const uah = (minor: number) => (minor / 100).toFixed(2);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    ...(product.description !== '' ? { description: product.description } : {}),
+    ...(product.images.length > 0 ? { image: product.images.map(absolute) } : {}),
+    brand: { '@type': 'Brand', name: site.brand },
+    offers: {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'UAH',
+      lowPrice: uah(product.lowPriceMinor),
+      highPrice: uah(product.highPriceMinor),
+      offerCount: product.offerCount,
+      availability: product.inStock
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/PreOrder',
+      url: product.url,
+      seller: { '@type': 'Organization', name: site.brand },
+    },
+  };
+}
+
 /** Рендериться як <script type="application/ld+json"> у серверному компоненті. */
 export function JsonLd({ data }: { data: unknown }) {
   return (

@@ -13,6 +13,7 @@ const SETTINGS_SELECT = {
   phone: true, phoneDisplay: true, telegram: true, telegramUrl: true, email: true,
   city: true, cityIn: true, workingHours: true,
   freeShippingFromMinor: true, returnDays: true,
+  defaultOgImage: true, googleSiteVerification: true, allowIndexing: true,
 } as const;
 
 /**

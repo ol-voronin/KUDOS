@@ -1,10 +1,12 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
-  MenuItemCreateDto, MenuItemUpdateDto, SiteSettingsUpdateDto, type SiteChromeDto,
+  MenuItemCreateDto, MenuItemUpdateDto, SiteSettingsUpdateDto,
+  type SeoAuditDto, type SiteChromeDto,
 } from '@dt/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { SeoService } from './seo.service';
 import { SettingsService } from './settings.service';
 
 /** Публічне: те, що потрібно оболонці сайту. Один запит на шапку й футер. */
@@ -23,7 +25,16 @@ export class SiteChromeController {
 @Controller({ path: 'admin/settings', version: '1' })
 @UseGuards(JwtAuthGuard)
 export class SettingsAdminController {
-  constructor(private readonly settings: SettingsService) {}
+  constructor(
+    private readonly settings: SettingsService,
+    private readonly seo: SeoService,
+  ) {}
+
+  /** Перевірка SEO: рахується на вимогу, бо застарілому списку не вірять. */
+  @Get('seo')
+  seoAudit(): Promise<SeoAuditDto> {
+    return this.seo.audit();
+  }
 
   @Get()
   get(): Promise<SiteChromeDto> {

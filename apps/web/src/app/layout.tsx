@@ -21,13 +21,23 @@ const unbounded = Unbounded({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const site = await getSettings();
+  const settings = await getSettings();
   return {
     metadataBase: new URL(BASE),
+    // Поки індексація вимкнена — `noindex` на кожній сторінці, а не тільки в
+    // robots.txt. robots.txt забороняє обхід, але сторінку, на яку вже є
+    // посилання, він з індексу не прибирає; метатег прибирає.
+    ...(settings.allowIndexing ? {} : { robots: { index: false, follow: false } }),
+    ...(settings.googleSiteVerification !== ''
+      ? { verification: { google: settings.googleSiteVerification } }
+      : {}),
+    ...(settings.defaultOgImage !== ''
+      ? { openGraph: { images: [settings.defaultOgImage] } }
+      : {}),
     // Простий рядок, а не `{ default, template }`: кожна сторінка вже додає
     // назву бренду сама, і шаблон приклеював другу — вийшло
     // «Футболки з принтом Коргі — Kudos print — Doggie Tale».
-    title: `${site.brand} — одяг з принтом вашої собаки`,
+    title: `${settings.brand} — одяг з принтом вашої собаки`,
     description: 'Одяг для тих, у кого є собака.',
   };
 }

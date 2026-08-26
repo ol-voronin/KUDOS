@@ -5,7 +5,10 @@ import { PrintOfferDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintOfferView } from '@/features/catalog/components/PrintOfferView';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
+import { breadcrumbJsonLd, JsonLd, productJsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
+
+const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
 interface Params { params: { slug: string } }
 
@@ -44,8 +47,33 @@ export default async function PrintPage({ params }: Params) {
     notFound();
   }
 
+  const site = await getSettings();
+
+  // Ціни рахує сервер і кладе на кожен варіант; тут лишається взяти межі.
+  // Складати «база + друк» руками означало б третю реалізацію ціни — після
+  // вітрини й каси.
+  const totals = offer.variants.map((v) => v.priceMinor + offer.printPriceMinor);
+  const inStock = offer.variants.some((v) => v.availability === 'IN_STOCK');
+
   return (
     <PublicShell>
+      {totals.length > 0 && (
+        <JsonLd data={productJsonLd({
+          name: offer.print.title,
+          description: `${offer.print.title}: друк на футболці, худі або світшоті. Друкуємо ${site.cityIn}.`,
+          images: offer.images.map((i) => i.url),
+          url: `${BASE}/prints/${params.slug}`,
+          lowPriceMinor: Math.min(...totals),
+          highPriceMinor: Math.max(...totals),
+          inStock,
+          offerCount: totals.length,
+        }, BASE, site)} />
+      )}
+      <JsonLd data={breadcrumbJsonLd([
+        { name: 'Головна', url: `${BASE}/` },
+        { name: 'Принти', url: `${BASE}/prints` },
+        { name: offer.print.title, url: `${BASE}/prints/${params.slug}` },
+      ])} />
       <div className="mx-auto max-w-5xl px-6 py-12">
         <nav aria-label="Хлібні крихти" className="mb-6 text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>

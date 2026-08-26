@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MenuArea, MenuItemDto, SiteChromeDto, SiteSettingsDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { createMenuItem, deleteMenuItem, getSettings, updateMenuItem, updateSettings } from './api';
+import { SeoPanel } from './seo-panel';
 
 const KEY = ['admin-settings'];
 
@@ -21,7 +22,7 @@ const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-ink-s
 const GROUPS: ReadonlyArray<{
   title: string;
   hint?: string;
-  fields: ReadonlyArray<{ name: keyof SiteSettingsDto; label: string; hint?: string; numeric?: boolean }>;
+  fields: ReadonlyArray<{ name: keyof SiteSettingsDto; label: string; hint?: string; numeric?: boolean; boolean?: boolean }>;
 }> = [
   {
     title: 'Назва й місто',
@@ -53,6 +54,15 @@ const GROUPS: ReadonlyArray<{
     ],
   },
   {
+    title: 'Пошук',
+    hint: 'Поки індексацію вимкнено, сайт закритий від пошуку — і в robots.txt, і метатегом на кожній сторінці.',
+    fields: [
+      { name: 'allowIndexing', label: 'Показувати сайт у пошуку', boolean: true, hint: 'Вмикайте, коли на сайті остаточна назва й свій домен.' },
+      { name: 'googleSiteVerification', label: 'Код Search Console', hint: 'Тільки значення content із тега підтвердження.' },
+      { name: 'defaultOgImage', label: 'Картинка для превʼю', hint: 'Показується в месенджерах, коли у сторінки немає своєї. Адреса з / або https://.' },
+    ],
+  },
+  {
     title: 'Умови',
     fields: [
       { name: 'freeShippingFromMinor', label: 'Безкоштовна доставка від, ₴', numeric: true, hint: 'Підставляється як {{freeShippingFrom}}.' },
@@ -71,6 +81,7 @@ export function SettingsScreen() {
     <div className="flex flex-col gap-10">
       <SettingsForm data={data} />
       <MenuEditor data={data} />
+      <SeoPanel />
     </div>
   );
 }
@@ -110,6 +121,24 @@ function SettingsForm({ data }: { data: SiteChromeDto }) {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {group.fields.map((field) => {
               const value = draft[field.name];
+
+              if (field.boolean) {
+                return (
+                  <div key={String(field.name)} className="md:col-span-2">
+                    <label className="flex items-center gap-2 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        checked={value === true}
+                        onChange={(e) => setDraft({ ...draft, [field.name]: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      {field.label}
+                    </label>
+                    {field.hint && <p className="mt-1 text-xs text-ink-subtle">{field.hint}</p>}
+                  </div>
+                );
+              }
+
               const shown = field.numeric && field.name === 'freeShippingFromMinor'
                 ? String((value as number) / 100)
                 : String(value);
