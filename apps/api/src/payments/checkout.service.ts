@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import type { ReadyPrintCheckoutRequestDto } from '@dt/contracts';
 import { ErrorCode, minor, mulMinor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
@@ -42,7 +41,7 @@ export class CheckoutService {
   ) {}
 
   async createReadyPrintCheckout(dto: ReadyPrintCheckoutRequestDto) {
-    const print = await this.prisma.print.findFirst({
+    const print = await this.prisma.db.print.findFirst({
       where: { slug: dto.printSlug, isPublished: true },
       select: {
         id: true, title: true, sizeTier: true, isPublished: true,
@@ -53,7 +52,7 @@ export class CheckoutService {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
     }
 
-    const variant = await this.prisma.variant.findUnique({
+    const variant = await this.prisma.db.variant.findUnique({
       where: { id: dto.variantId },
       select: {
         id: true, garmentId: true, availability: true, leadTimeDays: true, priceOverrideMinor: true,
@@ -77,11 +76,11 @@ export class CheckoutService {
     const [restrictions, exclusion] = await Promise.all([
       collectionIds.length === 0
         ? Promise.resolve([] as Array<{ garmentId: string }>)
-        : this.prisma.printGarmentRule.findMany({
+        : this.prisma.db.printGarmentRule.findMany({
           where: { collectionId: { in: collectionIds } },
           select: { garmentId: true },
         }),
-      this.prisma.printGarmentExclusion.findUnique({
+      this.prisma.db.printGarmentExclusion.findUnique({
         where: { printId_garmentId: { printId: print.id, garmentId: variant.garmentId } },
         select: { printId: true },
       }),
@@ -91,7 +90,7 @@ export class CheckoutService {
       && (restrictions.length === 0
         || restrictions.some((r: { garmentId: string }) => r.garmentId === variant.garmentId));
 
-    const priceRows = await this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true } });
+    const priceRows = await this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } });
     const priceTable = Object.fromEntries(
       priceRows.map((r: { tier: string; priceMinor: number }) => [r.tier, r.priceMinor]),
     ) as PrintPriceTable;
@@ -129,7 +128,7 @@ export class CheckoutService {
     // за `reference`, якщо оновлення не встигне.
     const pendingInvoiceId = `pending:${orderId}`;
 
-    const order = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const order = await this.prisma.db.$transaction(async (tx) => {
       const customer = await tx.customer.upsert({
         where: { phone: dto.customer.phone },
         update: {
@@ -216,14 +215,14 @@ export class CheckoutService {
     } catch (error) {
       // No invoice means no way to pay — do not leave an order sitting in
       // PENDING_PAYMENT that the customer can never actually pay for.
-      await this.prisma.order.update({ where: { id: order.id }, data: { status: 'CANCELLED' } }).catch(() => {});
-      await this.prisma.payment
+      await this.prisma.db.order.update({ where: { id: order.id }, data: { status: 'CANCELLED' } }).catch(() => {});
+      await this.prisma.db.payment
         .update({ where: { invoiceId: pendingInvoiceId }, data: { status: 'FAILURE', failureReason: 'Рахунок не створено' } })
         .catch(() => undefined);
       throw error;
     }
 
-    await this.prisma.payment.update({
+    await this.prisma.db.payment.update({
       where: { invoiceId: pendingInvoiceId },
       data: { invoiceId: invoice.invoiceId },
     });
@@ -235,7 +234,7 @@ export class CheckoutService {
 
   /** Public, minimal status for the post-payment "thank you" page. */
   async getPublicOrderStatus(orderId: string) {
-    const order = await this.prisma.order.findUnique({
+    const order = await this.prisma.db.order.findUnique({
       where: { id: orderId },
       select: { number: true, status: true, totalMinor: true },
     });

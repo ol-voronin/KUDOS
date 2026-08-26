@@ -13,17 +13,23 @@ interface FakeAdmin {
   lockedUntil: Date | null;
 }
 
+/**
+ * Заглушка бази.
+ *
+ * Моделі лежать під `db`, як і в справжньому `PrismaService`: сирий клієнт
+ * там приватний, і сервіси до нього не дістають. Заглушка повторює цю форму
+ * навмисно — інакше тест проходив би на структурі, якої в проді немає.
+ */
 function fakePrisma(admin: FakeAdmin | null) {
   const state = admin ? { ...admin } : null;
-  return {
-    adminUser: {
-      findUnique: vi.fn(async () => state),
-      update: vi.fn(async ({ data }: { data: Partial<FakeAdmin> }) => {
-        Object.assign(state as FakeAdmin, data);
-        return state;
-      }),
-    },
+  const adminUser = {
+    findUnique: vi.fn(async () => state),
+    update: vi.fn(async ({ data }: { data: Partial<FakeAdmin> }) => {
+      Object.assign(state as FakeAdmin, data);
+      return state;
+    }),
   };
+  return { db: { adminUser }, adminUser };
 }
 
 function fakeJwt() {

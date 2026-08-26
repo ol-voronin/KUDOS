@@ -12,17 +12,23 @@ interface FakePayment {
   finalizedAt: Date | null;
 }
 
+/**
+ * Заглушка бази.
+ *
+ * Моделі під `db`, як у справжньому `PrismaService`: сирий клієнт там
+ * приватний. Заглушка повторює цю форму навмисно — інакше тест проходив би
+ * на структурі, якої в проді немає.
+ */
 function fakePrisma(payment: FakePayment | null) {
   const state = payment ? { ...payment } : null;
-  return {
-    payment: {
-      findUnique: vi.fn(async () => state),
-      update: vi.fn(async ({ data }: { data: Partial<FakePayment> }) => {
-        Object.assign(state as FakePayment, data);
-        return state;
-      }),
-    },
+  const model = {
+    findUnique: vi.fn(async () => state),
+    update: vi.fn(async ({ data }: { data: Partial<FakePayment> }) => {
+      Object.assign(state as FakePayment, data);
+      return state;
+    }),
   };
+  return { db: { payment: model }, payment: model };
 }
 
 function fakeMonobank() {

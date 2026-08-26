@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import type { CustomRequestCreateDto } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { sendToTelegram } from '../common/telegram';
@@ -18,7 +17,7 @@ export class CustomRequestsService {
    * the price of a two-hour one.
    */
   async create(dto: CustomRequestCreateDto): Promise<{ id: string; number: number }> {
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    return this.prisma.db.$transaction(async (tx) => {
       const customer = await tx.customer.upsert({
         where: { phone: dto.contact.phone },
         update: { name: dto.contact.name, ...(dto.contact.email ? { email: dto.contact.email } : {}) },

@@ -6,6 +6,7 @@ import {
   type AdminVersionDto,
 } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { requireSiteId } from '../common/site-context';
 import { RevalidateService } from './revalidate.service';
 
 /** Версія з автором — рівно те, що читають усі методи нижче. */
@@ -54,7 +55,7 @@ export class ContentAdminService {
   }
 
   async list(): Promise<AdminPageListDto> {
-    const rows = await this.prisma.page.findMany({
+    const rows = await this.prisma.db.page.findMany({
       orderBy: [{ kind: 'asc' }, { position: 'asc' }, { slug: 'asc' }],
       select: {
         id: true, slug: true, kind: true, isSystem: true, publishedAt: true,
@@ -90,7 +91,7 @@ export class ContentAdminService {
   }
 
   async get(id: string): Promise<AdminPageDto> {
-    const page = await this.prisma.page.findUnique({
+    const page = await this.prisma.db.page.findUnique({
       where: { id },
       select: {
         id: true, slug: true, kind: true, isSystem: true, publishedAt: true,
@@ -134,17 +135,28 @@ export class ContentAdminService {
   // ── зміна ─────────────────────────────────────────────────────────────────
 
   async create(dto: AdminPageCreateDto, authorId: string): Promise<AdminPageDto> {
-    const taken = await this.prisma.page.findUnique({
-      where: { locale_slug: { locale: 'UK', slug: dto.slug } },
+    const taken = await this.prisma.db.page.findFirst({
+      where: { locale: 'UK', slug: dto.slug },
       select: { id: true },
     });
     if (taken) throw new ConflictException({ code: ErrorCode.CONFLICT, message: 'Сторінка з такою адресою вже є' });
 
-    const page = await this.prisma.page.create({
+    // `siteId` пишеться явно, хоча розширення підставило б його й саме.
+    //
+    // Причина в типах: розширення працює в рантаймі й не змінює того, що
+    // вимагає компілятор. І це на краще. Створення рядка — єдине місце, де
+    // питання «якому сайту він належить» справді має ставитися свідомо;
+    // читання й зміни розширення закриває само, а створення лишається
+    // видимим у коді. Вкладене створення версії інакше й не збереться.
+    const siteId = requireSiteId();
+
+    const page = await this.prisma.db.page.create({
       data: {
+        siteId,
         slug: dto.slug, kind: dto.kind, locale: 'UK', isSystem: false,
         versions: {
           create: {
+            siteId,
             number: 1, status: 'DRAFT', title: dto.title, blocks: [],
             authorId, note: 'створено',
           },
@@ -165,7 +177,7 @@ export class ContentAdminService {
    * пошуковик на другому переході вже втрачає вагу посилання.
    */
   async update(id: string, dto: AdminPageUpdateDto): Promise<AdminPageDto> {
-    const page = await this.prisma.page.findUnique({
+    const page = await this.prisma.db.page.findUnique({
       where: { id }, select: { id: true, slug: true, isSystem: true },
     });
     if (!page) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Сторінку не знайдено' });
@@ -177,21 +189,23 @@ export class ContentAdminService {
           message: 'Це системна сторінка: на її адресу посилаються код і документи, змінювати не можна',
         });
       }
-      const taken = await this.prisma.page.findUnique({
-        where: { locale_slug: { locale: 'UK', slug: dto.slug } }, select: { id: true },
+      const taken = await this.prisma.db.page.findFirst({
+        where: { locale: 'UK', slug: dto.slug }, select: { id: true },
       });
       if (taken) throw new ConflictException({ code: ErrorCode.CONFLICT, message: 'Сторінка з такою адресою вже є' });
 
-      await this.prisma.$transaction([
-        this.prisma.redirect.updateMany({ where: { toSlug: page.slug }, data: { toSlug: dto.slug } }),
-        this.prisma.redirect.deleteMany({ where: { locale: 'UK', fromSlug: dto.slug } }),
-        this.prisma.redirect.create({ data: { locale: 'UK', fromSlug: page.slug, toSlug: dto.slug } }),
-        this.prisma.page.update({ where: { id }, data: { slug: dto.slug } }),
+      await this.prisma.db.$transaction([
+        this.prisma.db.redirect.updateMany({ where: { toSlug: page.slug }, data: { toSlug: dto.slug } }),
+        this.prisma.db.redirect.deleteMany({ where: { locale: 'UK', fromSlug: dto.slug } }),
+        this.prisma.db.redirect.create({
+          data: { siteId: requireSiteId(), locale: 'UK', fromSlug: page.slug, toSlug: dto.slug },
+        }),
+        this.prisma.db.page.update({ where: { id }, data: { slug: dto.slug } }),
       ]);
     }
 
     if (dto.position !== undefined) {
-      await this.prisma.page.update({ where: { id }, data: { position: dto.position } });
+      await this.prisma.db.page.update({ where: { id }, data: { position: dto.position } });
     }
     return this.get(id);
   }
@@ -205,7 +219,7 @@ export class ContentAdminService {
    * сорока записами «зберіг через хвилину» непридатна для відкату.
    */
   async saveDraft(id: string, dto: AdminDraftSaveDto, authorId: string): Promise<AdminPageDto> {
-    const page = await this.prisma.page.findUnique({
+    const page = await this.prisma.db.page.findUnique({
       where: { id },
       select: { id: true, versions: { select: { id: true, number: true, status: true } } },
     });
@@ -219,10 +233,12 @@ export class ContentAdminService {
     };
 
     if (draft) {
-      await this.prisma.pageVersion.update({ where: { id: draft.id }, data });
+      await this.prisma.db.pageVersion.update({ where: { id: draft.id }, data });
     } else {
       const next = Math.max(0, ...page.versions.map((v: { number: number }) => v.number)) + 1;
-      await this.prisma.pageVersion.create({ data: { ...data, pageId: id, number: next, status: 'DRAFT' } });
+      await this.prisma.db.pageVersion.create({
+        data: { ...data, siteId: requireSiteId(), pageId: id, number: next, status: 'DRAFT' },
+      });
     }
     return this.get(id);
   }
@@ -235,7 +251,7 @@ export class ContentAdminService {
    * не існує — і це не домовленість у коді, а частковий унікальний індекс.
    */
   async publish(id: string): Promise<AdminPageDto> {
-    const page = await this.prisma.page.findUnique({
+    const page = await this.prisma.db.page.findUnique({
       where: { id },
       select: { id: true, slug: true, publishedAt: true, versions: { select: { id: true, status: true } } },
     });
@@ -249,12 +265,12 @@ export class ContentAdminService {
       });
     }
 
-    await this.prisma.$transaction([
-      this.prisma.pageVersion.updateMany({
+    await this.prisma.db.$transaction([
+      this.prisma.db.pageVersion.updateMany({
         where: { pageId: id, status: 'PUBLISHED' }, data: { status: 'ARCHIVED' },
       }),
-      this.prisma.pageVersion.update({ where: { id: draft.id }, data: { status: 'PUBLISHED' } }),
-      this.prisma.page.update({
+      this.prisma.db.pageVersion.update({ where: { id: draft.id }, data: { status: 'PUBLISHED' } }),
+      this.prisma.db.page.update({
         where: { id },
         data: { publishedAt: page.publishedAt ?? new Date() },
       }),
@@ -266,7 +282,7 @@ export class ContentAdminService {
 
   /** Зняти з публікації. Системну сторінку — ніколи. */
   async unpublish(id: string): Promise<AdminPageDto> {
-    const page = await this.prisma.page.findUnique({
+    const page = await this.prisma.db.page.findUnique({
       where: { id }, select: { id: true, slug: true, isSystem: true },
     });
     if (!page) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Сторінку не знайдено' });
@@ -276,7 +292,7 @@ export class ContentAdminService {
         message: 'Системну сторінку не можна прибрати з сайту',
       });
     }
-    await this.prisma.pageVersion.updateMany({
+    await this.prisma.db.pageVersion.updateMany({
       where: { pageId: id, status: 'PUBLISHED' }, data: { status: 'ARCHIVED' },
     });
     await this.refreshCache(id, page.slug);
@@ -291,7 +307,7 @@ export class ContentAdminService {
    * «Опублікувати» окремо.
    */
   async restore(id: string, versionId: string, authorId: string): Promise<AdminPageDto> {
-    const version = await this.prisma.pageVersion.findFirst({
+    const version = await this.prisma.db.pageVersion.findFirst({
       where: { id: versionId, pageId: id }, select: VERSION_SELECT,
     });
     if (!version) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Версію не знайдено' });
@@ -310,7 +326,7 @@ export class ContentAdminService {
   }
 
   async remove(id: string): Promise<{ ok: true }> {
-    const page = await this.prisma.page.findUnique({
+    const page = await this.prisma.db.page.findUnique({
       where: { id }, select: { slug: true, isSystem: true },
     });
     if (!page) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Сторінку не знайдено' });
@@ -320,7 +336,7 @@ export class ContentAdminService {
         message: 'Системну сторінку видалити не можна',
       });
     }
-    await this.prisma.page.delete({ where: { id } });
+    await this.prisma.db.page.delete({ where: { id } });
     await this.revalidate.revalidate([`/${page.slug}`, '/sitemap.xml']);
     return { ok: true };
   }
@@ -328,7 +344,7 @@ export class ContentAdminService {
   /** Скидання кешу разом із записом результату — щоб мовчазної невдачі не було. */
   private async refreshCache(id: string, slug: string): Promise<void> {
     const error = await this.revalidate.revalidate([`/${slug}`, '/sitemap.xml']);
-    await this.prisma.page.update({
+    await this.prisma.db.page.update({
       where: { id },
       data: {
         revalidateError: error,

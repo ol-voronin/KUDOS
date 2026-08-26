@@ -3,6 +3,7 @@ import {
   ErrorCode, type MediaAssetDto, type MediaCreateDto, type MediaListDto, type MediaUpdateDto,
 } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { requireSiteId } from '../common/site-context';
 
 interface AssetRow {
   id: string; url: string; pathname: string; filename: string;
@@ -30,12 +31,12 @@ export class MediaService {
 
   async list(page: number, perPage: number): Promise<MediaListDto> {
     const [rows, total] = await Promise.all([
-      this.prisma.mediaAsset.findMany({
+      this.prisma.db.mediaAsset.findMany({
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * perPage,
         take: perPage,
       }),
-      this.prisma.mediaAsset.count(),
+      this.prisma.db.mediaAsset.count(),
     ]);
     return { items: (rows as AssetRow[]).map((r) => this.toDto(r)), total };
   }
@@ -43,18 +44,23 @@ export class MediaService {
   async create(dto: MediaCreateDto, uploadedById: string): Promise<MediaAssetDto> {
     // Той самий `pathname` двічі означав би два рядки на один файл: видалили
     // один — другий лишився з мертвим посиланням.
-    const existing = await this.prisma.mediaAsset.findUnique({ where: { pathname: dto.pathname } });
+    // findFirst, а не findUnique: унікальність `pathname` тепер у межах
+    // сайту, і складений ключ вимагав би передати `siteId` руками — тобто
+    // обійти той самий механізм, заради якого він існує.
+    const existing = await this.prisma.db.mediaAsset.findFirst({ where: { pathname: dto.pathname } });
     if (existing) {
       throw new ConflictException({ code: ErrorCode.CONFLICT, message: 'Такий файл уже зареєстрований' });
     }
-    const row = await this.prisma.mediaAsset.create({ data: { ...dto, uploadedById } });
+    const row = await this.prisma.db.mediaAsset.create({
+      data: { ...dto, siteId: requireSiteId(), uploadedById },
+    });
     return this.toDto(row as AssetRow);
   }
 
   async update(id: string, dto: MediaUpdateDto): Promise<MediaAssetDto> {
-    const exists = await this.prisma.mediaAsset.findUnique({ where: { id }, select: { id: true } });
+    const exists = await this.prisma.db.mediaAsset.findUnique({ where: { id }, select: { id: true } });
     if (!exists) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Картинку не знайдено' });
-    const row = await this.prisma.mediaAsset.update({ where: { id }, data: { alt: dto.alt } });
+    const row = await this.prisma.db.mediaAsset.update({ where: { id }, data: { alt: dto.alt } });
     return this.toDto(row as AssetRow);
   }
 
@@ -66,9 +72,9 @@ export class MediaService {
    * мертвим посиланням — а це гірше за файл-сироту, який нікому не заважає.
    */
   async remove(id: string): Promise<{ pathname: string }> {
-    const row = await this.prisma.mediaAsset.findUnique({ where: { id }, select: { pathname: true } });
+    const row = await this.prisma.db.mediaAsset.findUnique({ where: { id }, select: { pathname: true } });
     if (!row) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Картинку не знайдено' });
-    await this.prisma.mediaAsset.delete({ where: { id } });
+    await this.prisma.db.mediaAsset.delete({ where: { id } });
     return { pathname: row.pathname };
   }
 }

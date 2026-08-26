@@ -51,6 +51,18 @@ for (const block of schema.matchAll(/^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm)) {
   }
 }
 
+/**
+ * Орендні моделі — ті самі, що в `src/common/tenancy.ts`.
+ *
+ * Список читається з файлу, а не дублюється тут: дві копії розійдуться,
+ * і розійдуться саме тоді, коли додадуть нову таблицю вмісту.
+ */
+const tenancySource = readFileSync(join(API_ROOT, 'src', 'common', 'tenancy.ts'), 'utf8');
+const tenantBlock = /TENANT_MODELS[^=]*=\s*new Set\(\[([\s\S]*?)\]\)/.exec(tenancySource);
+const tenantModels = new Set(
+  [...(tenantBlock?.[1] ?? '').matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1]),
+);
+
 // ── код ──────────────────────────────────────────────────────────────────────
 
 async function* walk(dir) {
@@ -66,18 +78,45 @@ const problems = [];
 
 for (const dir of ['src', 'prisma', 'scripts']) {
   for await (const file of walk(join(API_ROOT, dir))) {
-    const source = readFileSync(file, 'utf8');
+    // Коментарі відкидаємо: у них цілком доречно згадати старий, небезпечний
+    // виклик, щоб пояснити, чому його більше немає.
+    const source = readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
     const where = relative(API_ROOT, file);
 
     // Заперечний lookbehind відсікає шляхи імпорту: у `../common/prisma.service`
-    // перед `prisma` стоїть слеш, у `this.prisma.garment` — крапка.
+    // перед `prisma` стоїть слеш, у `this.prisma.db.garment` — крапка.
     // Крапка після імені моделі обовʼязкова: далі завжди йде метод.
-    for (const hit of source.matchAll(/(?<![\w/'"-])prisma\.([a-z][A-Za-z0-9]*)\./g)) {
+    for (const hit of source.matchAll(/(?<![\w/'"-])prisma\.(?:db\.)?([a-z][A-Za-z0-9]*)\./g)) {
       const model = hit[1];
       // Клієнтські методи, а не моделі.
-      if (/^\$/.test(model) || ['on', 'use', 'then', 'catch', 'finally'].includes(model)) continue;
+      if (/^\$/.test(model) || ['db', 'raw', 'on', 'use', 'then', 'catch', 'finally'].includes(model)) continue;
       if (models.has(model)) continue;
       problems.push(`${where}: моделі \`${model}\` немає в schema.prisma`);
+    }
+
+    // Небезпека, яку тут ловимо, одна: файл бере сирий `PrismaClient` і
+    // сам іде до таблиці вмісту. У сервісах це вже неможливо — `PrismaService`
+    // не успадковує клієнта, тож `this.prisma.page` не збереться. А от новий
+    // сідер написати саме так дуже легко, і він мовчки прочитає дані всіх
+    // сайтів одразу.
+    //
+    // Перевіряти імена змінних безглуздо: у сідері `prisma` — це вже
+    // ізольований клієнт. Тому дивимося на імпорти.
+    const usesRawClient = /from '@prisma\/client'/.test(source) && /\bnew PrismaClient\(/.test(source);
+    const isolated = /withTenancy|withSite/.test(source);
+    if (usesRawClient && !isolated) {
+      const touched = [...tenantModels].filter((m) => {
+        const lower = m[0].toLowerCase() + m.slice(1);
+        return new RegExp(`\\.${lower}\\.`).test(source);
+      });
+      if (touched.length > 0) {
+        problems.push(
+          `${where}: сирий PrismaClient звертається до ${touched.join(', ')} — `
+          + 'оберніть у withSite() або withTenancy(), інакше запит побачить дані всіх сайтів',
+        );
+      }
     }
 
     // Складений ключ упізнаємо за формою: щонайменше два фрагменти через "_",

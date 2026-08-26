@@ -26,7 +26,7 @@ export class HealthController {
 
   @Get()
   async check(): Promise<HealthDto> {
-    const database = await this.prisma.$queryRaw`SELECT 1`
+    const database = await this.prisma.db.$queryRaw`SELECT 1`
       .then(() => true)
       .catch(() => false);
 
@@ -48,7 +48,7 @@ export class HealthController {
    */
   private async lastMigration(): Promise<{ migration: string | null; applied: number; pending: number }> {
     try {
-      const rows = await this.prisma.$queryRaw<Array<{ migration_name: string; finished_at: Date | null }>>`
+      const rows = await this.prisma.db.$queryRaw<Array<{ migration_name: string; finished_at: Date | null }>>`
         SELECT migration_name, finished_at
         FROM "_prisma_migrations"
         ORDER BY started_at DESC

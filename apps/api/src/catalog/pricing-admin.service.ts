@@ -18,7 +18,7 @@ export class PricingAdminService {
 
   async get(): Promise<AdminPricingDto> {
     const [garments, printPrices] = await Promise.all([
-      this.prisma.garment.findMany({
+      this.prisma.db.garment.findMany({
         orderBy: [{ isPublished: 'desc' }, { basePriceMinor: 'asc' }],
         select: {
           id: true, slug: true, name: true, line: true, type: true, fit: true,
@@ -27,7 +27,7 @@ export class PricingAdminService {
           variants: { select: { colourId: true } },
         },
       }),
-      this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true }, orderBy: { tier: 'asc' } }),
+      this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true }, orderBy: { tier: 'asc' } }),
     ]);
 
     return {
@@ -49,11 +49,11 @@ export class PricingAdminService {
   }
 
   async updateGarment(id: string, dto: AdminGarmentUpdateDto): Promise<AdminPricingDto> {
-    const exists = await this.prisma.garment.findUnique({ where: { id }, select: { id: true } });
+    const exists = await this.prisma.db.garment.findUnique({ where: { id }, select: { id: true } });
     if (!exists) {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Виріб не знайдено' });
     }
-    await this.prisma.garment.update({
+    await this.prisma.db.garment.update({
       where: { id },
       data: {
         ...(dto.basePriceMinor !== undefined ? { basePriceMinor: dto.basePriceMinor } : {}),
@@ -64,8 +64,8 @@ export class PricingAdminService {
   }
 
   async updatePrintPrices(dto: AdminPrintPriceUpdateDto): Promise<AdminPricingDto> {
-    await this.prisma.$transaction(
-      dto.prices.map((p) => this.prisma.printPrice.upsert({
+    await this.prisma.db.$transaction(
+      dto.prices.map((p) => this.prisma.db.printPrice.upsert({
         where: { tier: p.tier },
         update: { priceMinor: p.priceMinor },
         create: { tier: p.tier, priceMinor: p.priceMinor },

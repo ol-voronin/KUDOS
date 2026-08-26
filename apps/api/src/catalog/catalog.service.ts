@@ -34,15 +34,15 @@ export class CatalogService {
       this.loadPrintPrices(),
     ]);
 
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.print.findMany({
+    const [rows, total] = await this.prisma.db.$transaction([
+      this.prisma.db.print.findMany({
         where,
         select: CatalogService.PRINT_ROW_SELECT,
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.perPage,
         take: query.perPage,
       }),
-      this.prisma.print.count({ where }),
+      this.prisma.db.print.count({ where }),
     ]);
 
     return {
@@ -54,7 +54,7 @@ export class CatalogService {
   }
 
   async getPrintOffer(slug: string): Promise<PrintOfferDto> {
-    const print = await this.prisma.print.findFirst({
+    const print = await this.prisma.db.print.findFirst({
       where: { slug, isPublished: true },
       select: {
         id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
@@ -87,13 +87,13 @@ export class CatalogService {
     const collectionIds = print.collections.map((c: { collectionId: string }) => c.collectionId);
     const excludedGarmentIds = print.exclusions.map((e: { garmentId: string }) => e.garmentId);
 
-    const restrictingRules = collectionIds.length === 0 ? [] : await this.prisma.printGarmentRule.findMany({
+    const restrictingRules = collectionIds.length === 0 ? [] : await this.prisma.db.printGarmentRule.findMany({
       where: { collectionId: { in: collectionIds } },
       select: { garmentId: true },
     });
     const allowedGarmentIds = [...new Set(restrictingRules.map((r: { garmentId: string }) => r.garmentId))];
 
-    const garments = await this.prisma.garment.findMany({
+    const garments = await this.prisma.db.garment.findMany({
       where: {
         isPublished: true,
         id: {
@@ -121,7 +121,7 @@ export class CatalogService {
     });
 
     const garmentIds = garments.map((g: { id: string }) => g.id);
-    const variants = garmentIds.length === 0 ? [] : await this.prisma.variant.findMany({
+    const variants = garmentIds.length === 0 ? [] : await this.prisma.db.variant.findMany({
       where: { garmentId: { in: garmentIds } },
       select: {
         id: true, sku: true, garmentId: true, fabricId: true, colourId: true, sizeId: true,
@@ -130,12 +130,12 @@ export class CatalogService {
     });
 
     const colourIds = [...new Set(variants.map((v: { colourId: string }) => v.colourId))];
-    const colours = colourIds.length === 0 ? [] : await this.prisma.colour.findMany({
+    const colours = colourIds.length === 0 ? [] : await this.prisma.db.colour.findMany({
       where: { id: { in: colourIds } },
       select: { id: true, name: true, supplierCode: true, hex: true, imageUrl: true },
     });
 
-    const printPriceRows = await this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true } });
+    const printPriceRows = await this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } });
     const priceTable = Object.fromEntries(
       printPriceRows.map((r: { tier: string; priceMinor: number }) => [r.tier, r.priceMinor]),
     ) as PrintPriceTable;
@@ -214,7 +214,7 @@ export class CatalogService {
    */
   async getRange(): Promise<RangeDto> {
     const [garments, printPrices] = await Promise.all([
-      this.prisma.garment.findMany({
+      this.prisma.db.garment.findMany({
         where: { isPublished: true },
         orderBy: { basePriceMinor: 'asc' },
         select: {
@@ -240,7 +240,7 @@ export class CatalogService {
           },
         },
       }),
-      this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true } }),
+      this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } }),
     ]);
 
     return {
@@ -287,7 +287,7 @@ export class CatalogService {
 
   private async loadOfferContext(): Promise<OfferContext> {
     const [rows, rules, exclusions] = await Promise.all([
-      this.prisma.garment.findMany({
+      this.prisma.db.garment.findMany({
         where: { isPublished: true },
         select: {
           id: true, basePriceMinor: true, type: true,
@@ -300,8 +300,8 @@ export class CatalogService {
       // Уся таблиця правил і вся таблиця заборон — це десятки рядків, і вони
       // потрібні цілком: без них не відрізнити «обмежень немає» від «обмеження
       // є, але вони нікуди не ведуть». Читати їх посторінково нічого не дає.
-      this.prisma.printGarmentRule.findMany({ select: { collectionId: true } }),
-      this.prisma.printGarmentExclusion.findMany({ select: { printId: true, garmentId: true } }),
+      this.prisma.db.printGarmentRule.findMany({ select: { collectionId: true } }),
+      this.prisma.db.printGarmentExclusion.findMany({ select: { printId: true, garmentId: true } }),
     ]);
 
     const garments: OfferableGarment[] = rows.map((g: {
@@ -338,7 +338,7 @@ export class CatalogService {
    * гроші, заради одного лічильника не варто.
    */
   private async breedPrintCounts(): Promise<Map<string, number>> {
-    const rows = await this.prisma.printBreed.groupBy({
+    const rows = await this.prisma.db.printBreed.groupBy({
       by: ['breedId'],
       where: { print: { isPublished: true } },
       _count: { printId: true },
@@ -347,7 +347,7 @@ export class CatalogService {
   }
 
   private async collectionPrintCounts(): Promise<Map<string, number>> {
-    const rows = await this.prisma.printCollection.groupBy({
+    const rows = await this.prisma.db.printCollection.groupBy({
       by: ['collectionId'],
       where: { print: { isPublished: true } },
       _count: { printId: true },
@@ -356,7 +356,7 @@ export class CatalogService {
   }
 
   private async loadPrintPrices(): Promise<PrintPriceTable> {
-    const rows = await this.prisma.printPrice.findMany({ select: { tier: true, priceMinor: true } });
+    const rows = await this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } });
     return Object.fromEntries(
       rows.map((r: { tier: string; priceMinor: number }) => [r.tier, r.priceMinor]),
     ) as PrintPriceTable;
@@ -393,13 +393,13 @@ export class CatalogService {
       this.collectionPrintCounts(),
     ]);
 
-    const [breedRows, collectionRows, newRows, totalPrints] = await this.prisma.$transaction([
-      this.prisma.breed.findMany({
+    const [breedRows, collectionRows, newRows, totalPrints] = await this.prisma.db.$transaction([
+      this.prisma.db.breed.findMany({
         select: {
           id: true, slug: true, name: true,
         },
       }),
-      this.prisma.collection.findMany({
+      this.prisma.db.collection.findMany({
         where: { isPublished: true },
         orderBy: { position: 'asc' },
         select: {
@@ -411,13 +411,13 @@ export class CatalogService {
           },
         },
       }),
-      this.prisma.print.findMany({
+      this.prisma.db.print.findMany({
         where: { isPublished: true },
         select: CatalogService.PRINT_ROW_SELECT,
         orderBy: { createdAt: 'desc' },
         take: HOME_BLOCK_SIZE,
       }),
-      this.prisma.print.count({ where: { isPublished: true } }),
+      this.prisma.db.print.count({ where: { isPublished: true } }),
     ]);
 
     const newPrints = newRows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices));
@@ -425,7 +425,7 @@ export class CatalogService {
     // «Готові до відправки» замість розпродажу: дефіцит справжній, бо власне
     // виробництво гарантує лише один колір на складі. Беремо ширше вікно й
     // фільтруємо вже порахованим полем inStock.
-    const stockCandidates = await this.prisma.print.findMany({
+    const stockCandidates = await this.prisma.db.print.findMany({
       where: { isPublished: true },
       select: CatalogService.PRINT_ROW_SELECT,
       orderBy: { createdAt: 'desc' },
@@ -464,7 +464,7 @@ export class CatalogService {
 
   async listBreeds(): Promise<BreedListDto> {
     const [rows, counts] = await Promise.all([
-      this.prisma.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
+      this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
       this.breedPrintCounts(),
     ]);
     // Тут, на відміну від головної, віддаємо всі — включно з порожніми:
@@ -475,7 +475,7 @@ export class CatalogService {
   }
 
   async listCollections(): Promise<CollectionListDto> {
-    const rows = await this.prisma.collection.findMany({
+    const rows = await this.prisma.db.collection.findMany({
       where: { isPublished: true },
       orderBy: { position: 'asc' },
       select: {
@@ -498,7 +498,7 @@ export class CatalogService {
   }
 
   async getBreedPage(slug: string): Promise<BreedPageDto> {
-    const breed = await this.prisma.breed.findUnique({
+    const breed = await this.prisma.db.breed.findUnique({
       where: { slug },
       select: { id: true, slug: true, name: true, synonyms: true },
     });
@@ -510,12 +510,12 @@ export class CatalogService {
       this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
-      this.prisma.print.findMany({
+      this.prisma.db.print.findMany({
         where: { isPublished: true, breeds: { some: { breedId: breed.id } } },
         select: CatalogService.PRINT_ROW_SELECT,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.breed.findMany({
+      this.prisma.db.breed.findMany({
         where: { id: { not: breed.id } },
         select: { id: true, slug: true, name: true },
       }),
@@ -535,7 +535,7 @@ export class CatalogService {
   }
 
   async getCollectionPage(slug: string): Promise<CollectionPageDto> {
-    const collection = await this.prisma.collection.findFirst({
+    const collection = await this.prisma.db.collection.findFirst({
       where: { slug, isPublished: true },
       select: { id: true, slug: true, title: true, description: true },
     });
@@ -546,7 +546,7 @@ export class CatalogService {
     const [offer, printPrices, rows] = await Promise.all([
       this.loadOfferContext(),
       this.loadPrintPrices(),
-      this.prisma.print.findMany({
+      this.prisma.db.print.findMany({
         where: { isPublished: true, collections: { some: { collectionId: collection.id } } },
         select: CatalogService.PRINT_ROW_SELECT,
         orderBy: { createdAt: 'desc' },
@@ -587,8 +587,8 @@ export class CatalogService {
       this.collectionPrintCounts(),
     ]);
 
-    const [breedRows, collectionRows, printRows] = await this.prisma.$transaction([
-      this.prisma.breed.findMany({
+    const [breedRows, collectionRows, printRows] = await this.prisma.db.$transaction([
+      this.prisma.db.breed.findMany({
         where: {
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
@@ -599,7 +599,7 @@ export class CatalogService {
         select: { id: true, slug: true, name: true },
         take: 8,
       }),
-      this.prisma.collection.findMany({
+      this.prisma.db.collection.findMany({
         where: {
           isPublished: true,
           OR: [
@@ -618,7 +618,7 @@ export class CatalogService {
         },
         take: 8,
       }),
-      this.prisma.print.findMany({
+      this.prisma.db.print.findMany({
         where: {
           isPublished: true,
           OR: [
@@ -652,10 +652,10 @@ export class CatalogService {
 
   /** Плоскі списки для sitemap.xml. Породи віддаємо всі — навіть порожні мають сторінку. */
   async getSitemap(): Promise<SitemapDto> {
-    const [prints, breeds, collections] = await this.prisma.$transaction([
-      this.prisma.print.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
-      this.prisma.breed.findMany({ select: { slug: true, updatedAt: true } }),
-      this.prisma.collection.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
+    const [prints, breeds, collections] = await this.prisma.db.$transaction([
+      this.prisma.db.print.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
+      this.prisma.db.breed.findMany({ select: { slug: true, updatedAt: true } }),
+      this.prisma.db.collection.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
     ]);
     return { prints, breeds, collections };
   }

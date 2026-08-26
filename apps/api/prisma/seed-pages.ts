@@ -14,11 +14,10 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PrismaClient } from '@prisma/client';
 import { BlockList } from '@dt/contracts';
+import type { TenantClient } from '../src/common/tenancy';
 import { MARKETING_PAGES, type PageSeed } from './pages/marketing';
-
-const prisma = new PrismaClient();
+import { withSite } from './tenant-client';
 
 /** Той самий банер, що й у сідері асортименту: куди саме ми пишемо. */
 function targetSummary(): string {
@@ -66,22 +65,29 @@ function legalSeeds(): PageSeed[] {
   });
 }
 
-async function upsertPage(seed: PageSeed): Promise<'створено' | 'оновлено' | 'пропущено'> {
+async function upsertPage(
+  prisma: TenantClient,
+  siteId: string,
+  seed: PageSeed,
+): Promise<'створено' | 'оновлено' | 'пропущено'> {
   // Схему перевіряємо ще раз, уже на боці сідера: сторінка з блоком, який не
   // проходить контракт, не має потрапити в базу навіть із нашого ж коду.
   const blocks = BlockList.parse(seed.blocks);
 
-  const existing = await prisma.page.findUnique({
-    where: { locale_slug: { locale: 'UK', slug: seed.slug } },
+  // findFirst, а не findUnique зі складеним ключем: сайт у запит додає
+  // розширення, і передавати його руками означало б обійти той самий
+  // механізм, заради якого він існує.
+  const existing = await prisma.page.findFirst({
+    where: { locale: 'UK', slug: seed.slug },
     select: { id: true, versions: { select: { id: true, number: true, authorId: true, status: true } } },
   });
 
   if (existing) {
     // Людина вже щось із цією сторінкою робила — не чіпаємо.
-    const touchedByHuman = existing.versions.some((v) => v.authorId !== null);
+    const touchedByHuman = existing.versions.some((v: { authorId: string | null }) => v.authorId !== null);
     if (touchedByHuman) return 'пропущено';
 
-    const next = Math.max(0, ...existing.versions.map((v) => v.number)) + 1;
+    const next = Math.max(0, ...existing.versions.map((v: { number: number }) => v.number)) + 1;
     await prisma.$transaction([
       prisma.pageVersion.updateMany({
         where: { pageId: existing.id, status: { in: ['DRAFT', 'PUBLISHED'] } },
@@ -89,7 +95,7 @@ async function upsertPage(seed: PageSeed): Promise<'створено' | 'оно�
       }),
       prisma.pageVersion.create({
         data: {
-          pageId: existing.id, number: next, status: 'PUBLISHED',
+          siteId, pageId: existing.id, number: next, status: 'PUBLISHED',
           title: seed.title, excerpt: seed.excerpt,
           seoTitle: seed.seoTitle, seoDescription: seed.seoDescription,
           blocks, note: 'перенесення з коду',
@@ -101,11 +107,19 @@ async function upsertPage(seed: PageSeed): Promise<'створено' | 'оно�
 
   await prisma.page.create({
     data: {
+      // `siteId` пишеться явно і на сторінці, і на версії. На версії — бо
+      // вкладене створення проходить повз розширення. На сторінці — бо
+      // Prisma розрізняє два варіанти вхідного типу: або `site: { connect }`,
+      // або `siteId`. Щойно ми вказали `siteId` всередині, весь обʼєкт має
+      // бути того самого «unchecked» варіанту, інакше union не сходиться.
+      // Розширення все одно підставить те саме значення — дублювання тут
+      // безпечне, а власника видно прямо в місці створення.
+      siteId,
       slug: seed.slug, kind: seed.kind, locale: 'UK', isSystem: seed.isSystem,
       publishedAt: new Date(),
       versions: {
         create: {
-          number: 1, status: 'PUBLISHED',
+          siteId, number: 1, status: 'PUBLISHED',
           title: seed.title, excerpt: seed.excerpt,
           seoTitle: seed.seoTitle, seoDescription: seed.seoDescription,
           blocks, note: 'перенесення з коду',
@@ -122,10 +136,13 @@ async function main(): Promise<void> {
   const seeds: PageSeed[] = [...legalSeeds(), ...MARKETING_PAGES];
   const report: string[] = [];
 
-  for (const seed of seeds) {
-    const result = await upsertPage(seed);
-    report.push(`  ${result.padEnd(10)} /${seed.slug}  ${seed.blocks.length} блоків  «${seed.title}»`);
-  }
+  await withSite(async (prisma, siteId) => {
+    console.info(`сайт: ${process.env['SITE_KEY'] ?? 'primary'}`);
+    for (const seed of seeds) {
+      const result = await upsertPage(prisma, siteId, seed);
+      report.push(`  ${result.padEnd(10)} /${seed.slug}  ${seed.blocks.length} блоків  «${seed.title}»`);
+    }
+  });
 
   console.info('');
   console.info(`сторінок у наборі: ${seeds.length}`);
@@ -138,6 +155,4 @@ async function main(): Promise<void> {
   }
 }
 
-main()
-  .catch((error: unknown) => { console.error(error); process.exitCode = 1; })
-  .finally(() => void prisma.$disconnect());
+main().catch((error: unknown) => { console.error(error); process.exitCode = 1; });

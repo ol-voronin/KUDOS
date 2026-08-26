@@ -45,7 +45,7 @@ export class ContentService {
   }
 
   async getPage(slug: string): Promise<PageDto> {
-    const page = await this.prisma.page.findFirst({
+    const page = await this.prisma.db.page.findFirst({
       where: { slug, locale: 'UK', versions: { some: { status: 'PUBLISHED' } } },
       select: {
         slug: true, kind: true, locale: true, publishedAt: true,
@@ -84,8 +84,8 @@ export class ContentService {
    * переписуються на нову.
    */
   async resolveRedirect(slug: string): Promise<RedirectDto> {
-    const row = await this.prisma.redirect.findUnique({
-      where: { locale_fromSlug: { locale: 'UK', fromSlug: slug } },
+    const row = await this.prisma.db.redirect.findFirst({
+      where: { locale: 'UK', fromSlug: slug },
       select: { toSlug: true },
     });
     if (!row) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Редіректу немає' });
@@ -94,7 +94,7 @@ export class ContentService {
 
   /** Список опублікованих сторінок: стрічка матеріалів і карта сайту. */
   async listPages(kind?: PageKind): Promise<PageListDto> {
-    const rows = await this.prisma.page.findMany({
+    const rows = await this.prisma.db.page.findMany({
       where: {
         locale: 'UK',
         ...(kind ? { kind } : {}),

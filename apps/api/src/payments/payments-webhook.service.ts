@@ -95,7 +95,7 @@ export class PaymentsWebhookService {
     // Умова на статус робить і ідемпотентність, і заборону руху назад: два
     // одночасні `success` не пройдуть обидва, а спізнілий `processing` не
     // відкотить уже успішний платіж.
-    const { count } = await this.prisma.payment.updateMany({
+    const { count } = await this.prisma.db.payment.updateMany({
       where: { id: payment.id, status: { in: statusesBelow(nextStatus) } },
       data: {
         status: nextStatus,
@@ -114,7 +114,7 @@ export class PaymentsWebhookService {
 
     const orderStatus = ORDER_STATUS_FOR[nextStatus];
     if (orderStatus) {
-      await this.prisma.order.update({ where: { id: payment.orderId }, data: { status: orderStatus } });
+      await this.prisma.db.order.update({ where: { id: payment.orderId }, data: { status: orderStatus } });
     }
 
     this.logger.log(
@@ -138,14 +138,14 @@ export class PaymentsWebhookService {
    * замовлення назавжди лишається в PENDING_PAYMENT при списаних грошах.
    */
   private async findPayment(body: MonobankWebhookBody) {
-    const byInvoice = await this.prisma.payment.findUnique({
+    const byInvoice = await this.prisma.db.payment.findUnique({
       where: { invoiceId: body.invoiceId },
       select: { id: true, orderId: true, status: true, amountMinor: true },
     });
     if (byInvoice) return byInvoice;
     if (!body.reference) return null;
 
-    const byReference = await this.prisma.payment.findFirst({
+    const byReference = await this.prisma.db.payment.findFirst({
       where: { orderId: body.reference },
       orderBy: { createdAt: 'desc' },
       select: { id: true, orderId: true, status: true, amountMinor: true },
@@ -153,7 +153,7 @@ export class PaymentsWebhookService {
     if (!byReference) return null;
 
     // Знайшли — доклеюємо invoiceId, щоб наступні вебхуки йшли прямим шляхом.
-    await this.prisma.payment
+    await this.prisma.db.payment
       .update({ where: { id: byReference.id }, data: { invoiceId: body.invoiceId } })
       .catch(() => undefined);
     this.logger.warn(
@@ -163,7 +163,7 @@ export class PaymentsWebhookService {
   }
 
   private async notifyPaid(orderId: string): Promise<void> {
-    const order = await this.prisma.order.findUnique({
+    const order = await this.prisma.db.order.findUnique({
       where: { id: orderId },
       select: {
         number: true,

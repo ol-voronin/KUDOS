@@ -1,5 +1,5 @@
 import type { AnyBlock, BlockType } from '@dt/contracts';
-import { BLOCK_TYPES } from '@dt/contracts';
+import { BLOCK_TYPES, moduleOfBlock } from '@dt/contracts';
 import { RICH_HELP, type Field } from './fields';
 
 /**
@@ -258,8 +258,19 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
   },
 };
 
-/** Порядок у меню «додати блок» — той самий, що в контрактах. */
-export const ADD_ORDER: readonly BlockType[] = BLOCK_TYPES;
+/**
+ * Порядок у меню «додати блок» — той самий, що в контрактах, але з
+ * відсіяними блоками вимкнених модулів.
+ *
+ * Показати сайту без товарів блок «Сітка принтів» означає запропонувати
+ * поставити на сторінку порожнечу. Межа з контрактів працює й тут.
+ */
+export function addOrderFor(modules: ReadonlySet<'content' | 'shop'>): readonly BlockType[] {
+  return BLOCK_TYPES.filter((type) => modules.has(moduleOfBlock(type)));
+}
+
+/** Поки сайт один і він торгує — увімкнені обидва модулі. */
+export const ADD_ORDER: readonly BlockType[] = addOrderFor(new Set(['content', 'shop']));
 
 /** Новий блок із унікальним id. */
 export function createBlock(type: BlockType, existing: readonly string[]): AnyBlock {

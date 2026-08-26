@@ -9,6 +9,7 @@ import type {
 } from '@dt/contracts';
 import { ErrorCode, MAX_PRINT_IMAGES } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import type { TransactionClient } from '../common/tenancy';
 
 /** Один select на всі відповіді — щоб форма й таблиця бачили однакову форму даних. */
 const PRINT_SELECT = {
@@ -65,29 +66,29 @@ export class PrintsAdminService {
 
     // Сторінка й лічильник — однією транзакцією: інакше на активній базі
     // «показано 20 з 19» стає реальністю.
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.print.findMany({
+    const [items, total] = await this.prisma.db.$transaction([
+      this.prisma.db.print.findMany({
         where,
         select: PRINT_SELECT,
         orderBy: { updatedAt: 'desc' },
         skip: (query.page - 1) * query.perPage,
         take: query.perPage,
       }),
-      this.prisma.print.count({ where }),
+      this.prisma.db.print.count({ where }),
     ]);
 
     return { items: items.map(toDto), total, page: query.page, perPage: query.perPage };
   }
 
   async get(id: string): Promise<AdminPrintDto> {
-    const row = await this.prisma.print.findUnique({ where: { id }, select: PRINT_SELECT });
+    const row = await this.prisma.db.print.findUnique({ where: { id }, select: PRINT_SELECT });
     if (!row) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
     return toDto(row);
   }
 
   async create(dto: AdminPrintCreateDto): Promise<AdminPrintDto> {
     await this.assertSlugFree(dto.slug, null);
-    const row = await this.prisma.print.create({
+    const row = await this.prisma.db.print.create({
       data: {
         slug: dto.slug,
         title: dto.title,
@@ -111,7 +112,7 @@ export class PrintsAdminService {
     // Раніше це стримувалось тим, що посилання було обовʼязковим полем форми;
     // тепер обкладинка береться з фото, тож перевірка потрібна тут.
     if (dto.isPublished === true) {
-      const withImage = await this.prisma.printImage.count({ where: { printId: id } });
+      const withImage = await this.prisma.db.printImage.count({ where: { printId: id } });
       if (withImage === 0) {
         throw new BadRequestException({
           code: ErrorCode.VALIDATION_FAILED,
@@ -120,7 +121,7 @@ export class PrintsAdminService {
       }
     }
 
-    const row = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const row = await this.prisma.db.$transaction(async (tx) => {
       const exists = await tx.print.findUnique({ where: { id }, select: { id: true } });
       if (!exists) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
 
@@ -161,14 +162,14 @@ export class PrintsAdminService {
    * публікації замість видалення.
    */
   async remove(id: string): Promise<{ ok: true }> {
-    const sold = await this.prisma.orderItem.count({ where: { printId: id } });
+    const sold = await this.prisma.db.orderItem.count({ where: { printId: id } });
     if (sold > 0) {
       throw new ConflictException({
         code: ErrorCode.CONFLICT,
         message: `Принт уже в ${sold} замовленні(ях). Зніміть з публікації замість видалення.`,
       });
     }
-    await this.prisma.print.delete({ where: { id } }).catch(() => {
+    await this.prisma.db.print.delete({ where: { id } }).catch(() => {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
     });
     this.logger.log(`print.deleted id=${id}`);
@@ -176,9 +177,9 @@ export class PrintsAdminService {
   }
 
   async options(): Promise<{ breeds: CatalogOptionDto[]; collections: CatalogOptionDto[] }> {
-    const [breeds, collections] = await this.prisma.$transaction([
-      this.prisma.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
-      this.prisma.collection.findMany({ select: { id: true, slug: true, title: true }, orderBy: { position: 'asc' } }),
+    const [breeds, collections] = await this.prisma.db.$transaction([
+      this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
+      this.prisma.db.collection.findMany({ select: { id: true, slug: true, title: true }, orderBy: { position: 'asc' } }),
     ]);
     return {
       breeds,
@@ -187,11 +188,11 @@ export class PrintsAdminService {
   }
 
   async createBreed(dto: AdminBreedCreateDto): Promise<CatalogOptionDto> {
-    const clash = await this.prisma.breed.findUnique({ where: { slug: dto.slug }, select: { id: true } });
+    const clash = await this.prisma.db.breed.findUnique({ where: { slug: dto.slug }, select: { id: true } });
     if (clash) {
       throw new ConflictException({ code: ErrorCode.CONFLICT, message: 'Порода з такою адресою вже є' });
     }
-    const breed = await this.prisma.breed.create({
+    const breed = await this.prisma.db.breed.create({
       data: { slug: dto.slug, name: dto.name, synonyms: [] },
       select: { id: true, slug: true, name: true },
     });
@@ -206,7 +207,7 @@ export class PrintsAdminService {
   // результат: адреса й ключ. Тому «завантаження» тут — це вставка рядка.
 
   async addImage(printId: string, dto: AdminPrintImageCreateDto): Promise<AdminPrintDto> {
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await this.prisma.db.$transaction(async (tx) => {
       const print = await tx.print.findUnique({ where: { id: printId }, select: { id: true } });
       if (!print) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
 
@@ -255,13 +256,13 @@ export class PrintsAdminService {
    * битим зображенням, а так найгірший наслідок — осиротілий блоб.
    */
   async removeImage(printId: string, imageId: string): Promise<AdminPrintDto> {
-    const image = await this.prisma.printImage.findFirst({
+    const image = await this.prisma.db.printImage.findFirst({
       where: { id: imageId, printId },
       select: { id: true },
     });
     if (!image) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Фото не знайдено' });
 
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await this.prisma.db.$transaction(async (tx) => {
       await tx.printImage.delete({ where: { id: imageId } });
       await this.syncCover(tx, printId);
     });
@@ -272,7 +273,7 @@ export class PrintsAdminService {
 
   /** Перетягування в адмінці. Перший у списку стає обкладинкою. */
   async reorderImages(printId: string, dto: AdminPrintImageReorderDto): Promise<AdminPrintDto> {
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await this.prisma.db.$transaction(async (tx) => {
       const owned = await tx.printImage.findMany({ where: { printId }, select: { id: true } });
       const ownedIds = new Set(owned.map((img) => img.id));
 
@@ -301,7 +302,7 @@ export class PrintsAdminService {
    * у чотирьох різних сітках. Ціна цього дублювання — оцей один метод,
    * який мусить викликатись після будь-якої зміни набору фото.
    */
-  private async syncCover(tx: Prisma.TransactionClient, printId: string): Promise<void> {
+  private async syncCover(tx: TransactionClient, printId: string): Promise<void> {
     const first = await tx.printImage.findFirst({
       where: { printId },
       select: { url: true },
@@ -320,7 +321,7 @@ export class PrintsAdminService {
   }
 
   private async assertSlugFree(slug: string, exceptId: string | null): Promise<void> {
-    const clash = await this.prisma.print.findUnique({ where: { slug }, select: { id: true } });
+    const clash = await this.prisma.db.print.findUnique({ where: { slug }, select: { id: true } });
     if (clash && clash.id !== exceptId) {
       throw new ConflictException({
         code: ErrorCode.CONFLICT,

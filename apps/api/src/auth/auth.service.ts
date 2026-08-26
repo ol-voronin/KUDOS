@@ -34,7 +34,7 @@ export class AuthService {
    */
   async login(email: string, password: string): Promise<{ token: string; email: string }> {
     const normalisedEmail = email.trim().toLowerCase();
-    const admin = await this.prisma.adminUser.findUnique({ where: { email: normalisedEmail } });
+    const admin = await this.prisma.db.adminUser.findUnique({ where: { email: normalisedEmail } });
 
     if (!admin || !admin.isActive) {
       // Хешуємо навіть коли юзера нема — щоб відповідь не приходила швидше
@@ -53,7 +53,7 @@ export class AuthService {
     if (!passwordOk) {
       const attempts = admin.failedLoginAttempts + 1;
       const locked = attempts >= LOGIN_MAX_ATTEMPTS;
-      await this.prisma.adminUser.update({
+      await this.prisma.db.adminUser.update({
         where: { id: admin.id },
         data: {
           failedLoginAttempts: attempts,
@@ -66,7 +66,7 @@ export class AuthService {
       throw invalidCredentials();
     }
 
-    await this.prisma.adminUser.update({
+    await this.prisma.db.adminUser.update({
       where: { id: admin.id },
       data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
     });

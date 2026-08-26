@@ -33,7 +33,7 @@ export class LeadsService {
     input: Lead & { marketingConsent?: boolean },
     correlationId: string,
   ): Promise<{ id: string; number: number }> {
-    const customer = await this.prisma.customer.upsert({
+    const customer = await this.prisma.db.customer.upsert({
       where: { phone: input.phone },
       update: {
         name: input.name,
@@ -50,7 +50,7 @@ export class LeadsService {
       select: { id: true },
     });
 
-    const lead = await this.prisma.lead.create({
+    const lead = await this.prisma.db.lead.create({
       data: {
         name: input.name,
         phone: input.phone,
@@ -64,13 +64,13 @@ export class LeadsService {
 
     try {
       await sendToTelegram(formatLead({ ...input, source: `№${lead.number} · ${input.source ?? 'сайт'}` }));
-      await this.prisma.lead.update({
+      await this.prisma.db.lead.update({
         where: { id: lead.id },
         data: { telegramSentAt: new Date() },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      await this.prisma.lead.update({
+      await this.prisma.db.lead.update({
         where: { id: lead.id },
         data: { telegramError: message.slice(0, 500) },
       });
@@ -85,15 +85,15 @@ export class LeadsService {
   async list(query: AdminLeadListQueryDto): Promise<AdminLeadListDto> {
     const where = this.buildWhere(query);
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.lead.findMany({
+    const [items, total] = await this.prisma.db.$transaction([
+      this.prisma.db.lead.findMany({
         where,
         select: ADMIN_LEAD_SELECT,
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.perPage,
         take: query.perPage,
       }),
-      this.prisma.lead.count({ where }),
+      this.prisma.db.lead.count({ where }),
     ]);
 
     return { items, total, page: query.page, perPage: query.perPage };
@@ -108,7 +108,7 @@ export class LeadsService {
 
   /** Lead detail screen: the lead plus its customer's other leads (repeat clients). */
   async getDetail(id: string): Promise<AdminLeadDetailDto> {
-    const lead = await this.prisma.lead.findUnique({
+    const lead = await this.prisma.db.lead.findUnique({
       where: { id },
       select: {
         ...ADMIN_LEAD_SELECT,
@@ -125,7 +125,7 @@ export class LeadsService {
     const { customer, ...rest } = lead;
 
     const previousLeads = customer
-      ? await this.prisma.lead.findMany({
+      ? await this.prisma.db.lead.findMany({
           where: { customerId: customer.id, id: { not: id } },
           select: ADMIN_LEAD_SELECT,
           orderBy: { createdAt: 'desc' },
@@ -150,7 +150,7 @@ export class LeadsService {
 
   /** Manual retry for a lead that didn't reach Telegram the first time. */
   async resendTelegram(id: string): Promise<AdminLeadDto> {
-    const lead = await this.prisma.lead.findUnique({
+    const lead = await this.prisma.db.lead.findUnique({
       where: { id },
       select: { id: true, number: true, name: true, phone: true, message: true, source: true },
     });
@@ -163,14 +163,14 @@ export class LeadsService {
         ...(lead.message ? { message: lead.message } : {}),
         source: `№${lead.number} · ${lead.source ?? 'сайт'} · повтор`,
       }));
-      return await this.prisma.lead.update({
+      return await this.prisma.db.lead.update({
         where: { id },
         data: { telegramSentAt: new Date(), telegramError: null },
         select: ADMIN_LEAD_SELECT,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      await this.prisma.lead.update({ where: { id }, data: { telegramError: message.slice(0, 500) } });
+      await this.prisma.db.lead.update({ where: { id }, data: { telegramError: message.slice(0, 500) } });
       this.logger.error(`Повторне надсилання заявки №${lead.number} не долетіло: ${message}`);
       throw new BadGatewayException({ code: ErrorCode.TELEGRAM_DELIVERY_FAILED, message: 'Не вдалося надіслати в Telegram' });
     }
@@ -178,7 +178,7 @@ export class LeadsService {
 
   /** CSV for the current filter — capped, this is an export button, not a report engine. */
   async exportCsv(query: AdminLeadExportQueryDto): Promise<string> {
-    const leads = await this.prisma.lead.findMany({
+    const leads = await this.prisma.db.lead.findMany({
       where: this.buildWhere(query),
       select: ADMIN_LEAD_SELECT,
       orderBy: { createdAt: 'desc' },
@@ -201,7 +201,7 @@ export class LeadsService {
 
   async updateStatus(id: string, status: LeadStatus) {
     try {
-      return await this.prisma.lead.update({
+      return await this.prisma.db.lead.update({
         where: { id },
         data: { status },
         select: ADMIN_LEAD_SELECT,

@@ -7,6 +7,7 @@ import { PrismaService } from './common/prisma.service';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { ContentModule } from './content/content.module';
+import { SiteMiddleware } from './common/site.middleware';
 import { CustomRequestsModule } from './custom-requests/custom-requests.module';
 import { LeadsModule } from './leads/leads.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -25,12 +26,15 @@ import { PaymentsModule } from './payments/payments.module';
   controllers: [HealthController],
   providers: [
     PrismaService,
+    SiteMiddleware,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [PrismaService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    // Порядок має значення: контекст сайту мусить стояти до всього, що
+    // читає дані, інакше перший же запит впаде без сайту.
+    consumer.apply(CorrelationIdMiddleware, SiteMiddleware).forRoutes('*');
   }
 }

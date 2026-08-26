@@ -80,7 +80,7 @@ pnpm exec tsx prisma/seed.ts
 echo "==> асортимент: тканини, кольори, вироби, розміри, варіанти"
 pnpm exec tsx prisma/seed-range.ts
 
-echo "==> вміст: сторінки з блоків"
+echo "==> вміст: сторінки з блоків (сайт із SITE_KEY, за замовчуванням primary)"
 pnpm exec tsx prisma/seed-pages.ts
 
 echo "==> каталог: породи й колекції"

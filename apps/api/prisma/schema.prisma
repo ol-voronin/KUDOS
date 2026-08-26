@@ -131,6 +131,14 @@ enum Locale {
   UK
 }
 
+/// OWNER може все, включно з видаленням сайту. EDITOR — вміст і публікація.
+/// Двох ролей вистачає надовго: третю додають тоді, коли зʼявляється людина,
+/// якій треба менше за EDITOR, а не тому що «хай буде».
+enum SiteRole {
+  OWNER
+  EDITOR
+}
+
 enum PageKind {
   PAGE
   ARTICLE
@@ -485,6 +493,60 @@ model PrintPrice {
 }
 
 // ---------------------------------------------------------------------------
+// Сайти — межа орендаря
+// ---------------------------------------------------------------------------
+
+/// Один сайт в установці. Сьогодні він один; завтра їх буде стільки, скільки
+/// клієнтів, і всі в цій самій базі.
+///
+/// Саме тому `siteId` зʼявляється зараз, а не «коли знадобиться»: додати
+/// колонку в чотири таблиці коштує день, а в тридцять, із перевіркою сотні
+/// запитів, — тиждень, у якому кожна пропущена перевірка означає, що один
+/// клієнт побачив дані іншого.
+model Site {
+  id   String @id @default(uuid()) @db.Uuid
+  /// Технічна назва для адміністратора установки.
+  key  String @unique
+  name String
+
+  /// Домени, за якими цей сайт відповідає. Порожньо — сайт доступний лише
+  /// тоді, коли він в установці єдиний.
+  hosts String[]
+
+  /// Увімкнені модулі: `content` є завжди, `shop` — там, де є що продавати.
+  /// Каталог, ціни й замовлення показуються в адмінці лише за наявності `shop`.
+  modules String[] @default(["content"])
+
+  isActive Boolean @default(true)
+
+  pages   Page[]
+  media   MediaAsset[]
+  redirects Redirect[]
+  versions  PageVersion[]
+  members   SiteMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Доступ людини до сайту. Людина існує окремо від доступу: та сама пошта
+/// може вести два сайти з різними ролями, і видалення сайту не має стирати
+/// людину.
+model SiteMember {
+  siteId String   @db.Uuid
+  userId String   @db.Uuid
+  role   SiteRole @default(EDITOR)
+
+  site Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([siteId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
 // Вміст — сторінки, матеріали, блоки
 // ---------------------------------------------------------------------------
 
@@ -497,6 +559,8 @@ model PrintPrice {
 /// наполовину зміненою. Тут публікація — це один UPDATE статусу версії.
 model Page {
   id     String   @id @default(uuid()) @db.Uuid
+  siteId String   @db.Uuid
+  site   Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   kind   PageKind @default(PAGE)
   locale Locale   @default(UK)
   slug   String
@@ -526,8 +590,10 @@ model Page {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([locale, slug])
-  @@index([kind, publishedAt])
+  /// Адреса унікальна в межах сайту, а не всесвіту: у двох клієнтів цілком
+  /// може бути своя «Доставка».
+  @@unique([siteId, locale, slug])
+  @@index([siteId, kind, publishedAt])
 }
 
 /// Знімок сторінки цілком. `blocks` — масив, перевірений тим самим zod-union,
@@ -538,6 +604,12 @@ model Page {
 /// описати, тому вони написані руками — так само, як CHECK на leadTimeDays.
 model PageVersion {
   id     String            @id @default(uuid()) @db.Uuid
+  /// Дублює `page.siteId` навмисно. Без цього запит на версію за її id
+  /// довелося б щоразу вести через сторінку, і рано чи пізно хтось цього не
+  /// зробить. Колонка обовʼязкова й без значення за замовчуванням — тоді
+  /// вкладене створення без неї не компілюється.
+  siteId String            @db.Uuid
+  site   Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
   pageId String            @db.Uuid
   page   Page              @relation(fields: [pageId], references: [id], onDelete: Cascade)
   number Int
@@ -564,6 +636,7 @@ model PageVersion {
 
   @@unique([pageId, number])
   @@index([pageId, status])
+  @@index([siteId])
 }
 
 /// Картинка у сховищі.
@@ -577,8 +650,10 @@ model PageVersion {
 /// лишиться у сховищі назавжди.
 model MediaAsset {
   id       String @id @default(uuid()) @db.Uuid
+  siteId   String @db.Uuid
+  site     Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   url      String
-  pathname String @unique
+  pathname String
   filename String
   mimeType String
   bytes    Int
@@ -591,7 +666,8 @@ model MediaAsset {
 
   createdAt DateTime @default(now())
 
-  @@index([createdAt])
+  @@unique([siteId, pathname])
+  @@index([siteId, createdAt])
 }
 
 /// Стара адреса → нова. Створюється автоматично при перейменуванні сторінки.
@@ -601,6 +677,8 @@ model MediaAsset {
 /// в чиємусь дописі трирічної давнини має вести куди треба й через три роки.
 model Redirect {
   id     String @id @default(uuid()) @db.Uuid
+  siteId String @db.Uuid
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   locale Locale @default(UK)
   /// Без початкового слеша — той самий вигляд, що й `Page.slug`.
   fromSlug String
@@ -608,8 +686,8 @@ model Redirect {
 
   createdAt DateTime @default(now())
 
-  @@unique([locale, fromSlug])
-  @@index([toSlug])
+  @@unique([siteId, locale, fromSlug])
+  @@index([siteId, toSlug])
 }
 
 // ---------------------------------------------------------------------------
@@ -792,6 +870,7 @@ model AdminUser {
   /// стирати історію правок разом із ним.
   pageVersions PageVersion[]
   mediaAssets  MediaAsset[]
+  memberships  SiteMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

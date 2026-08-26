@@ -33,7 +33,7 @@ export class PaymentsAdminService {
   ) {}
 
   private async findPayment(invoiceId: string): Promise<Payment> {
-    const payment = await this.prisma.payment.findUnique({ where: { invoiceId } });
+    const payment = await this.prisma.db.payment.findUnique({ where: { invoiceId } });
     if (!payment) {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Платіж не знайдено' });
     }
@@ -61,7 +61,7 @@ export class PaymentsAdminService {
     }
 
     await this.monobank.finalizeInvoice(invoiceId, amountMinor);
-    const updated = await this.prisma.payment.update({
+    const updated = await this.prisma.db.payment.update({
       where: { invoiceId },
       data: { finalizedAt: new Date() },
     });

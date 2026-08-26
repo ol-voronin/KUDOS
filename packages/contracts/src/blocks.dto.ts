@@ -261,13 +261,24 @@ export type PrintGridBlock = z.infer<typeof PrintGridBlock>;
 export type BreedStripBlock = z.infer<typeof BreedStripBlock>;
 export type CollectionStripBlock = z.infer<typeof CollectionStripBlock>;
 
-// ── union ───────────────────────────────────────────────────────────────────
+// ── межа «ядро / модуль» ────────────────────────────────────────────────────
+//
+// Блоки ядра не знають нічого про предметну область: текст, картинки,
+// питання, заклики. Вони потрібні будь-якому сайту — і салону, і майстерні.
+//
+// Блоки модуля «магазин» читають каталог: принти, породи, колекції. Сайту без
+// товарів вони не потрібні, і саме тому лежать окремо, а не в спільній купі.
+// Межа проведена тут навмисно: доки вона є в типах, каталог можна вимкнути
+// перемикачем, а не гілкою в репозиторії.
 
-export const AnyBlock = z.discriminatedUnion('type', [
+const CORE_BLOCKS = [
   HeroBlock, TextBlock, LegalBlock, StepsBlock, CardsBlock, FeaturesBlock,
   FaqBlock, CtaBlock, LeadFormBlock, ImageTextBlock, GalleryBlock, QuoteBlock,
-  PrintGridBlock, BreedStripBlock, CollectionStripBlock,
-]);
+] as const;
+
+const SHOP_BLOCKS = [PrintGridBlock, BreedStripBlock, CollectionStripBlock] as const;
+
+export const AnyBlock = z.discriminatedUnion('type', [...CORE_BLOCKS, ...SHOP_BLOCKS]);
 export type AnyBlock = z.infer<typeof AnyBlock>;
 
 export type BlockType = AnyBlock['type'];
@@ -276,11 +287,21 @@ export type BlockType = AnyBlock['type'];
  * Порядок тут — це порядок у списку «додати блок» в адмінці, тому він
  * не алфавітний: спершу те, що ставлять найчастіше.
  */
-export const BLOCK_TYPES = [
+export const CORE_BLOCK_TYPES = [
   'hero', 'text', 'cards', 'steps', 'features', 'faq', 'cta', 'leadForm',
   'imageText', 'gallery', 'quote', 'legal',
+] as const satisfies readonly BlockType[];
+
+export const SHOP_BLOCK_TYPES = [
   'printGrid', 'breedStrip', 'collectionStrip',
 ] as const satisfies readonly BlockType[];
+
+export const BLOCK_TYPES = [...CORE_BLOCK_TYPES, ...SHOP_BLOCK_TYPES] as const;
+
+/** Який модуль дає цей блок. Адмінка ховає блоки вимкнених модулів. */
+export function moduleOfBlock(type: BlockType): 'content' | 'shop' {
+  return (SHOP_BLOCK_TYPES as readonly BlockType[]).includes(type) ? 'shop' : 'content';
+}
 
 /** Сторінка не може складатися з сотні блоків — це вже не сторінка. */
 export const BlockList = z.array(AnyBlock).max(60);
