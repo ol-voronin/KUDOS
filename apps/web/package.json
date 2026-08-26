@@ -7,7 +7,7 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "typecheck": "node scripts/clean-route-types.mjs && tsc --noEmit",
+    "typecheck": "node scripts/clean-route-types.mjs && node scripts/check-tailwind-classes.mjs && tsc --noEmit",
     "test": "vitest run",
     "lint": "next lint"
   },

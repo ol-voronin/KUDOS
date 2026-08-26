@@ -32,11 +32,22 @@ const VARIANT: Record<Variant, string> = {
   danger: 'border-danger bg-transparent text-danger hover:bg-danger hover:text-surface',
 };
 
+/**
+ * Висота кнопок.
+ *
+ * Підняті проти першої версії, і причина в наборі: заголовки тут набрані
+ * вузьким капсом у 5rem, і на їхньому тлі кнопка у 44px читалася як
+ * службовий елемент, а не як головна дія сторінки. Поруч із великим
+ * шрифтом кнопка мусить мати вагу.
+ *
+ * Ширина росте разом із висотою: кнопка, що виросла тільки вгору,
+ * перетворюється на приплюснутий прямокутник.
+ */
 const SIZE: Record<Size, string> = {
-  lg: 'min-h-13 px-7 text-[0.95rem]',
-  md: 'min-h-11 px-5 text-sm',
+  lg: 'min-h-15 px-9 text-base',
+  md: 'min-h-13 px-7 text-[0.95rem]',
   /** Рядкова кнопка в таблиці: `tap-sm` знімає загальний поріг у 44px. */
-  sm: 'tap-sm min-h-8 px-3 text-xs',
+  sm: 'tap-sm min-h-9 px-4 text-xs',
 };
 
 function classes(variant: Variant, size: Size, full: boolean, extra?: string): string {
