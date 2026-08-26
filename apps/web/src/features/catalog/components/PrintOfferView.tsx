@@ -63,6 +63,18 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     setSizeId((current) => (current && sizes.some((s) => s.id === current) ? current : sizes[0]?.id ?? null));
   }, [sizes]);
 
+  // Найдешевший варіант кожного виробу — для кнопок вибору. Рахується з
+  // цін, які прислав сервер, а не з базової: після надбавок «база + друк»
+  // може не збігтися з жодним реальним варіантом.
+  const cheapestByGarment = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const v of data?.variants ?? []) {
+      const current = map.get(v.garmentId);
+      if (current === undefined || v.priceMinor < current) map.set(v.garmentId, v.priceMinor);
+    }
+    return map;
+  }, [data]);
+
   const selectedColour = colours.find((c) => c.id === colourId);
   const selectedFabric = garment?.fabrics.find((f) => f.id === fabricId);
   const selectedSize = sizes.find((s) => s.id === sizeId);
@@ -88,7 +100,10 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     );
   }
 
-  const garmentPriceMinor = variant?.priceOverrideMinor ?? garment?.basePriceMinor ?? 0;
+  // Ціну варіанта рахує сервер: у ній уже враховані надбавки за розмір,
+  // тканину й колір. Складати її тут із бази означало б тримати в браузері
+  // другу реалізацію ціноутворення — і колись розійтися з касою.
+  const garmentPriceMinor = variant?.priceMinor ?? garment?.basePriceMinor ?? 0;
   const totalMinor = garmentPriceMinor + data.printPriceMinor;
 
   async function handleCheckoutSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -149,7 +164,10 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
                       а не вгадуванням: різниця між футболкою й худі тут у
                       два з половиною рази. */}
                   <span className={g.id === garment?.id ? 'ml-2 opacity-70' : 'ml-2 text-ink-subtle'}>
-                    {formatUAH(minor(g.basePriceMinor + data.printPriceMinor))}
+                    {/* Найдешевший варіант цього виробу: з надбавками ціна
+                        залежить від розміру, тож «база + друк» показувала б
+                        суму, якої може не бути в жодному варіанті. */}
+                    {formatUAH(minor((cheapestByGarment.get(g.id) ?? g.basePriceMinor) + data.printPriceMinor))}
                   </span>
                 </button>
               ))}

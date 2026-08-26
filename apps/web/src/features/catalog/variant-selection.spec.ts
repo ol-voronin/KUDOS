@@ -19,6 +19,7 @@ const variant = (over: Partial<VariantDto> & Pick<VariantDto, 'id'>): VariantDto
   availability: 'IN_STOCK',
   leadTimeDays: null,
   priceOverrideMinor: null,
+  priceMinor: 55_000,
   ...over,
 } as VariantDto);
 

@@ -46,6 +46,28 @@ export function mulMinor(amount: Minor, quantity: number): Minor {
   return minor(amount * quantity);
 }
 
+/**
+ * Відсоток від суми, у сотих відсотка: 1000 = 10 %.
+ *
+ * Окрема функція, а не множення на 0.1, і причина та сама, чому в цьому файлі
+ * узагалі немає чисел із комою. Ставка — це не гроші, тому вона й зберігається
+ * цілим числом; єдине місце, де вона зустрічається з грошима, — цей рядок,
+ * і тут одразу відбувається округлення до копійки.
+ *
+ * Округлення симетричне: −0.5 копійки йде в −1, а не в 0, як зробив би
+ * `Math.round`. Інакше знижка й така сама надбавка дають різні за модулем
+ * суми, і рядок замовлення не сходиться сам із собою на одну копійку.
+ */
+export const PERCENT_SCALE = 10_000;
+
+export function percentOfMinor(amount: Minor, hundredthsOfPercent: number): Minor {
+  if (!Number.isInteger(hundredthsOfPercent)) {
+    throw new TypeError(`Ставка має бути цілим числом сотих відсотка, отримано ${hundredthsOfPercent}`);
+  }
+  const raw = (amount * hundredthsOfPercent) / PERCENT_SCALE;
+  return minor(Math.sign(raw) * Math.round(Math.abs(raw)));
+}
+
 export function clampToZero(amount: Minor): Minor {
   return minor(Math.max(0, amount));
 }

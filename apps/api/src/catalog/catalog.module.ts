@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { PricingModule } from '../pricing/pricing.module';
 import { PrismaService } from '../common/prisma.service';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
@@ -9,7 +10,7 @@ import { PrintsAdminController } from './prints-admin.controller';
 import { PrintsAdminService } from './prints-admin.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, PricingModule],
   controllers: [CatalogController, PrintsAdminController, PricingAdminController],
   providers: [CatalogService, PrintsAdminService, PricingAdminService, PrismaService],
   exports: [CatalogService],

@@ -87,6 +87,16 @@ export const VariantDto = z.object({
   leadTimeDays: z.number().int().positive().nullable(),
   /** Overrides garment.basePriceMinor when the variant costs more. */
   priceOverrideMinor: MinorAmount.nullable(),
+  /**
+   * Кінцева ціна виробу для цього варіанта: база, надбавки за розмір,
+   * тканину й колір, або ручна ціна. Друк не входить.
+   *
+   * Рахує сервер, і саме тому поле тут є. Клієнт міг би скласти базу з
+   * `priceOverrideMinor` сам — і робив це, доки надбавок не було. Щойно
+   * зʼявляються правила, «складу сам» означає другу реалізацію
+   * ціноутворення в браузері, яка розійдеться з касою.
+   */
+  priceMinor: MinorAmount,
 }).refine(
   (v) => v.availability !== 'MADE_TO_ORDER' || v.leadTimeDays !== null,
   { message: 'MADE_TO_ORDER variants must declare leadTimeDays', path: ['leadTimeDays'] },

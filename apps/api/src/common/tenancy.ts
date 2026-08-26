@@ -43,8 +43,8 @@ export const GLOBAL_MODELS: ReadonlySet<string> = new Set([
   'Fabric', 'Colour', 'FabricColour', 'Garment', 'GarmentFabric', 'Size',
   'Measurement', 'Variant', 'Collection', 'Breed', 'Print', 'PrintImage',
   'PrintCollection', 'PrintBreed', 'PrintGarmentRule', 'PrintGarmentExclusion',
-  'PrintPrice', 'Customer', 'Order', 'Payment', 'OrderItem', 'CustomRequest',
-  'Lead',
+  'PrintPrice', 'PriceModifier', 'Discount',
+  'Customer', 'Order', 'Payment', 'OrderItem', 'CustomRequest', 'Lead',
 ]);
 
 type Args = Record<string, unknown>;

@@ -3,6 +3,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import type { ReadyPrintCheckoutRequestDto } from '@dt/contracts';
 import { ErrorCode, minor, mulMinor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { PriceBookService } from '../pricing/price-book.service';
+import { bestDiscount } from '../pricing/price-rules';
 import {
   priceOffer, totalCart,
   type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable,
@@ -38,6 +40,7 @@ export class CheckoutService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly monobank: MonobankService,
+    private readonly priceBook: PriceBookService,
   ) {}
 
   async createReadyPrintCheckout(dto: ReadyPrintCheckoutRequestDto) {
@@ -55,7 +58,8 @@ export class CheckoutService {
     const variant = await this.prisma.db.variant.findUnique({
       where: { id: dto.variantId },
       select: {
-        id: true, garmentId: true, availability: true, leadTimeDays: true, priceOverrideMinor: true,
+        id: true, garmentId: true, fabricId: true, colourId: true,
+        availability: true, leadTimeDays: true, priceOverrideMinor: true,
         garment: { select: { id: true, name: true, basePriceMinor: true, isPublished: true } },
         colour: { select: { name: true } },
         size: { select: { label: true } },
@@ -90,7 +94,11 @@ export class CheckoutService {
       && (restrictions.length === 0
         || restrictions.some((r: { garmentId: string }) => r.garmentId === variant.garmentId));
 
-    const priceRows = await this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } });
+    const [priceRows, modifiers, discounts] = await Promise.all([
+      this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } }),
+      this.priceBook.modifiers(),
+      this.priceBook.discounts(),
+    ]);
     const priceTable = Object.fromEntries(
       priceRows.map((r: { tier: string; priceMinor: number }) => [r.tier, r.priceMinor]),
     ) as PrintPriceTable;
@@ -106,9 +114,12 @@ export class CheckoutService {
       availability: variant.availability,
       leadTimeDays: variant.leadTimeDays,
       priceOverrideMinor: variant.priceOverrideMinor === null ? null : minor(variant.priceOverrideMinor),
+      sizeLabel: variant.size.label,
+      fabricId: variant.fabricId,
+      colourId: variant.colourId,
     };
 
-    const offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, offerable);
+    const offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, offerable, modifiers);
     if (!offer.purchasable) {
       throw new BadRequestException({
         code: ErrorCode.VARIANT_NOT_PURCHASABLE,
@@ -117,6 +128,24 @@ export class CheckoutService {
     }
 
     const totals = totalCart([{ offer, quantity: dto.quantity }]);
+
+    // Знижка рахується тут, на сервері, за серверним часом і серверною
+    // кількістю. Клієнт присилає лише що і скільки — суму він не присилає
+    // ніколи, і акція, що вже закінчилася, не діє, навіть якщо сторінку
+    // відкрили вчора й не перезавантажували.
+    const discount = bestDiscount(
+      discounts,
+      {
+        garmentId: variant.garmentId,
+        collectionIds,
+        quantity: dto.quantity,
+        now: new Date(),
+      },
+      totals.subtotalMinor,
+    );
+    const totalMinor = discount === null
+      ? totals.subtotalMinor
+      : minor(totals.subtotalMinor - discount.amountMinor);
 
     // Id замовлення генеруємо самі, щоб рядок Payment створився в тій самій
     // транзакції, що й замовлення. Інакше між успішним створенням рахунку в
@@ -151,7 +180,9 @@ export class CheckoutService {
           stream: 'READY_PRINT',
           status: 'PENDING_PAYMENT',
           subtotalMinor: totals.subtotalMinor,
-          totalMinor: totals.subtotalMinor,
+          discountMinor: discount?.amountMinor ?? 0,
+          discountName: discount?.name ?? null,
+          totalMinor,
           ...(dto.note ? { note: dto.note } : {}),
           items: {
             create: {
@@ -192,6 +223,10 @@ export class CheckoutService {
     // is a placeholder until the merchant's actual pRRO/VAT setup is
     // confirmed; Monobank only enforces a real tax code once fiscalisation is
     // switched on for the account.
+    // Знижка живе на рівні рахунку: `total` — це те, що людина справді
+    // платить. Рядок кошика лишається валовим, бо фіскалізацію на цьому
+    // акаунті ще не вмикали, і вигадувати розподіл знижки по позиціях до
+    // того, як зʼявиться справжня вимога, — це вгадувати.
     const basketOrder = [{
       name: `${variant.garment.name} — ${print.title}`,
       qty: dto.quantity,

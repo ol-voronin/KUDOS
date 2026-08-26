@@ -5,7 +5,8 @@ import type {
 } from '@dt/contracts';
 import { ErrorCode, minor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
-import { blockReasonFor, printPriceFor, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
+import { PriceBookService } from '../pricing/price-book.service';
+import { blockReasonFor, garmentPriceFor, printPriceFor, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
 import { garmentTypesFor, toPrintCard, type OfferContext, type OfferableGarment, type PrintRow } from './print-card';
 
 /** Скільки карток показувати в блоці на головній. */
@@ -20,7 +21,10 @@ const HOME_BLOCK_SIZE = 8;
  */
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly priceBook: PriceBookService,
+  ) {}
 
   async listPrints(query: CatalogQueryDto): Promise<PrintListDto> {
     const where = {
@@ -126,6 +130,9 @@ export class CatalogService {
       select: {
         id: true, sku: true, garmentId: true, fabricId: true, colourId: true, sizeId: true,
         availability: true, leadTimeDays: true, priceOverrideMinor: true,
+        // Напис розміру потрібен для надбавок: правило «2XL дорожчий»
+        // зберігається за написом, бо сіток у нас девʼять різних.
+        size: { select: { label: true } },
       },
     });
 
@@ -135,7 +142,10 @@ export class CatalogService {
       select: { id: true, name: true, supplierCode: true, hex: true, imageUrl: true },
     });
 
-    const printPriceRows = await this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } });
+    const [printPriceRows, modifiers] = await Promise.all([
+      this.prisma.db.printPrice.findMany({ select: { tier: true, priceMinor: true } }),
+      this.priceBook.modifiers(),
+    ]);
     const priceTable = Object.fromEntries(
       printPriceRows.map((r: { tier: string; priceMinor: number }) => [r.tier, r.priceMinor]),
     ) as PrintPriceTable;
@@ -148,9 +158,9 @@ export class CatalogService {
     // garment). "Unavailable" and "needs a lead time" stay in — the customer
     // needs to see those states, not have them silently disappear.
     const garmentById = new Map(garments.map((g) => [g.id, g] as const));
-    const offerableVariants = variants.filter((v) => {
+    const offerableVariants = variants.flatMap((v) => {
       const garment = garmentById.get(v.garmentId);
-      if (!garment) return false;
+      if (!garment) return [];
       const pricingGarment: PricingGarment = {
         id: garment.id, basePriceMinor: minor(garment.basePriceMinor), isPublished: garment.isPublished,
       };
@@ -159,12 +169,22 @@ export class CatalogService {
         availability: v.availability,
         leadTimeDays: v.leadTimeDays,
         priceOverrideMinor: v.priceOverrideMinor === null ? null : minor(v.priceOverrideMinor),
+        sizeLabel: v.size.label,
+        fabricId: v.fabricId,
+        colourId: v.colourId,
       };
       const reason = blockReasonFor(pricingGarment, pricingPrint, pricingVariant, true);
-      return reason === null
+      const keep = reason === null
         || reason === 'VARIANT_UNAVAILABLE'
         || reason === 'MISSING_LEAD_TIME'
         || reason === 'LEAD_TIME_TOO_LONG';
+      if (!keep) return [];
+
+      // Ціну кожного варіанта рахує сервер тією самою функцією, що й каса.
+      // Розмір відповіді від цього майже не зростає, а розбіжність між
+      // сторінкою й кошиком стає неможливою.
+      const { size: _size, ...row } = v;
+      return [{ ...row, priceMinor: garmentPriceFor(pricingGarment, pricingVariant, modifiers).amountMinor }];
     });
 
     return {

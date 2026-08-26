@@ -25,6 +25,12 @@ import {
   subMinor,
   type VariantAvailability,
 } from '@dt/contracts';
+import {
+  garmentPriceWithModifiers,
+  type ModifiedPrice,
+  type PriceModifierRule,
+  type PriceStep,
+} from './price-rules';
 
 /** Beyond this, we do not let a made-to-order item into the cart. */
 export const MAX_CART_LEAD_TIME_DAYS = 21;
@@ -34,6 +40,15 @@ export interface PricingVariant {
   readonly availability: VariantAvailability;
   readonly leadTimeDays: number | null;
   readonly priceOverrideMinor: Minor | null;
+  /**
+   * Ознаки, за якими шукаються надбавки. Обовʼязкові, хоч і можуть бути
+   * `null`: якби вони були необовʼязковими полями, місце виклику, яке про
+   * них забуло, продовжило б рахувати ціну — просто без надбавок. Помилку в
+   * бік «дешевше, ніж має бути» ніхто не помічає, доки не зведе касу.
+   */
+  readonly sizeLabel: string | null;
+  readonly fabricId: string | null;
+  readonly colourId: string | null;
 }
 
 export interface PricingGarment {
@@ -54,6 +69,8 @@ export interface PricedOffer {
   readonly variantId: string;
   readonly printId: string;
   readonly garmentPriceMinor: Minor;
+  /** Розкладка ціни виробу: база й кожна надбавка окремим рядком. */
+  readonly steps: readonly PriceStep[];
   readonly printPriceMinor: Minor;
   readonly totalMinor: Minor;
   readonly purchasable: boolean;
@@ -79,8 +96,29 @@ const BLOCK_MESSAGES: Readonly<Record<BlockReason, string>> = {
   PRINT_NOT_OFFERED_ON_GARMENT: 'Цей принт не друкується на цьому виробі.',
 };
 
-export function garmentPriceFor(garment: PricingGarment, variant: PricingVariant): Minor {
-  return variant.priceOverrideMinor ?? garment.basePriceMinor;
+/**
+ * Ціна виробу: ручна ціна варіанта, інакше база плюс надбавки.
+ *
+ * Правила передаються аргументом, а не читаються звідкись усередині, і це
+ * головне, що тут є. Функція лишається чистою, тож калькулятор в адмінці,
+ * вітрина й каса рахують однаково за визначенням, а не за домовленістю.
+ */
+export function garmentPriceFor(
+  garment: PricingGarment,
+  variant: PricingVariant,
+  modifiers: readonly PriceModifierRule[],
+): ModifiedPrice {
+  return garmentPriceWithModifiers(
+    garment.basePriceMinor,
+    variant.priceOverrideMinor,
+    {
+      garmentId: garment.id,
+      sizeLabel: variant.sizeLabel,
+      fabricId: variant.fabricId,
+      colourId: variant.colourId,
+    },
+    modifiers,
+  );
 }
 
 export function printPriceFor(print: PricingPrint, table: PrintPriceTable): Minor {
@@ -122,8 +160,10 @@ export function priceOffer(
   variant: PricingVariant,
   table: PrintPriceTable,
   isPrintOfferedOnGarment: boolean,
+  modifiers: readonly PriceModifierRule[],
 ): PricedOffer {
-  const garmentPriceMinor = garmentPriceFor(garment, variant);
+  const garmentPrice = garmentPriceFor(garment, variant, modifiers);
+  const garmentPriceMinor = garmentPrice.amountMinor;
   const printPriceMinor = printPriceFor(print, table);
   const reason = blockReasonFor(garment, print, variant, isPrintOfferedOnGarment);
 
@@ -131,6 +171,7 @@ export function priceOffer(
     variantId: variant.id,
     printId: print.id,
     garmentPriceMinor,
+    steps: garmentPrice.steps,
     printPriceMinor,
     totalMinor: addMinor(garmentPriceMinor, printPriceMinor),
     purchasable: reason === null,

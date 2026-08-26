@@ -173,9 +173,10 @@ model Fabric {
   composition String
   origin      String?
 
-  garments GarmentFabric[]
-  colours  FabricColour[]
-  variants Variant[]
+  garments  GarmentFabric[]
+  colours   FabricColour[]
+  variants  Variant[]
+  modifiers PriceModifier[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -197,8 +198,9 @@ model Colour {
   hex          String? @db.Char(7)
   imageUrl     String?
 
-  fabrics  FabricColour[]
-  variants Variant[]
+  fabrics   FabricColour[]
+  variants  Variant[]
+  modifiers PriceModifier[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -243,6 +245,8 @@ model Garment {
   variants Variant[]
   rules    PrintGarmentRule[]
   exclusions PrintGarmentExclusion[]
+  modifiers  PriceModifier[]
+  discounts  Discount[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -343,8 +347,9 @@ model Collection {
   position    Int     @default(0)
   isPublished Boolean @default(false)
 
-  prints PrintCollection[]
-  rules  PrintGarmentRule[]
+  prints    PrintCollection[]
+  rules     PrintGarmentRule[]
+  discounts Discount[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -479,6 +484,118 @@ model PrintGarmentExclusion {
 
   @@id([printId, garmentId])
   @@index([garmentId])
+}
+
+/// Куди дивиться надбавка: на розмір, на тканину або на колір.
+///
+/// Розмір ідентифікується написом («2XL»), а не рядком у таблиці Size: сітки
+/// в нас девʼять різних, і «2XL» — це девʼять різних записів. Правило «великі
+/// розміри дорожчі» стосується напису, а не конкретного виробу, тож і
+/// зберігається за написом.
+enum PriceModifierTarget {
+  SIZE_LABEL
+  FABRIC
+  COLOUR
+}
+
+/// Як рахується сума: у копійках чи у відсотках від базової ціни.
+enum PriceAdjustKind {
+  DELTA
+  PERCENT
+}
+
+/// На що діє знижка.
+enum DiscountScope {
+  ALL
+  GARMENT
+  COLLECTION
+}
+
+/// Надбавка до ціни виробу.
+///
+/// Чому це правила, а не ціна в кожному варіанті: варіантів 7 виробів × 4
+/// тканини × 23 кольори × 8 розмірів. Проставити ціну в кожному — це тисячі
+/// рядків, які ніхто ніколи не перевірить. Правил натомість одиниці, і кожне
+/// читається вголос: «2XL +50 ₴», «начіс +30 ₴».
+///
+/// Ручна ціна варіанта (`Variant.priceOverrideMinor`) нікуди не поділася й
+/// має вищий пріоритет: правила описують систему, override — виняток із неї.
+model PriceModifier {
+  id     String              @id @default(uuid()) @db.Uuid
+  /// Назва для адмінки: «Великі розміри», «Начіс».
+  name   String
+  target PriceModifierTarget
+
+  /// Заповнена рівно одна з трьох — відповідно до `target`. Стежить CHECK у міграції.
+  sizeLabel String?
+  fabricId  String? @db.Uuid
+  colourId  String? @db.Uuid
+
+  /// Звуження до одного виробу. NULL — правило діє на весь асортимент.
+  garmentId String? @db.Uuid
+
+  kind PriceAdjustKind @default(DELTA)
+  /// DELTA — копійки (відʼємне значення = знижка). PERCENT — соті відсотка:
+  /// 1000 = 10 %. Одна колонка, бо два види ніколи не діють одночасно.
+  amount Int
+
+  isActive Boolean @default(true)
+
+  fabric  Fabric?  @relation(fields: [fabricId], references: [id], onDelete: Cascade)
+  colour  Colour?  @relation(fields: [colourId], references: [id], onDelete: Cascade)
+  garment Garment? @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([garmentId])
+  @@index([fabricId])
+  @@index([colourId])
+}
+
+/// Знижка на позицію замовлення.
+///
+/// Відрізняється від надбавки не сумою, а моментом: надбавка формує ціну
+/// виробу, знижка застосовується до вже порахованого рядка. Тому опт («від
+/// 10 шт») і акція («−15 % до 31 грудня») — це одна сутність із двома
+/// умовами, а не два механізми.
+///
+/// Знижки НЕ складаються: діє одна, найвигідніша для покупця. Складання
+/// відсотків — найкоротший шлях продати за 0 ₴ через дві акції, які нікому
+/// не спадало на думку перевірити разом.
+model Discount {
+  id    String        @id @default(uuid()) @db.Uuid
+  name  String
+  scope DiscountScope @default(ALL)
+
+  /// Заповнене відповідно до `scope`. Стежить CHECK у міграції.
+  garmentId    String? @db.Uuid
+  collectionId String? @db.Uuid
+
+  kind PriceAdjustKind @default(PERCENT)
+  /// Розмір знижки, завжди додатний. DELTA — копійки з одиниці товару,
+  /// PERCENT — соті відсотка.
+  amount Int
+
+  /// Від якої кількості в рядку діє. 1 — діє завжди.
+  minQty Int @default(1)
+
+  /// Вікно дії. NULL з обох боків — безстроково.
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  isActive Boolean @default(true)
+
+  garment    Garment?    @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, startsAt, endsAt])
+  @@index([garmentId])
+  @@index([collectionId])
 }
 
 /// Print price by tier. A row, not a constant, so the workshop can reprice
@@ -729,6 +846,10 @@ model Order {
   subtotalMinor Int
   shippingMinor Int @default(0)
   discountMinor Int @default(0)
+  /// Яка саме знижка спрацювала, назвою на момент замовлення. Знімок, як і
+  /// суми: правило потім перейменують або вимкнуть, а питання «чому тут
+  /// −15 %» ставлять через півроку.
+  discountName  String?
   totalMinor    Int
 
   /// Free-text note the customer left at checkout (e.g. "довжину коротше").

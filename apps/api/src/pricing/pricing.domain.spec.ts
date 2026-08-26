@@ -38,12 +38,15 @@ const variant = (over: Partial<PricingVariant> = {}): PricingVariant => ({
   availability: 'IN_STOCK',
   leadTimeDays: null,
   priceOverrideMinor: null,
+  sizeLabel: 'M',
+  fabricId: 'f1',
+  colourId: 'c1',
   ...over,
 });
 
 describe('priceOffer', () => {
   it('adds the garment price and the print price', () => {
-    const offer = priceOffer(garment(), print(), variant(), PRINT_PRICES, true);
+    const offer = priceOffer(garment(), print(), variant(), PRINT_PRICES, true, []);
     expect(offer.garmentPriceMinor).toBe(160_000);
     expect(offer.printPriceMinor).toBe(60_000);
     expect(offer.totalMinor).toBe(220_000);
@@ -58,6 +61,7 @@ describe('priceOffer', () => {
       variant({ priceOverrideMinor: fromUAH(1850) }),
       PRINT_PRICES,
       true,
+      [],
     );
     expect(offer.garmentPriceMinor).toBe(185_000);
     expect(offer.totalMinor).toBe(245_000);
@@ -66,13 +70,25 @@ describe('priceOffer', () => {
   it('prices each tier from the table rather than from the print method', () => {
     const tiers: PrintSizeTier[] = ['MINI', 'MEDIUM', 'MAXI'];
     const totals = tiers.map(
-      (t) => priceOffer(garment(), print({ sizeTier: t }), variant(), PRINT_PRICES, true).printPriceMinor,
+      (t) => priceOffer(garment(), print({ sizeTier: t }), variant(), PRINT_PRICES, true, []).printPriceMinor,
     );
     expect(totals).toEqual([50_000, 60_000, 70_000]);
   });
 
+  it('застосовує надбавки й повертає розкладку', () => {
+    const offer = priceOffer(garment(), print(), variant({ sizeLabel: '2XL' }), PRINT_PRICES, true, [{
+      id: 'm1', name: 'Великі розміри', target: 'SIZE_LABEL',
+      sizeLabel: '2XL', fabricId: null, colourId: null, garmentId: null,
+      kind: 'DELTA', amount: 5_000, isActive: true,
+    }]);
+
+    expect(offer.garmentPriceMinor).toBe(165_000);
+    expect(offer.totalMinor).toBe(225_000);
+    expect(offer.steps.map((s) => s.label)).toEqual(['База', 'Великі розміри']);
+  });
+
   it('reports the lead time only for made-to-order variants', () => {
-    const inStock = priceOffer(garment(), print(), variant(), PRINT_PRICES, true);
+    const inStock = priceOffer(garment(), print(), variant(), PRINT_PRICES, true, []);
     expect(inStock.leadTimeDays).toBeNull();
 
     const mto = priceOffer(
@@ -81,6 +97,7 @@ describe('priceOffer', () => {
       variant({ availability: 'MADE_TO_ORDER', leadTimeDays: 10 }),
       PRINT_PRICES,
       true,
+      [],
     );
     expect(mto.leadTimeDays).toBe(10);
     expect(mto.purchasable).toBe(true);
@@ -136,7 +153,7 @@ describe('blockReasonFor', () => {
 });
 
 describe('totalCart', () => {
-  const ok = priceOffer(garment(), print(), variant(), PRINT_PRICES, true);
+  const ok = priceOffer(garment(), print(), variant(), PRINT_PRICES, true, []);
 
   it('multiplies by quantity without floating point drift', () => {
     const { subtotalMinor } = totalCart([{ offer: ok, quantity: 3 }]);
@@ -147,7 +164,7 @@ describe('totalCart', () => {
     const slow = priceOffer(
       garment(), print(),
       variant({ id: 'v2', availability: 'MADE_TO_ORDER', leadTimeDays: 14 }),
-      PRINT_PRICES, true,
+      PRINT_PRICES, true, [],
     );
     const { maxLeadTimeDays } = totalCart([
       { offer: ok, quantity: 1 },
@@ -158,7 +175,7 @@ describe('totalCart', () => {
 
   it('throws rather than silently dropping a non-purchasable line', () => {
     const blocked = priceOffer(
-      garment(), print(), variant({ availability: 'UNAVAILABLE' }), PRINT_PRICES, true,
+      garment(), print(), variant({ availability: 'UNAVAILABLE' }), PRINT_PRICES, true, [],
     );
     expect(() => totalCart([{ offer: blocked, quantity: 1 }])).toThrow(/not purchasable/);
   });
