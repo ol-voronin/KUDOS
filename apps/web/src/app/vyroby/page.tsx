@@ -6,6 +6,7 @@ import { Section } from '@/components/section';
 import { RangeCard } from '@/features/catalog/components/RangeCard';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink } from '@/components/ui';
 
 export const revalidate = 300;
 
@@ -73,18 +74,8 @@ export default async function RangePage() {
           Шиємо самі, тому багато що можемо зробити під вас. Напишіть — порахуємо.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/prints"
-            className="rounded-card bg-ink px-6 py-3 font-semibold text-surface transition hover:bg-ink/90"
-          >
-            Обрати принт
-          </Link>
-          <Link
-            href="/zayavka"
-            className="rounded-card border-2 border-ink px-6 py-3 font-semibold text-ink transition hover:bg-ink hover:text-surface"
-          >
-            Залишити заявку
-          </Link>
+          <ButtonLink href="/prints" size="lg">Обрати принт</ButtonLink>
+          <ButtonLink href="/zayavka" variant="outline" size="lg">Залишити заявку</ButtonLink>
         </div>
       </Section>
     </PublicShell>

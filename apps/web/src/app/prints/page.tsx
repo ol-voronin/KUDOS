@@ -6,6 +6,7 @@ import { PrintGrid } from '@/features/home/print-card';
 import { plural } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink, EmptyState } from '@/components/ui';
 
 export const revalidate = 60;
 
@@ -30,7 +31,7 @@ export default async function PrintsPage({ searchParams }: Search) {
 
   return (
     <PublicShell>
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -48,18 +49,11 @@ export default async function PrintsPage({ searchParams }: Search) {
           {data && data.items.length > 0 ? (
             <PrintGrid prints={data.items} />
           ) : (
-            <div className="rounded-card border border-dashed border-line-strong bg-surface-sunken p-8 text-center">
-              <p className="font-medium text-ink">Каталог ще наповнюється</p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-                Поки що працюємо під замовлення — намалюємо принт із фото вашої собаки.
-              </p>
-              <Link
-                href="/svoya-ideya"
-                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-accent px-5 text-sm font-semibold text-white"
-              >
-                Замовити свій принт
-              </Link>
-            </div>
+            <EmptyState
+              title="Каталог ще наповнюється"
+              hint="Поки що працюємо під замовлення — намалюємо принт із фото вашої собаки."
+              action={<ButtonLink href="/svoya-ideya">Замовити свій принт</ButtonLink>}
+            />
           )}
         </div>
 
@@ -67,15 +61,15 @@ export default async function PrintsPage({ searchParams }: Search) {
         {pages > 1 && (
           <nav aria-label="Сторінки каталогу" className="mt-10 flex items-center justify-between text-sm">
             {page > 1 ? (
-              <Link href={`/prints?page=${page - 1}`} className="min-h-11 rounded-card border border-line px-4 py-2.5 text-ink hover:border-ink">
+              <ButtonLink href={`/prints?page=${page - 1}`} variant="quiet">
                 ← Назад
-              </Link>
+              </ButtonLink>
             ) : <span />}
             <span className="text-ink-muted">Сторінка {page} з {pages}</span>
             {page < pages ? (
-              <Link href={`/prints?page=${page + 1}`} className="min-h-11 rounded-card border border-line px-4 py-2.5 text-ink hover:border-ink">
+              <ButtonLink href={`/prints?page=${page + 1}`} variant="quiet">
                 Далі →
-              </Link>
+              </ButtonLink>
             ) : <span />}
           </nav>
         )}

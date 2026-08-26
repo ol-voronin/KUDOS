@@ -5,6 +5,11 @@ import { PrintThumb } from '@/components/print-thumb';
 /**
  * Плитка принта. Одна на всі сітки — головна, породна, колекція.
  *
+ * Рамки навколо картки більше немає. Це не смак: рамка малює прямокутник
+ * навколо фотографії, на якій і так є прямокутник — сам принт. Два
+ * вкладені прямокутники читаються як шум, і саме тому обидва референси
+ * кладуть товар на голе тло й розділяють колонки волосінню.
+ *
  * Ціна показується як «від N ₴», бо принт друкується на кількох виробах із
  * різною базовою ціною. Не показати ціну взагалі гірше: людина мусить
  * заходити в картку, щоб зрозуміти, чи це взагалі її діапазон.
@@ -13,49 +18,96 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
   return (
     <Link
       href={`/prints/${print.slug}`}
-      className="group flex flex-col rounded-card border border-line bg-surface-raised p-2 transition hover:border-ink focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+      className="group flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
     >
-      <div className="relative">
+      <div className="relative overflow-hidden bg-surface-sunken">
         <PrintThumb src={print.previewUrl} alt={print.title} />
+      </div>
+
+      <p className="mt-3 border-t border-ink pt-2 text-sm font-medium text-ink group-hover:underline">
+        {print.title}
+      </p>
+
+      <div className="mt-1 flex items-baseline justify-between gap-2">
+        {print.fromPriceMinor === null
+          ? <span className="text-sm text-ink-subtle">ціну уточнюємо</span>
+          : (
+            <p className="font-display text-lg font-bold text-ink">
+              {formatUAH(minor(print.fromPriceMinor))}
+            </p>
+          )}
+        {/*
+          Наявність — крапка з підписом, а не зелена плашка. Плашка кричала
+          на кожній картці однаково голосно, тобто не означала нічого; тут
+          вона помітна лише тоді, коли поруч є картка без неї.
+        */}
         {print.inStock && (
-          <span className="absolute left-2 top-2 rounded-card bg-ok-soft px-2 py-1 text-xs font-semibold text-ok">
-            Є в наявності
+          <span className="flex shrink-0 items-center gap-1.5 text-xs text-ink-muted">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-pill bg-ok" />
+            є
           </span>
         )}
       </div>
-      <p className="mt-2 line-clamp-2 text-sm font-medium text-ink group-hover:underline">{print.title}</p>
-      <p className="mt-auto pt-1 text-sm text-ink-muted">
-        {print.fromPriceMinor === null
-          ? <span className="text-ink-subtle">ціну уточнюємо</span>
-          : <>від <span className="font-semibold text-ink">{formatUAH(minor(print.fromPriceMinor))}</span></>}
-      </p>
     </Link>
   );
 }
 
+/**
+ * Сітка товарів.
+ *
+ * Волосінь між колонками замальовується не проміжком, а рамкою самих
+ * комірок: у сітці з незаповненим останнім рядком фон-роздільник
+ * перетворився б на сірі плями там, де товарів забракло.
+ */
 export function PrintGrid({ prints }: { prints: readonly PrintCardDto[] }) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div
+      className={[
+        'grid grid-cols-2 border-t border-line sm:grid-cols-3 lg:grid-cols-4',
+        '[&>*]:border-b [&>*]:border-r [&>*]:border-line',
+        '[&>*:nth-child(2n)]:border-r-0',
+        'sm:[&>*:nth-child(2n)]:border-r sm:[&>*:nth-child(3n)]:border-r-0',
+        'lg:[&>*:nth-child(3n)]:border-r lg:[&>*:nth-child(4n)]:border-r-0',
+      ].join(' ')}
+    >
       {prints.map((print) => <PrintCard key={print.id} print={print} />)}
     </div>
   );
 }
 
-/** Заголовок секції з посиланням «дивитись усі». Однаковий у всіх блоках. */
+/**
+ * Заголовок секції.
+ *
+ * Два тони одного заголовка — головний прийом напрямку: перше слово
+ * чорнилом, продовження блідим. Читається як одне ціле, але великий кегль
+ * не перетворює сторінку на суцільний крик.
+ */
 export function SectionHead({
-  title, subtitle, href, hrefLabel,
-}: { title: string; subtitle?: string; href?: string; hrefLabel?: string }) {
+  title, ghost, eyebrow, subtitle, href, hrefLabel,
+}: {
+  title: string; ghost?: string; eyebrow?: string; subtitle?: string;
+  href?: string; hrefLabel?: string;
+}) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h2 className="font-display text-2xl font-bold text-ink">{title}</h2>
-        {subtitle && <p className="mt-1.5 max-w-prose text-ink-muted">{subtitle}</p>}
+    <div className="mb-6">
+      {eyebrow !== undefined && <p className="label-eyebrow mb-1">{eyebrow}</p>}
+      <h2 className="text-section font-display font-bold uppercase text-ink">
+        {title}
+        {ghost !== undefined && <> <span className="ghost-word">{ghost}</span></>}
+      </h2>
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-t border-ink pt-2">
+        {subtitle !== undefined
+          ? <p className="max-w-prose text-sm text-ink-muted">{subtitle}</p>
+          : <span />}
+        {href !== undefined && (
+          <Link
+            href={href}
+            className="label-eyebrow shrink-0 border-b border-ink pb-0.5 text-ink hover:text-ink-muted"
+          >
+            {hrefLabel ?? 'Дивитись усі'} →
+          </Link>
+        )}
       </div>
-      {href && (
-        <Link href={href} className="shrink-0 text-sm font-medium text-ink underline-offset-4 hover:underline">
-          {hrefLabel ?? 'Дивитись усі'} →
-        </Link>
-      )}
     </div>
   );
 }

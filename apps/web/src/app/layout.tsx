@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Onest, Unbounded } from 'next/font/google';
+import { Onest, Oswald } from 'next/font/google';
 import '../styles/globals.css';
 import { Providers } from './providers';
 import { Analytics } from '@/features/analytics/analytics';
@@ -15,9 +15,16 @@ import { getTracking } from '@/lib/tracking';
 const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
 const onest = Onest({ subsets: ['latin', 'cyrillic'], variable: '--font-sans', display: 'swap' });
-const unbounded = Unbounded({
+
+/**
+ * Вузький важкий ґротеск у заголовках — головна впізнавана риса напрямку.
+ * Oswald узятий тому, що це єдиний вузький капс на Google Fonts із повною
+ * кирилицею; у референсі (vidro) стоїть ліцензійний шрифт типу Druk, і його
+ * можна буде підмінити пізніше, змінивши тільки цей блок.
+ */
+const oswald = Oswald({
   subsets: ['latin', 'cyrillic'],
-  weight: ['500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-display',
   display: 'swap',
 });
@@ -47,7 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const [settings, tracking] = await Promise.all([getSettings(), getTracking()]);
   return (
-    <html lang="uk" className={`${onest.variable} ${unbounded.variable}`}>
+    <html lang="uk" className={`${onest.variable} ${oswald.variable}`}>
       <body>
         <Providers settings={settings}>
           {children}

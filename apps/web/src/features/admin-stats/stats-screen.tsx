@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AdminStatsDto, formatUAH, minor } from '@dt/contracts';
 import { apiFetch } from '@/lib/api-client';
 import { DailyChart } from './daily-chart';
+import { TableSkeleton } from '@/components/ui';
 
 const RANGES = [7, 30, 90] as const;
 
@@ -46,7 +47,7 @@ export function StatsScreen() {
         ))}
       </div>
 
-      {isLoading && <p className="text-ink-muted">Рахую…</p>}
+      {isLoading && <TableSkeleton rows={4} cols={6} />}
       {isError && <p className="text-danger">Не вдалося завантажити статистику.</p>}
 
       {data && (

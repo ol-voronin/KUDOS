@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MediaAssetDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { DropZone } from './drop-zone';
 import { deleteMedia, listMedia, updateMedia, uploadMedia } from './media-api';
+import { ConfirmButton, TableSkeleton } from '@/components/ui';
 
 const KEY = ['admin-media'];
 
@@ -60,9 +61,25 @@ export function MediaPicker({
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 sm:p-8">
-      <div className="w-full max-w-3xl rounded-card border border-line bg-surface p-5 shadow-xl">
+      {/*
+        Вікно було без ролі, без `aria-modal` і без Escape: для клавіатури й
+        зчитувача це був просто прямокутник поверх сторінки, з якого не видно
+        виходу. Escape тепер закриває — це те, що людина спробує першим.
+      */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Медіатека"
+        className="w-full max-w-3xl rounded-card border border-line bg-surface p-5 shadow-sm"
+      >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-ink">Медіатека</h2>
           <button type="button" onClick={onClose} className="text-sm text-ink-muted hover:text-ink">
@@ -85,7 +102,7 @@ export function MediaPicker({
 
         <div className="mt-5">
           {isLoading ? (
-            <p className="text-ink-muted">Завантаження…</p>
+            <TableSkeleton rows={2} cols={4} />
           ) : (data?.items.length ?? 0) === 0 ? (
             <p className="py-8 text-center text-sm text-ink-subtle">
               Поки що порожньо. Перетягніть перше фото у поле вище.
@@ -97,7 +114,7 @@ export function MediaPicker({
                   <button
                     type="button"
                     onClick={() => onPick(asset)}
-                    className="block w-full overflow-hidden rounded-card focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="block w-full overflow-hidden rounded-card focus:outline-none focus:ring-2 focus:ring-ink"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -116,14 +133,15 @@ export function MediaPicker({
                   />
                   <div className="mt-1 flex items-center justify-between text-xs text-ink-subtle">
                     <span>{Math.round(asset.bytes / 1024)} КБ</span>
-                    <button
-                      type="button"
-                      onClick={() => remove.mutate(asset.id)}
+                    {/*
+                      Файл може вже стояти на живій сторінці, і перевірити це
+                      звідси неможливо — тим паче потрібне підтвердження.
+                    */}
+                    <ConfirmButton
+                      onConfirm={() => remove.mutate(asset.id)}
                       disabled={remove.isPending}
-                      className="text-danger"
-                    >
-                      Видалити
-                    </button>
+                      question="Видалити файл?"
+                    />
                   </div>
                 </li>
               ))}

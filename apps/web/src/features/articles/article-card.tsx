@@ -22,7 +22,7 @@ export function ArticleCard({ article }: { article: PageCardDto }) {
     <article className="group flex flex-col">
       <Link href={`/statti/${article.slug}`} className="flex flex-col gap-3">
         {article.coverUrl !== '' && (
-          <span className="relative block aspect-[3/2] overflow-hidden rounded-card bg-surface-sunken">
+          <span className="relative block aspect-[3/2] overflow-hidden bg-surface-sunken">
             <Image
               src={article.coverUrl}
               alt=""
@@ -32,7 +32,7 @@ export function ArticleCard({ article }: { article: PageCardDto }) {
             />
           </span>
         )}
-        <h3 className="font-display text-lg font-bold leading-snug text-ink group-hover:text-accent">
+        <h3 className="font-display text-lg font-bold leading-snug text-ink group-hover:text-ink">
           {article.title}
         </h3>
       </Link>

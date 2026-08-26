@@ -10,6 +10,7 @@ import { compressImage } from './compress-image';
 import {
   addPrintImage, deletePrintPhotoBlob, removePrintImage, reorderPrintImages, uploadPrintPhoto,
 } from './api';
+import { ConfirmButton, ErrorBanner } from '@/components/ui';
 
 /**
  * Фото принта: завантаження, порядок, видалення.
@@ -150,7 +151,7 @@ export function PrintImageUploader({
                   className="aspect-square w-full rounded-card object-cover"
                 />
                 {index === 0 && (
-                  <span className="absolute left-2 top-2 rounded-card bg-accent px-2 py-1 text-xs font-semibold text-white">
+                  <span className="absolute left-2 top-2 rounded-pill bg-ink px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-surface">
                     Обкладинка
                   </span>
                 )}
@@ -170,14 +171,7 @@ export function PrintImageUploader({
                     →
                   </IconButton>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void remove(image)}
-                  disabled={busy}
-                  className="min-h-9 rounded-card px-2 text-sm font-medium text-danger transition hover:bg-danger-soft disabled:opacity-50"
-                >
-                  Видалити
-                </button>
+                <ConfirmButton onConfirm={() => void remove(image)} disabled={busy} question="Видалити фото?" />
               </div>
             </li>
           ))}
@@ -210,9 +204,9 @@ export function PrintImageUploader({
       )}
 
       {error && (
-        <p role="alert" className="mt-3 rounded-card border border-danger bg-danger-soft p-3 text-sm font-medium text-danger">
+        <ErrorBanner>
           {error}
-        </p>
+        </ErrorBanner>
       )}
     </section>
   );

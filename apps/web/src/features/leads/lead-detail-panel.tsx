@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLeadDetail, resendTelegram } from './api';
+import { TableSkeleton } from '@/components/ui';
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: 'Нова',
@@ -59,7 +60,7 @@ export function LeadDetailPanel({ leadId, onClose }: { leadId: string; onClose: 
           </button>
         </div>
 
-        {isLoading && <p className="text-ink-muted">Завантаження…</p>}
+        {isLoading && <TableSkeleton rows={4} cols={2} />}
         {isError && <p className="text-danger">Не вдалося завантажити заявку.</p>}
 
         {data && (

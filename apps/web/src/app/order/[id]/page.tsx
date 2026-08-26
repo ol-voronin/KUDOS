@@ -11,7 +11,7 @@ export function generateMetadata(): Metadata {
 export default function OrderStatusPage({ params }: Params) {
   return (
     <PublicShell>
-      <div className="mx-auto max-w-2xl px-6 py-12">
+      <div className="mx-auto max-w-2xl px-4 sm:px-6 py-12">
         <OrderStatusView orderId={params.id} />
       </div>
     </PublicShell>

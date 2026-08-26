@@ -16,12 +16,13 @@ import { BlockHeading, BlockLinks } from './shared';
  */
 
 /**
- * Заголовок героя, у якому частину можна виділити кольором: `**отак**`.
+ * Заголовок героя, у якому частину виділяють так: `**отак**`.
  *
- * Той самий прийом, що й у решті текстів, але тут він малюється не жирним, а
- * акцентним кольором — бо в заголовку жирним уже все. Це єдине оформлення,
- * яке редактор може задати в H1, і його достатньо: «Ваш пес — **на вашій
- * футболці**».
+ * Раніше виділене малювалося акцентним кольором. Тепер — блідим тоном того
+ * самого чорнила, і це не косметика: так працює головний прийом напрямку.
+ * Слово-привид дочитує заголовок, не перетягуючи на себе увагу, і той самий
+ * прийом повторюється в назвах колекцій та в підвалі. Один трюк на трьох
+ * масштабах читається як задум; той самий трюк у трьох кольорах — як хаос.
  */
 function HeroHeading({ text }: { text: string }) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
@@ -29,7 +30,7 @@ function HeroHeading({ text }: { text: string }) {
     <>
       {parts.map((part, i) => (
         i % 2 === 1
-          ? <span key={i} className="text-accent">{part}</span>
+          ? <span key={i} className="ghost-word">{part}</span>
           : <Fragment key={i}>{part}</Fragment>
       ))}
     </>
@@ -40,11 +41,9 @@ export function Hero({ block }: { block: HeroBlock }) {
   return (
     <>
       {block.eyebrow.trim() !== '' && (
-        <p className="mb-3 inline-flex rounded-pill bg-accent-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.11em] text-accent-ink">
-          {block.eyebrow}
-        </p>
+        <p className="label-eyebrow mb-3">{block.eyebrow}</p>
       )}
-      <h1 className="max-w-3xl font-display text-hero font-bold text-ink">
+      <h1 className="max-w-4xl font-display text-hero font-bold uppercase text-ink">
         <HeroHeading text={block.heading} />
       </h1>
       <InlineParagraph text={block.lead} className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted" />
@@ -84,7 +83,7 @@ export function Legal({ block }: { block: LegalBlock }) {
   return (
     <section id={id} className="max-w-3xl scroll-mt-24">
       <h2 className="font-display text-xl font-bold text-ink">
-        <a href={`#${id}`} className="hover:text-accent">{block.number}. {block.heading}</a>
+        <a href={`#${id}`} className="hover:text-ink-muted">{block.number}. {block.heading}</a>
       </h2>
       <div className="mt-3 space-y-3 leading-relaxed text-ink-muted">
         {block.items.map((item, i) => (
@@ -104,14 +103,14 @@ export function Steps({ block }: { block: StepsBlock }) {
       <BlockHeading text={block.heading} lead={block.lead} />
       <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {block.items.map((item, i) => (
-          <li key={i} className="rounded-card border border-line bg-surface p-5">
+          <li key={i} className="border-t border-ink pt-3">
             <span
               aria-hidden="true"
-              className="flex h-8 w-8 items-center justify-center rounded-pill bg-teal text-sm font-bold text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-pill border border-ink font-display text-xs font-bold text-ink"
             >
               {i + 1}
             </span>
-            <h3 className="mt-3 font-display font-bold text-ink">{item.title}</h3>
+            <h3 className="mt-3 font-semibold text-ink">{item.title}</h3>
             <InlineParagraph text={item.text} className="mt-1.5 text-sm leading-relaxed text-ink-muted" />
           </li>
         ))}
@@ -132,8 +131,8 @@ export function Cards({ block }: { block: CardsBlock }) {
       <BlockHeading text={block.heading} lead={block.lead} />
       <div className={`grid gap-4 ${COLUMNS[block.columns]}`}>
         {block.items.map((item, i) => (
-          <div key={i} className="rounded-card border border-line bg-surface p-5">
-            <h3 className="font-display font-bold text-ink">{item.title}</h3>
+          <div key={i} className="border-t border-line pt-3">
+            <h3 className="font-semibold text-ink">{item.title}</h3>
             <InlineParagraph text={item.text} className="mt-1.5 text-sm leading-relaxed text-ink-muted" />
           </div>
         ))}
@@ -168,12 +167,12 @@ export function Features({ block }: { block: FeaturesBlock }) {
             <svg
               width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
-              aria-hidden="true" className="mt-0.5 shrink-0 text-accent"
+              aria-hidden="true" className="mt-0.5 shrink-0 text-ink"
             >
               <path d={ICONS[item.icon]} />
             </svg>
             <div>
-              <h3 className="font-display font-bold text-ink">{item.title}</h3>
+              <h3 className="font-semibold text-ink">{item.title}</h3>
               <InlineParagraph text={item.text} className="mt-1 text-sm leading-relaxed text-ink-muted" />
             </div>
           </div>
@@ -190,7 +189,7 @@ export function Faq({ block }: { block: FaqBlock }) {
       <div className="max-w-3xl divide-y divide-line">
         {block.items.map((item, i) => (
           <details key={i} className="group py-4">
-            <summary className="cursor-pointer font-display font-bold text-ink marker:text-ink-subtle">
+            <summary className="cursor-pointer font-semibold text-ink marker:text-ink-subtle">
               {item.q}
             </summary>
             <InlineParagraph text={item.a} className="mt-2 leading-relaxed text-ink-muted" />
@@ -204,7 +203,7 @@ export function Faq({ block }: { block: FaqBlock }) {
 export function Cta({ block }: { block: CtaBlock }) {
   return (
     <div className="max-w-prose">
-      <h2 className="font-display text-2xl font-bold text-ink">{block.heading}</h2>
+      <h2 className="text-section font-display font-bold uppercase text-ink">{block.heading}</h2>
       <InlineParagraph text={block.text} className="mt-3 leading-relaxed text-ink-muted" />
       <BlockLinks links={block.links} className="mt-6" />
     </div>
@@ -218,7 +217,7 @@ export function ImageText({ block }: { block: ImageTextBlock }) {
       <img
         src={block.image.url}
         alt={block.image.alt}
-        className="w-full rounded-card border border-line object-cover"
+        className="w-full object-cover"
       />
       {block.image.caption.trim() !== '' && (
         <figcaption className="mt-2 text-sm text-ink-subtle">{block.image.caption}</figcaption>
@@ -228,7 +227,7 @@ export function ImageText({ block }: { block: ImageTextBlock }) {
   const body = (
     <div>
       {block.heading.trim() !== '' && (
-        <h2 className="font-display text-2xl font-bold text-ink">{block.heading}</h2>
+        <h2 className="text-section font-display font-bold uppercase text-ink">{block.heading}</h2>
       )}
       <InlineParagraph text={block.text} className="mt-3 leading-relaxed text-ink-muted" />
       <BlockLinks links={block.links} className="mt-6" />
@@ -253,7 +252,7 @@ export function Gallery({ block }: { block: GalleryBlock }) {
             <img
               src={img.url}
               alt={img.alt}
-              className="aspect-square w-full rounded-card border border-line object-cover"
+              className="aspect-square w-full bg-surface-sunken object-cover"
             />
             {img.caption.trim() !== '' && (
               <figcaption className="mt-2 text-sm text-ink-subtle">{img.caption}</figcaption>
@@ -268,7 +267,7 @@ export function Gallery({ block }: { block: GalleryBlock }) {
 export function Quote({ block }: { block: QuoteBlock }) {
   return (
     <figure className="m-0 max-w-3xl">
-      <blockquote className="font-display text-xl font-semibold leading-snug text-ink">
+      <blockquote className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">
         <Inline text={block.text} />
       </blockquote>
       {(block.author.trim() !== '' || block.role.trim() !== '') && (

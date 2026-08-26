@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { formatUAH, minor } from '@dt/contracts';
 import { fireConversion } from '@/features/analytics/client';
 import { useOrderStatus } from '../hooks/useOrderStatus';
+import { Skeleton } from '@/components/ui';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_PAYMENT: 'Очікуємо оплату',
@@ -43,7 +44,7 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
   }, [data?.status, data?.totalMinor, orderId]);
 
   if (isLoading) {
-    return <p className="text-ink-muted">Завантаження…</p>;
+    return <Skeleton className="h-24 w-full" />;
   }
   if (isError || !data) {
     return <p className="text-danger">Не вдалося знайти замовлення.</p>;

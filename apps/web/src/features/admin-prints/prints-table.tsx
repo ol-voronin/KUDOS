@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { PrintThumb } from '@/components/print-thumb';
 import { listPrints, type PrintFilters } from './api';
+import { TableSkeleton } from '@/components/ui';
 
 const FILTERS: ReadonlyArray<{ label: string; value: PrintFilters['published'] }> = [
   { label: 'Усі', value: undefined },
@@ -51,19 +52,19 @@ export function PrintsTable() {
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           placeholder="Пошук за назвою або адресою"
-          className="h-10 min-w-56 flex-1 rounded-card border border-line bg-surface-raised px-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+          className="h-10 min-w-56 flex-1 rounded-card border border-line bg-surface-raised px-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-ink"
         />
 
         <Link
           href="/admin/prints/new"
-          className="flex min-h-10 items-center rounded-card bg-ink px-4 text-sm font-semibold text-surface transition hover:bg-ink/90"
+          className="inline-flex min-h-10 items-center rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85"
         >
           Новий принт
         </Link>
       </div>
 
       <div className="mt-5">
-        {isLoading && <p className="text-ink-muted">Завантаження…</p>}
+        {isLoading && <TableSkeleton rows={5} cols={4} />}
         {isError && <p className="text-danger">Не вдалося завантажити принти.</p>}
 
         {data && data.items.length === 0 && (
@@ -79,7 +80,7 @@ export function PrintsTable() {
             {!q && !published && (
               <Link
                 href="/admin/prints/new"
-                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
+                className="mt-5 inline-flex min-h-11 items-center rounded-pill bg-ink px-5 text-sm font-semibold text-surface"
               >
                 Додати перший
               </Link>

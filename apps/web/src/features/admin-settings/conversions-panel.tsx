@@ -8,6 +8,7 @@ import {
 } from '@dt/contracts';
 import { z } from 'zod';
 import { apiFetch, ApiError } from '@/lib/api-client';
+import { ConfirmButton, TableSkeleton, ErrorBanner } from '@/components/ui';
 
 const KEY = ['admin-conversions'];
 const Rows = z.array(z.object({
@@ -58,7 +59,7 @@ export function ConversionsPanel() {
     onSuccess: (fresh) => qc.setQueryData(KEY, fresh),
   });
 
-  if (isLoading) return <p className="text-ink-muted">Завантаження…</p>;
+  if (isLoading) return <TableSkeleton rows={3} cols={4} />;
 
   const rows: ConversionActionDto[] = data ?? [];
   const error = add.error ?? patch.error ?? drop.error;
@@ -75,9 +76,9 @@ export function ConversionsPanel() {
       </div>
 
       {error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {error instanceof ApiError ? error.message : 'Не вдалося зберегти'}
-        </p>
+        </ErrorBanner>
       )}
 
       {rows.length > 0 && (
@@ -118,13 +119,7 @@ export function ConversionsPanel() {
                     />
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => drop.mutate(row.id)}
-                      className="text-sm text-ink-subtle hover:text-danger"
-                    >
-                      Видалити
-                    </button>
+                    <ConfirmButton onConfirm={() => drop.mutate(row.id)} question="Видалити конверсію?" />
                   </td>
                 </tr>
               ))}
@@ -165,7 +160,7 @@ export function ConversionsPanel() {
         <button
           type="submit"
           disabled={label.trim().length < 3 || add.isPending}
-          className="rounded-card bg-ink px-4 py-2 text-sm text-surface disabled:opacity-40"
+          className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
         >
           Додати
         </button>

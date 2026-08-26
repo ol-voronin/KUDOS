@@ -6,6 +6,7 @@ import { BlockRenderer } from '@/features/content/block-renderer';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { faqJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink } from '@/components/ui';
 
 /**
  * Головна — сторінка з CMS, як і всі інші.
@@ -73,18 +74,18 @@ export default async function HomePage() {
  */
 function MissingHome() {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
       <h1 className="font-display text-3xl font-bold text-ink">Одяг з принтом вашої собаки</h1>
       <p className="mt-4 text-ink-muted">
         Головна сторінка зараз оновлюється. Каталог працює як звичайно.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link href="/prints" className="flex min-h-12 items-center rounded-card bg-accent px-6 text-sm font-semibold text-white">
+        <ButtonLink href="/prints" size="lg">
           Дивитись принти
-        </Link>
-        <Link href="/svoya-ideya" className="flex min-h-12 items-center rounded-card border border-ink px-6 text-sm font-medium text-ink">
+        </ButtonLink>
+        <ButtonLink href="/svoya-ideya" variant="outline" size="lg">
           Свій принт із фото
-        </Link>
+        </ButtonLink>
       </div>
     </div>
   );

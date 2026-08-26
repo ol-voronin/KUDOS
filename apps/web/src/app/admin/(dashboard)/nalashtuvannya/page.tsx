@@ -1,19 +1,13 @@
 import type { Metadata } from 'next';
 import { SettingsScreen } from '@/features/admin-settings/settings-screen';
+import { AdminPage } from '@/features/admin-shell/admin-shell';
 
 export const metadata: Metadata = { title: 'Налаштування · адмін' };
 
-export default function SettingsPage() {
+export default function Page() {
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-2xl font-bold text-ink">Налаштування</h1>
-      <p className="mt-2 max-w-prose text-sm text-ink-muted">
-        Реквізити, контакти й меню. Усе звідси потрапляє і в футер, і в тексти сторінок через
-        підстановки — тож правити треба тут, а не в кожному тексті окремо.
-      </p>
-      <div className="mt-8">
-        <SettingsScreen />
-      </div>
-    </div>
+    <AdminPage title="Налаштування" hint="Реквізити, контакти й меню. Усе звідси потрапляє і в футер, і в тексти сторінок через підстановки — тож правити треба тут, а не в кожному тексті окремо.">
+      <div className="max-w-4xl"><SettingsScreen /></div>
+    </AdminPage>
   );
 }

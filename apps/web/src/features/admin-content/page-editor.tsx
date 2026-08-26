@@ -8,6 +8,7 @@ import { AnyBlock, BlockList as BlockListSchema, type AdminPageDto } from '@dt/c
 import { ApiError } from '@/lib/api-client';
 import { BlockList } from './block-list';
 import { getPage, publishPage, restoreVersion, saveDraft, setPageTerms, unpublishPage, updatePage } from './api';
+import { inputClass, TableSkeleton, useToast, ErrorBanner, Chip } from '@/components/ui';
 
 /**
  * Редактор сторінки.
@@ -41,13 +42,11 @@ function draftFrom(page: AdminPageDto): DraftState {
   };
 }
 
-const inputCls =
-  'w-full rounded-card border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none';
-const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-ink-subtle';
 
 export function PageEditor({ id }: { id: string }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const toast = useToast();
   const key = ['admin-page', id];
 
   const { data: page, isLoading, isError } = useQuery({ queryKey: key, queryFn: () => getPage(id) });
@@ -83,7 +82,7 @@ export function PageEditor({ id }: { id: string }) {
       if (!draft) throw new Error('нічого зберігати');
       return saveDraft(id, { ...draft, coverUrl: '', note: '' });
     },
-    onSuccess: (fresh) => { qc.setQueryData(key, fresh); setSaved(draft); },
+    onSuccess: (fresh) => { qc.setQueryData(key, fresh); setSaved(draft); toast('Чернетку збережено'); },
   });
 
   const publish = useMutation({
@@ -94,12 +93,12 @@ export function PageEditor({ id }: { id: string }) {
       if (dirty && draft) await saveDraft(id, { ...draft, coverUrl: '', note: '' });
       return publishPage(id);
     },
-    onSuccess: (fresh) => { qc.setQueryData(key, fresh); setSaved(draft); },
+    onSuccess: (fresh) => { qc.setQueryData(key, fresh); setSaved(draft); toast('Опубліковано — сторінка вже на сайті'); },
   });
 
   const unpublish = useMutation({
     mutationFn: () => unpublishPage(id),
-    onSuccess: (fresh) => qc.setQueryData(key, fresh),
+    onSuccess: (fresh) => { qc.setQueryData(key, fresh); toast('Сторінку прибрано з сайту'); },
   });
 
   const restore = useMutation({
@@ -112,7 +111,7 @@ export function PageEditor({ id }: { id: string }) {
     onSuccess: (fresh) => { qc.setQueryData(key, fresh); router.refresh(); },
   });
 
-  if (isLoading || !draft || !page) return <p className="text-ink-muted">Завантаження…</p>;
+  if (isLoading || !draft || !page) return <TableSkeleton rows={6} cols={2} />;
   if (isError) return <p className="text-danger">Не вдалося завантажити сторінку.</p>;
 
   const invalid = draft.blocks.filter((b) => !AnyBlock.safeParse(b).success).length;
@@ -133,16 +132,16 @@ export function PageEditor({ id }: { id: string }) {
             >
               {page.kind === 'ARTICLE' ? `/statti/${page.slug}` : `/${page.slug}`}
             </a>
-            {page.kind === 'ARTICLE' && <span className="ml-2 rounded-card bg-teal-soft px-1.5 py-0.5 text-xs text-teal-ink">стаття</span>}
-            {page.isSystem && <span className="ml-2 rounded-card bg-surface-sunken px-1.5 py-0.5 text-xs">системна</span>}
-            {!page.isPublished && <span className="ml-2 rounded-card bg-sun-soft px-1.5 py-0.5 text-xs text-sun-ink">не на сайті</span>}
+            {page.kind === 'ARTICLE' && <span className="ml-2"><Chip tone="ok">стаття</Chip></span>}
+            {page.isSystem && <span className="ml-2"><Chip>системна</Chip></span>}
+            {!page.isPublished && <span className="ml-2"><Chip tone="warn">не на сайті</Chip></span>}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/admin/storinky/${id}/preview`}
-            className="rounded-card border-2 border-line px-4 py-2 text-sm font-semibold text-ink-muted transition hover:border-ink hover:text-ink"
+            className="min-h-10 rounded-pill border border-line px-5 text-sm font-semibold text-ink transition hover:border-ink"
           >
             Переглянути
           </Link>
@@ -150,7 +149,7 @@ export function PageEditor({ id }: { id: string }) {
             type="button"
             onClick={() => save.mutate()}
             disabled={!dirty || save.isPending}
-            className="rounded-card border-2 border-ink px-4 py-2 text-sm font-semibold text-ink transition disabled:opacity-40"
+            className="min-h-10 rounded-pill border border-ink px-5 text-sm font-semibold text-ink transition hover:bg-ink hover:text-surface disabled:opacity-40"
           >
             {save.isPending ? 'Зберігаю…' : dirty ? 'Зберегти чернетку' : 'Збережено'}
           </button>
@@ -159,7 +158,7 @@ export function PageEditor({ id }: { id: string }) {
             onClick={() => publish.mutate()}
             disabled={!canPublish || publish.isPending}
             title={canPublish ? '' : 'Спершу заповніть блоки, позначені червоним'}
-            className="rounded-card bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-strong disabled:opacity-40"
+            className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
           >
             {publish.isPending ? 'Публікую…' : 'Опублікувати'}
           </button>
@@ -167,9 +166,9 @@ export function PageEditor({ id }: { id: string }) {
       </header>
 
       {error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {error instanceof ApiError ? error.message : 'Не вдалося зберегти'}
-        </p>
+        </ErrorBanner>
       )}
 
       {page.revalidateError !== '' && (
@@ -188,18 +187,18 @@ export function PageEditor({ id }: { id: string }) {
         <h2 className="mb-4 font-display text-lg font-bold text-ink">Про сторінку</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className={labelCls} htmlFor="p-title">Назва</label>
+            <label className="label-eyebrow" htmlFor="p-title">Назва</label>
             <input
-              id="p-title" type="text" className={`${inputCls} mt-1`} value={draft.title}
+              id="p-title" type="text" className={`${inputClass()} w-full mt-1`} value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             />
             <p className="mt-1 text-xs text-ink-subtle">Видно в хлібних крихтах і в списку сторінок.</p>
           </div>
           <div>
-            <label className={labelCls} htmlFor="p-slug">Адреса</label>
+            <label className="label-eyebrow" htmlFor="p-slug">Адреса</label>
             <div className="mt-1 flex gap-2">
               <input
-                id="p-slug" type="text" className={inputCls} value={slug}
+                id="p-slug" type="text" className={`${inputClass()} w-full`} value={slug}
                 disabled={page.isSystem}
                 onChange={(e) => setSlug(e.target.value)}
               />
@@ -225,25 +224,25 @@ export function PageEditor({ id }: { id: string }) {
         <p className="mb-4 text-sm text-ink-muted">Порожні поля означають «взяти зі сторінки» — дублювати нічого не треба.</p>
         <div className="flex flex-col gap-4">
           <div>
-            <label className={labelCls} htmlFor="p-seo-title">Заголовок у пошуку</label>
+            <label className="label-eyebrow" htmlFor="p-seo-title">Заголовок у пошуку</label>
             <input
-              id="p-seo-title" type="text" className={`${inputCls} mt-1`} value={draft.seoTitle}
+              id="p-seo-title" type="text" className={`${inputClass()} w-full mt-1`} value={draft.seoTitle}
               onChange={(e) => setDraft({ ...draft, seoTitle: e.target.value })}
             />
             <SeoHint value={draft.seoTitle} soft={60} hard={70} what="заголовок" />
           </div>
           <div>
-            <label className={labelCls} htmlFor="p-seo-desc">Опис у пошуку</label>
+            <label className="label-eyebrow" htmlFor="p-seo-desc">Опис у пошуку</label>
             <textarea
-              id="p-seo-desc" rows={3} className={`${inputCls} mt-1`} value={draft.seoDescription}
+              id="p-seo-desc" rows={3} className={`${inputClass()} w-full mt-1`} value={draft.seoDescription}
               onChange={(e) => setDraft({ ...draft, seoDescription: e.target.value })}
             />
             <SeoHint value={draft.seoDescription} soft={155} hard={180} what="опис" />
           </div>
           <div>
-            <label className={labelCls} htmlFor="p-excerpt">Короткий опис</label>
+            <label className="label-eyebrow" htmlFor="p-excerpt">Короткий опис</label>
             <textarea
-              id="p-excerpt" rows={2} className={`${inputCls} mt-1`} value={draft.excerpt}
+              id="p-excerpt" rows={2} className={`${inputClass()} w-full mt-1`} value={draft.excerpt}
               onChange={(e) => setDraft({ ...draft, excerpt: e.target.value })}
             />
             <p className="mt-1 text-xs text-ink-subtle">Показується в списках і підставляється в опис, якщо його не заповнити.</p>
@@ -372,7 +371,7 @@ function TermsPanel({ page, pageKey }: { page: AdminPageDto; pageKey: unknown[] 
 
       {page.breedOptions.length > 0 && (
         <fieldset className="mb-4">
-          <legend className={labelCls}>Породи</legend>
+          <legend className="label-eyebrow">Породи</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {page.breedOptions.map((b) => {
               const on = breedIds.includes(b.id);
@@ -402,7 +401,7 @@ function TermsPanel({ page, pageKey }: { page: AdminPageDto; pageKey: unknown[] 
 
       {page.collectionOptions.length > 0 && (
         <fieldset>
-          <legend className={labelCls}>Колекції</legend>
+          <legend className="label-eyebrow">Колекції</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {page.collectionOptions.map((c) => {
               const on = collectionIds.includes(c.id);

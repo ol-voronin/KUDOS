@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { slugify, type AdminPageSummaryDto, type PageKind } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { createPage, listPages } from './api';
+import {
+  Button, EmptyState, ErrorBanner, TableSkeleton, TableWrap, Thead, Th, inputClass, Chip } from '@/components/ui';
 
 const KEY = ['admin-pages'];
 
@@ -30,8 +32,8 @@ export function PagesTable() {
     },
   });
 
-  if (isLoading) return <p className="text-ink-muted">Завантаження…</p>;
-  if (isError || !data) return <p className="text-danger">Не вдалося завантажити список.</p>;
+  if (isLoading) return <TableSkeleton rows={5} cols={4} />;
+  if (isError || !data) return <ErrorBanner>Не вдалося завантажити список.</ErrorBanner>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,7 +44,7 @@ export function PagesTable() {
         >
           <h2 className="mb-3 font-display text-lg font-bold text-ink">Нова сторінка</h2>
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+            <label className="label-eyebrow">
               Назва
               <input
                 type="text" required value={title}
@@ -50,26 +52,26 @@ export function PagesTable() {
                   setTitle(e.target.value);
                   if (!touchedSlug) setSlug(slugify(e.target.value));
                 }}
-                className="mt-1 w-full rounded-card border border-line px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink focus:border-ink focus:outline-none"
+                className={`${inputClass()} w-full mt-1 font-normal normal-case tracking-normal`}
               />
             </label>
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+            <label className="label-eyebrow">
               Адреса
               <input
                 type="text" required value={slug}
                 onChange={(e) => { setTouchedSlug(true); setSlug(e.target.value); }}
-                className="mt-1 w-full rounded-card border border-line px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink focus:border-ink focus:outline-none"
+                className={`${inputClass()} w-full mt-1 font-normal normal-case tracking-normal`}
               />
               <span className="mt-1 block font-normal normal-case tracking-normal text-ink-subtle">
                 Буде за адресою {kind === 'ARTICLE' ? '/statti/' : '/'}{slug || '…'}
               </span>
             </label>
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+            <label className="label-eyebrow">
               Тип
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as PageKind)}
-                className="mt-1 w-full rounded-card border border-line px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink focus:border-ink focus:outline-none"
+                className={`${inputClass()} w-full mt-1 font-normal normal-case tracking-normal`}
               >
                 <option value="PAGE">Сторінка</option>
                 <option value="ARTICLE">Матеріал</option>
@@ -82,14 +84,16 @@ export function PagesTable() {
             </label>
           </div>
           {create.error && (
-            <p className="mt-3 text-sm text-danger" role="alert">
-              {create.error instanceof ApiError ? create.error.message : 'Не вдалося створити'}
-            </p>
+            <div className="mt-3">
+              <ErrorBanner>
+                {create.error instanceof ApiError ? create.error.message : 'Не вдалося створити'}
+              </ErrorBanner>
+            </div>
           )}
           <div className="mt-4 flex gap-2">
             <button
               type="submit" disabled={create.isPending || slug === ''}
-              className="rounded-card bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+              className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
             >
               {create.isPending ? 'Створюю…' : 'Створити'}
             </button>
@@ -100,30 +104,29 @@ export function PagesTable() {
         </form>
       ) : (
         <div>
-          <button
-            type="button" onClick={() => setCreating(true)}
-            className="rounded-card bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong"
-          >
-            Нова сторінка
-          </button>
+          <Button onClick={() => setCreating(true)}>Нова сторінка</Button>
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-max border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-ink-muted">
-              <th scope="col" className="py-2 pr-4 font-medium">Сторінка</th>
-              <th scope="col" className="px-3 py-2 font-medium">Тип</th>
-              <th scope="col" className="px-3 py-2 font-medium">Стан</th>
-              <th scope="col" className="px-3 py-2 font-medium">Оновлено</th>
-            </tr>
-          </thead>
+      {data.items.length === 0 ? (
+        <EmptyState
+          title="Сторінок ще немає"
+          hint="Головна, статті та юридичні документи живуть тут. Створіть першу — і вона зʼявиться на сайті після публікації."
+          action={<Button onClick={() => setCreating(true)}>Нова сторінка</Button>}
+        />
+      ) : (
+        <TableWrap minWidth="38rem">
+          <Thead>
+            <Th>Сторінка</Th>
+            <Th>Тип</Th>
+            <Th>Стан</Th>
+            <Th>Оновлено</Th>
+          </Thead>
           <tbody>
             {data.items.map((p) => <Row key={p.id} page={p} />)}
           </tbody>
-        </table>
-      </div>
+        </TableWrap>
+      )}
     </div>
   );
 }
@@ -141,19 +144,14 @@ function Row({ page }: { page: AdminPageSummaryDto }) {
       <td className="px-3 py-2.5">
         <div className="flex flex-wrap gap-1.5">
           {page.isPublished
-            ? <span className="rounded-card bg-ok-soft px-1.5 py-0.5 text-xs font-semibold text-ok">на сайті</span>
-            : <span className="rounded-card bg-surface-sunken px-1.5 py-0.5 text-xs text-ink-muted">не опубліковано</span>}
+            ? <Chip tone="ok">на сайті</Chip>
+            : <Chip>не опубліковано</Chip>}
           {page.hasDraft && (
-            <span className="rounded-card bg-sun-soft px-1.5 py-0.5 text-xs font-semibold text-sun-ink">
-              є незопубліковані зміни
-            </span>
+            <Chip tone="warn">є неопубліковані зміни</Chip>
           )}
           {page.revalidateError !== '' && (
-            <span
-              title={page.revalidateError}
-              className="rounded-card bg-danger-soft px-1.5 py-0.5 text-xs font-semibold text-danger"
-            >
-              кеш не оновився
+            <span title={page.revalidateError}>
+              <Chip tone="danger">кеш не оновився</Chip>
             </span>
           )}
         </div>

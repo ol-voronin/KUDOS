@@ -1,18 +1,13 @@
 import type { Metadata } from 'next';
 import { LeadsTable } from '@/features/leads/leads-table';
+import { AdminPage } from '@/features/admin-shell/admin-shell';
 
 export const metadata: Metadata = { title: 'Заявки' };
 
-export default function AdminLeadsPage() {
+export default function Page() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink">Заявки</h1>
-      <p className="mt-2 max-w-prose text-ink-muted">
-        Все, що прийшло через форму на сайті — і чи долетіло в Telegram.
-      </p>
-      <div className="mt-6">
-        <LeadsTable />
-      </div>
-    </div>
+    <AdminPage title="Заявки" hint="Все, що прийшло через форму на сайті — і чи долетіло в Telegram.">
+      <LeadsTable />
+    </AdminPage>
   );
 }

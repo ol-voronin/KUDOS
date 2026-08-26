@@ -107,7 +107,7 @@ export default async function ArticlePage({ params }: Params) {
         <JsonLd data={faqJsonLd(faq)} />
       )}
 
-      <article className="mx-auto max-w-3xl px-6 py-10">
+      <article className="mx-auto max-w-3xl px-4 sm:px-6 py-10">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -136,7 +136,7 @@ export default async function ArticlePage({ params }: Params) {
       <BlockRenderer blocks={page.blocks} />
 
       {(page.breeds.length > 0 || page.collections.length > 0) && (
-        <section className="mx-auto max-w-3xl px-6 py-10">
+        <section className="mx-auto max-w-3xl px-4 sm:px-6 py-10">
           <h2 className="font-display text-lg font-bold text-ink">Дивіться також</h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {page.breeds.map((b) => (
@@ -162,7 +162,7 @@ export default async function ArticlePage({ params }: Params) {
       )}
 
       {siblings.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 py-12">
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
           <h2 className="font-display text-xl font-bold text-ink">Ще матеріали</h2>
           <div className="mt-6">
             <ArticleGrid articles={siblings} />

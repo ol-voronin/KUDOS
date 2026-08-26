@@ -1,0 +1,79 @@
+import Link from 'next/link';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
+
+/**
+ * Одна кнопка на весь застосунок.
+ *
+ * До цього в коді жило чотирнадцять різних рецептів: три конкурентні заливки
+ * для «головної» дії, пʼять розмірів обведеної й чотири способи написати
+ * «видалити». Вони розʼїхалися не тому, що хтось помилявся, а тому що не було
+ * куди подітися — спільної кнопки не існувало.
+ *
+ * Варіантів навмисно шість, і кожен відповідає на питання «що станеться»:
+ *
+ *   primary  — головна дія екрана. На екрані вона одна.
+ *   accent   — подія, а не дія: єдиний акцентний колір лишається за знижкою,
+ *              новинкою й персоналізацією. Кнопкою стає рідко й свідомо.
+ *   outline  — рівнозначна альтернатива поруч із primary.
+ *   quiet    — другорядне: «ще», «назад», пагінація.
+ *   ghost    — дія без ваги: «скасувати».
+ *   danger   — незворотне. Червоне обведення, заливка тільки під курсором,
+ *              щоб випадкове влучання не виглядало як запрошення.
+ */
+type Variant = 'primary' | 'accent' | 'outline' | 'quiet' | 'ghost' | 'danger';
+type Size = 'lg' | 'md' | 'sm';
+
+const VARIANT: Record<Variant, string> = {
+  primary: 'border-ink bg-ink text-surface hover:bg-ink/85',
+  accent: 'border-accent bg-accent text-white hover:bg-accent-strong',
+  outline: 'border-ink bg-transparent text-ink hover:bg-ink hover:text-surface',
+  quiet: 'border-line bg-transparent text-ink hover:border-ink',
+  ghost: 'border-transparent bg-transparent text-ink-muted hover:text-ink',
+  danger: 'border-danger bg-transparent text-danger hover:bg-danger hover:text-surface',
+};
+
+const SIZE: Record<Size, string> = {
+  lg: 'min-h-13 px-7 text-[0.95rem]',
+  md: 'min-h-11 px-5 text-sm',
+  /** Рядкова кнопка в таблиці: `tap-sm` знімає загальний поріг у 44px. */
+  sm: 'tap-sm min-h-8 px-3 text-xs',
+};
+
+function classes(variant: Variant, size: Size, full: boolean, extra?: string): string {
+  return [
+    'inline-flex items-center justify-center gap-2 rounded-pill border font-semibold',
+    'transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+    VARIANT[variant],
+    SIZE[size],
+    full ? 'w-full' : '',
+    extra ?? '',
+  ].filter(Boolean).join(' ');
+}
+
+type Shared = { variant?: Variant; size?: Size; full?: boolean; children: ReactNode };
+
+export function Button({
+  variant = 'primary', size = 'md', full = false, className, type = 'button', children, ...rest
+}: Shared & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>) {
+  return (
+    <button type={type} className={classes(variant, size, full, className)} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Те саме, але посилання. Окремий компонент, а не проп `href`: кнопка й
+ * посилання по-різному поводяться з клавіатурою, і підміна тегу «за пропом»
+ * робить це непомітним у місці виклику.
+ */
+export function ButtonLink({
+  href, variant = 'primary', size = 'md', full = false, className, children, ...rest
+}: Shared & { href: string } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'children'>) {
+  const external = href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:');
+  const cls = classes(variant, size, full, className);
+  if (external) {
+    return <a href={href} className={cls} rel="noopener noreferrer" target="_blank" {...rest}>{children}</a>;
+  }
+  return <Link href={href} className={cls} {...rest}>{children}</Link>;
+}

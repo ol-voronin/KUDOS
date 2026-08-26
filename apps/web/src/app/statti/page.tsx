@@ -31,7 +31,7 @@ export default async function ArticlesPage() {
 
   return (
     <PublicShell>
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>

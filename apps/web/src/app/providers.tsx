@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/ui';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { SiteSettingsDto } from '@dt/contracts';
 
@@ -29,7 +30,9 @@ export function Providers({ settings, children }: { settings: SiteSettingsDto; c
   const [client] = useState(() => new QueryClient());
   return (
     <SettingsContext.Provider value={settings}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
     </SettingsContext.Provider>
   );
 }

@@ -4,24 +4,58 @@
 
 @layer base {
   body { @apply bg-surface text-ink antialiased; }
-  h1, h2, h3 { @apply font-display tracking-tight; }
+
+  /*
+   * Тільки h1 і h2 беруть вузький набір. h3 у вузькому шрифті на дрібному
+   * кеглі читається гірше за звичайний — а h3 у нас це підзаголовок усередині
+   * тексту, не плакат.
+   */
+  h1, h2 { @apply font-display tracking-tight; }
   h1 { @apply font-bold; }
-  h2, h3 { @apply font-semibold; }
-  /* Touch targets never below 48px — the size chart page is used on phones. */
-  button, a[role='button'] { @apply min-h-12; }
+  h2 { @apply font-bold; }
+  h3 { @apply font-semibold tracking-tight; }
+
+  /*
+   * Поріг дотику. 44px — рекомендація WCAG 2.5.8; там, де елемент свідомо
+   * дрібніший (рядкові кнопки в таблицях адмінки), ставиться `.tap-sm`.
+   */
+  button, a[role='button'] { @apply min-h-11; }
+  .tap-sm { min-height: 0; }
 
   :focus-visible {
-    outline: 2px solid theme('colors.accent.DEFAULT');
+    outline: 2px solid theme('colors.ink.DEFAULT');
     outline-offset: 2px;
   }
-  ::selection { background: theme('colors.accent.soft'); color: theme('colors.ink.DEFAULT'); }
+  ::selection { background: theme('colors.ink.DEFAULT'); color: theme('colors.surface.DEFAULT'); }
+
+  /* Цифри в колонках мають бути однакової ширини — інакше ціни «стрибають». */
+  table, .tabular { font-variant-numeric: tabular-nums; }
 
   .skip-link {
-    @apply absolute left-4 top-4 z-50 -translate-y-20 rounded-card bg-ink px-4 py-2 text-sm font-medium text-surface transition-transform;
+    @apply absolute left-4 top-4 z-50 -translate-y-20 rounded-pill bg-ink px-4 py-2 text-sm font-medium text-surface transition-transform;
     @apply focus:translate-y-0;
   }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@layer components {
+  /*
+   * Мітка над полем чи над заголовком: дрібна, розріджена, приглушена.
+   * Її завдання — назвати блок і зникнути, а не сперечатися із заголовком.
+   */
+  .label-eyebrow {
+    @apply font-display text-[0.7rem] font-medium uppercase tracking-label text-ink-subtle;
+  }
+
+  /* Слово-привид: другий склад заголовка тим самим кеглем, блідим тоном. */
+  .ghost-word { @apply text-ghost; }
+
+  /* Скелет замість «Завантаження…»: сторінка не перестрибує. */
+  .skeleton { @apply animate-pulse rounded-card bg-surface-sunken; }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton { @apply animate-none; }
   }
 }

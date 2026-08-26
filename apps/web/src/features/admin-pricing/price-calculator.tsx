@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import { formatUAH, minor, type AdminPriceRulesDto, type PrintSizeTier } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { quotePrice } from './rules-api';
+import { ErrorBanner } from '@/components/ui';
 
 const TIER_LABEL: Record<PrintSizeTier, string> = {
   MINI: 'Міні',
@@ -134,16 +135,16 @@ export function PriceCalculator({ data }: { data: AdminPriceRulesDto }) {
         <button
           type="submit"
           disabled={!canSubmit || quote.isPending}
-          className="rounded-card bg-ink px-4 py-2 text-sm text-surface disabled:opacity-40"
+          className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
         >
           Порахувати
         </button>
       </form>
 
       {quote.error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {quote.error instanceof ApiError ? quote.error.message : 'Не вдалося порахувати'}
-        </p>
+        </ErrorBanner>
       )}
 
       {result && (

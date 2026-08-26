@@ -11,6 +11,7 @@ import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink } from '@/components/ui';
 
 interface Params { params: { slug: string } }
 
@@ -93,7 +94,7 @@ export default async function BreedPage({ params }: Params) {
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(breed.name, prints, BASE)} />}
 
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -144,19 +145,16 @@ export default async function BreedPage({ params }: Params) {
 
         {/* Міст у «свою ідею» — навіть коли принти є: свій пес завжди свій. */}
         {prints.length > 0 && (
-          <div className="mt-12 rounded-card border border-accent bg-accent-soft p-6 sm:p-8">
+          <div className="mt-12 border-t border-ink pt-6">
             <h2 className="font-display text-xl font-bold text-ink">
               Ваш {breed.name.toLowerCase()} не схожий на жодного тут?
             </h2>
             <p className="mt-2 max-w-prose leading-relaxed text-ink-muted">
               Намалюємо саме його — з вашого фото, з його вухами й характером.
             </p>
-            <Link
-              href="/svoya-ideya"
-              className="mt-5 inline-flex min-h-12 items-center rounded-card bg-ink px-6 text-sm font-semibold text-surface transition hover:bg-ink/90"
-            >
+            <ButtonLink href="/svoya-ideya" className="mt-5" size="lg">
               Замовити свій принт
-            </Link>
+            </ButtonLink>
           </div>
         )}
 
@@ -165,14 +163,10 @@ export default async function BreedPage({ params }: Params) {
             <SectionHead title="Інші породи" />
             <div className="flex flex-wrap gap-2">
               {relatedBreeds.map((other) => (
-                <Link
-                  key={other.id}
-                  href={`/breeds/${other.slug}`}
-                  className="flex min-h-11 items-center rounded-pill border border-line px-4 text-sm font-medium text-ink transition hover:border-ink"
-                >
+                <ButtonLink key={other.id} href={`/breeds/${other.slug}`} variant="quiet" size="sm">
                   {other.name}
-                  <span className="ml-1.5 text-ink-subtle">{other.printCount}</span>
-                </Link>
+                  <span className="text-ink-subtle">{other.printCount}</span>
+                </ButtonLink>
               ))}
             </div>
           </section>
@@ -194,7 +188,7 @@ function EmptyBreed({
 }: { name: string; collections: readonly CollectionListDto['items'][number][] }) {
   return (
     <div className="space-y-10">
-      <div className="grid gap-8 rounded-card border border-accent/25 bg-accent-soft p-6 sm:p-10 lg:grid-cols-[1fr_minmax(0,24rem)]">
+      <div className="grid gap-8 border-t border-ink pt-8 lg:grid-cols-[1fr_minmax(0,24rem)]">
         <div>
           <h2 className="font-display text-xl font-bold text-ink">Намалюємо {name.toLowerCase()} з вашого фото</h2>
           <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">

@@ -7,12 +7,10 @@ import { ApiError } from '@/lib/api-client';
 import { createMenuItem, deleteMenuItem, getSettings, updateMenuItem, updateSettings } from './api';
 import { ConversionsPanel } from './conversions-panel';
 import { SeoPanel } from './seo-panel';
+import { ConfirmButton, inputClass, TableSkeleton, useToast, ErrorBanner } from '@/components/ui';
 
 const KEY = ['admin-settings'];
 
-const inputCls =
-  'w-full rounded-card border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none';
-const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-ink-subtle';
 
 /**
  * Поля згруповані так, як про них думають, а не так, як вони лежать у базі.
@@ -83,7 +81,7 @@ const GROUPS: ReadonlyArray<{
 export function SettingsScreen() {
   const { data, isLoading, isError } = useQuery({ queryKey: KEY, queryFn: getSettings });
 
-  if (isLoading) return <p className="text-ink-muted">Завантаження…</p>;
+  if (isLoading) return <TableSkeleton rows={6} cols={2} />;
   if (isError || !data) return <p className="text-danger">Не вдалося завантажити налаштування.</p>;
 
   return (
@@ -98,6 +96,7 @@ export function SettingsScreen() {
 
 function SettingsForm({ data }: { data: SiteChromeDto }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [draft, setDraft] = useState<SiteSettingsDto>(data.settings);
 
   // Значення з сервера мають перемагати локальні: два відкриті таби інакше
@@ -106,7 +105,7 @@ function SettingsForm({ data }: { data: SiteChromeDto }) {
 
   const save = useMutation({
     mutationFn: updateSettings,
-    onSuccess: (fresh) => qc.setQueryData(KEY, fresh),
+    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); toast('Збережено'); },
   });
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(data.settings);
@@ -154,11 +153,11 @@ function SettingsForm({ data }: { data: SiteChromeDto }) {
                 : String(value);
               return (
                 <div key={String(field.name)}>
-                  <label className={labelCls} htmlFor={`s-${String(field.name)}`}>{field.label}</label>
+                  <label className="label-eyebrow" htmlFor={`s-${String(field.name)}`}>{field.label}</label>
                   <input
                     id={`s-${String(field.name)}`}
                     type="text"
-                    className={`${inputCls} mt-1`}
+                    className={`${inputClass()} w-full mt-1`}
                     value={shown}
                     onChange={(e) => {
                       const raw = e.target.value;
@@ -179,16 +178,16 @@ function SettingsForm({ data }: { data: SiteChromeDto }) {
       ))}
 
       {save.error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {save.error instanceof ApiError ? save.error.message : 'Не вдалося зберегти'}
-        </p>
+        </ErrorBanner>
       )}
 
       <div className="flex items-center gap-4">
         <button
           type="submit"
           disabled={!dirty || save.isPending}
-          className="rounded-card bg-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
         >
           {save.isPending ? 'Зберігаю…' : dirty ? 'Зберегти' : 'Збережено'}
         </button>
@@ -204,15 +203,16 @@ const AREA_LABEL: Record<MenuArea, string> = { HEADER: 'Шапка', FOOTER: 'Ф
 
 function MenuEditor({ data }: { data: SiteChromeDto }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [adding, setAdding] = useState<MenuArea | null>(null);
 
   const save = useMutation({
     mutationFn: ({ id, ...dto }: { id: string; isActive?: boolean; position?: number }) => updateMenuItem(id, dto),
-    onSuccess: (fresh) => qc.setQueryData(KEY, fresh),
+    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); toast('Збережено'); },
   });
   const remove = useMutation({
     mutationFn: deleteMenuItem,
-    onSuccess: (fresh) => qc.setQueryData(KEY, fresh),
+    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); toast('Пункт прибрано'); },
   });
 
   const error = save.error ?? remove.error;
@@ -228,9 +228,9 @@ function MenuEditor({ data }: { data: SiteChromeDto }) {
       </div>
 
       {error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {error instanceof ApiError ? error.message : 'Не вдалося зберегти'}
-        </p>
+        </ErrorBanner>
       )}
 
       {(['HEADER', 'FOOTER'] as const).map((area) => {
@@ -329,9 +329,7 @@ function MenuRow({
         />
       </td>
       <td className="px-3 py-2 text-right">
-        <button type="button" onClick={onDelete} disabled={busy} className="text-sm text-ink-subtle hover:text-danger">
-          Видалити
-        </button>
+        <ConfirmButton onConfirm={onDelete} disabled={busy} question="Прибрати пункт меню?" />
       </td>
     </tr>
   );
@@ -339,6 +337,7 @@ function MenuRow({
 
 function NewMenuItem({ area, onDone }: { area: MenuArea; onDone: () => void }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [label, setLabel] = useState('');
   const [href, setHref] = useState('/');
   const [group, setGroup] = useState('');
@@ -346,7 +345,7 @@ function NewMenuItem({ area, onDone }: { area: MenuArea; onDone: () => void }) {
 
   const create = useMutation({
     mutationFn: createMenuItem,
-    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); onDone(); },
+    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); toast('Пункт додано'); onDone(); },
   });
 
   const parsed = Number(position);
@@ -362,21 +361,21 @@ function NewMenuItem({ area, onDone }: { area: MenuArea; onDone: () => void }) {
     >
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Напис
-        <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} className={`${inputCls} w-48`} />
+        <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} className={`${inputClass()} w-48`} />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Адреса
-        <input type="text" value={href} onChange={(e) => setHref(e.target.value)} className={`${inputCls} w-56`} />
+        <input type="text" value={href} onChange={(e) => setHref(e.target.value)} className={`${inputClass()} w-56`} />
       </label>
       {area === 'FOOTER' && (
         <label className="flex flex-col gap-1 text-sm text-ink-muted">
           Колонка
-          <input type="text" value={group} onChange={(e) => setGroup(e.target.value)} className={`${inputCls} w-40`} />
+          <input type="text" value={group} onChange={(e) => setGroup(e.target.value)} className={`${inputClass()} w-40`} />
         </label>
       )}
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Порядок
-        <input type="text" inputMode="numeric" value={position} onChange={(e) => setPosition(e.target.value)} className={`${inputCls} w-20 text-right`} />
+        <input type="text" inputMode="numeric" value={position} onChange={(e) => setPosition(e.target.value)} className={`${inputClass()} w-20 text-right`} />
       </label>
 
       {create.error && (
@@ -388,7 +387,7 @@ function NewMenuItem({ area, onDone }: { area: MenuArea; onDone: () => void }) {
       <button
         type="submit"
         disabled={!canSubmit || create.isPending}
-        className="rounded-card bg-ink px-4 py-2 text-sm text-surface disabled:opacity-40"
+        className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
       >
         Додати
       </button>

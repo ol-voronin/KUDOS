@@ -5,6 +5,7 @@ import { PublicShell } from '@/components/public-shell';
 import { CollectionStrip } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink, EmptyState } from '@/components/ui';
 
 export const revalidate = 300;
 
@@ -24,7 +25,7 @@ export default async function CollectionsPage() {
 
   return (
     <PublicShell>
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -41,18 +42,11 @@ export default async function CollectionsPage() {
           {items.length > 0 ? (
             <CollectionStrip collections={items} />
           ) : (
-            <div className="rounded-card border border-dashed border-line-strong bg-surface-sunken p-8 text-center">
-              <p className="font-medium text-ink">Колекції ще збираються</p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-                Тим часом принти можна дивитись за породами.
-              </p>
-              <Link
-                href="/prints"
-                className="mt-5 inline-flex min-h-11 items-center rounded-card bg-accent px-5 text-sm font-semibold text-white"
-              >
-                Усі принти
-              </Link>
-            </div>
+            <EmptyState
+              title="Колекції ще збираються"
+              hint="Тим часом принти можна дивитись за породами."
+              action={<ButtonLink href="/prints">Усі принти</ButtonLink>}
+            />
           )}
         </div>
       </div>

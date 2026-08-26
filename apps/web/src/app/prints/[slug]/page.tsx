@@ -74,7 +74,7 @@ export default async function PrintPage({ params }: Params) {
         { name: 'Принти', url: `${BASE}/prints` },
         { name: offer.print.title, url: `${BASE}/prints/${params.slug}` },
       ])} />
-      <div className="mx-auto max-w-5xl px-6 py-12">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="mb-6 text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>

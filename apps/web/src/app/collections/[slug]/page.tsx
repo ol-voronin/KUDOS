@@ -10,6 +10,7 @@ import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink } from '@/components/ui';
 
 interface Params { params: { slug: string } }
 
@@ -69,7 +70,7 @@ export default async function CollectionPage({ params }: Params) {
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(collection.title, prints, BASE)} />}
 
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -93,7 +94,7 @@ export default async function CollectionPage({ params }: Params) {
             <PrintGrid prints={prints} />
           ) : (
             <div className="space-y-10">
-              <div className="rounded-card border border-accent/25 bg-accent-soft p-6 sm:p-8">
+              <div className="border-t border-ink pt-6">
                 <h2 className="font-display text-xl font-bold text-ink">
                   Готових принтів у цій колекції ще немає
                 </h2>
@@ -102,18 +103,8 @@ export default async function CollectionPage({ params }: Params) {
                   стилі. Ціну називаємо після того, як побачили ідею.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <Link
-                    href="/svoya-ideya"
-                    className="inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface"
-                  >
-                    Замовити в цьому стилі
-                  </Link>
-                  <Link
-                    href="/collections"
-                    className="inline-flex min-h-11 items-center rounded-card border border-accent-strong bg-surface px-5 text-sm font-medium text-accent-ink"
-                  >
-                    Інші колекції
-                  </Link>
+                  <ButtonLink href="/svoya-ideya" size="lg">Замовити в цьому стилі</ButtonLink>
+                  <ButtonLink href="/collections" variant="outline" size="lg">Інші колекції</ButtonLink>
                 </div>
               </div>
 
@@ -140,15 +131,9 @@ export default async function CollectionPage({ params }: Params) {
         <section className="mt-16">
           <SectionHead title="Дивитись інакше" subtitle="Той самий каталог, згрупований по-іншому." />
           <div className="flex flex-wrap gap-3">
-            <Link href="/collections" className="flex min-h-11 items-center rounded-pill border border-line px-4 text-sm font-medium text-ink hover:border-ink">
-              Усі колекції
-            </Link>
-            <Link href="/prints" className="flex min-h-11 items-center rounded-pill border border-line px-4 text-sm font-medium text-ink hover:border-ink">
-              Усі принти
-            </Link>
-            <Link href="/#породи" className="flex min-h-11 items-center rounded-pill border border-line px-4 text-sm font-medium text-ink hover:border-ink">
-              За породами
-            </Link>
+            <ButtonLink href="/collections" variant="quiet" size="sm">Усі колекції</ButtonLink>
+            <ButtonLink href="/prints" variant="quiet" size="sm">Усі принти</ButtonLink>
+            <ButtonLink href="/#породи" variant="quiet" size="sm">За породами</ButtonLink>
           </div>
         </section>
       </div>

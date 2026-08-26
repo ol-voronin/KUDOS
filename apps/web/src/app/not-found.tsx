@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PublicShell } from '@/components/public-shell';
+import { ButtonLink } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'Сторінку не знайдено',
@@ -21,22 +22,22 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <PublicShell>
-      <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+      <div className="mx-auto max-w-2xl px-4 sm:px-6 py-24 text-center">
         <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-subtle">404</p>
         <h1 className="mt-3 font-display text-3xl font-bold text-ink">Такої сторінки немає</h1>
         <p className="mt-4 text-ink-muted">
           Можливо, посилання застаріло. Ось звідки точно можна почати.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/prints" className="flex min-h-12 items-center rounded-card bg-accent px-6 text-sm font-semibold text-white">
+          <ButtonLink href="/prints" size="lg">
             Усі принти
-          </Link>
-          <Link href="/svoya-ideya" className="flex min-h-12 items-center rounded-card border border-ink px-6 text-sm font-medium text-ink">
+          </ButtonLink>
+          <ButtonLink href="/svoya-ideya" variant="outline" size="lg">
             Свій принт із фото
-          </Link>
-          <Link href="/" className="flex min-h-12 items-center rounded-card border border-line px-6 text-sm font-medium text-ink-muted">
+          </ButtonLink>
+          <ButtonLink href="/" variant="quiet" size="lg">
             На головну
-          </Link>
+          </ButtonLink>
         </div>
       </div>
     </PublicShell>

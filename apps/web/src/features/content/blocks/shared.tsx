@@ -1,8 +1,14 @@
-import Link from 'next/link';
 import { isSafeHref, type BlockLink } from '@dt/contracts';
+import { Button, ButtonLink } from '@/components/ui';
 import { Inline } from '../inline';
 
-/** Кнопки блока. Перша — заливкою, решта контуром, якщо не сказано інакше. */
+/**
+ * Кнопки блока. Перша — заливкою, решта контуром, якщо не сказано інакше.
+ *
+ * Рецепт кнопки більше не живе тут: він один на весь застосунок і лежить у
+ * `components/ui/button`. Цей файл вирішує лише те, що вирішувати саме йому —
+ * яка з кнопок блока головна і чи взагалі можна довіряти адресі.
+ */
 export function BlockLinks({ links, className = '' }: { links: readonly BlockLink[]; className?: string }) {
   if (links.length === 0) return null;
   return (
@@ -14,50 +20,42 @@ export function BlockLinks({ links, className = '' }: { links: readonly BlockLin
         // написом, а не стає робочою кнопкою.
         if (!isSafeHref(l.href)) {
           return (
-            <span key={`${l.href}-${i}`} className="flex min-h-12 items-center px-6 text-sm text-ink-subtle">
-              {l.label}
-            </span>
+            <Button key={`${l.href}-${i}`} variant="ghost" disabled>{l.label}</Button>
           );
         }
         const secondary = l.secondary || i > 0;
-        const cls = secondary
-          ? 'border-2 border-ink text-ink hover:bg-ink hover:text-surface'
-          : 'bg-accent text-white hover:bg-accent-strong';
-        const external = /^https?:\/\//.test(l.href);
-        return external ? (
-          <a
+        return (
+          <ButtonLink
             key={`${l.href}-${i}`}
             href={l.href}
-            target="_blank"
-            rel="noreferrer"
-            className={`flex min-h-12 items-center rounded-card px-6 text-sm font-semibold transition ${cls}`}
+            variant={secondary ? 'outline' : 'primary'}
+            size="lg"
           >
             {l.label}
-          </a>
-        ) : (
-          <Link
-            key={`${l.href}-${i}`}
-            href={l.href}
-            className={`flex min-h-12 items-center rounded-card px-6 text-sm font-semibold transition ${cls}`}
-          >
-            {l.label}
-          </Link>
+          </ButtonLink>
         );
       })}
     </div>
   );
 }
 
-/** Заголовок секції. Порожній рядок не малює нічого — і не лишає відступу. */
+/**
+ * Заголовок секції. Порожній рядок не малює нічого — і не лишає відступу.
+ *
+ * Заголовок набирається капсом вузьким шрифтом: у цьому напрямку розмір і є
+ * єдиною окрасою, тому решта тексту навколо може лишатися дрібною й тихою.
+ */
 export function BlockHeading({ text, lead }: { text: string; lead?: string }) {
   if (text.trim() === '' && (lead ?? '').trim() === '') return null;
   return (
-    <div className="mb-6 max-w-prose">
+    <div className="mb-6">
       {text.trim() !== '' && (
-        <h2 className="font-display text-2xl font-bold text-ink">{text}</h2>
+        <h2 className="text-section font-display font-bold uppercase text-ink">{text}</h2>
       )}
       {(lead ?? '').trim() !== '' && (
-        <p className="mt-3 leading-relaxed text-ink-muted"><Inline text={lead as string} /></p>
+        <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">
+          <Inline text={lead as string} />
+        </p>
       )}
     </div>
   );

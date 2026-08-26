@@ -115,7 +115,7 @@ export async function CollectionStripBlockView({ block }: { block: CollectionStr
 /** Форма заявки. Клієнтський компонент усередині серверного — це нормально. */
 export function LeadFormBlockView({ block }: { block: LeadFormBlock }) {
   return (
-    <div className="grid gap-10 rounded-card border border-line bg-surface p-6 sm:p-10 lg:grid-cols-[1fr_minmax(0,24rem)]">
+    <div className="grid gap-10 border-t border-ink pt-8 lg:grid-cols-[1fr_minmax(0,24rem)]">
       <div>
         <h2 className="font-display text-2xl font-bold text-ink">{block.heading}</h2>
         <InlineParagraph text={block.text} className="mt-3 max-w-prose leading-relaxed text-ink-muted" />

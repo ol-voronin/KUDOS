@@ -17,7 +17,7 @@ export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
         <Link
           key={breed.id}
           href={`/breeds/${breed.slug}`}
-          className="flex min-h-16 flex-col justify-center rounded-card border border-line bg-surface-raised px-4 py-3 transition hover:border-ink focus:outline-none focus:ring-2 focus:ring-accent"
+          className="flex min-h-16 flex-col justify-center border-t border-line pt-2 transition hover:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           <span className="font-medium text-ink">{breed.name}</span>
           {/*
@@ -33,10 +33,10 @@ export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
       ))}
       <Link
         href="/svoya-ideya"
-        className="flex min-h-16 flex-col justify-center rounded-card border border-dashed border-accent bg-accent-soft px-4 py-3 transition hover:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent"
+        className="flex min-h-16 flex-col justify-center border-t border-accent pt-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
       >
-        <span className="font-medium text-accent-strong">Немає вашої?</span>
-        <span className="text-sm text-accent-strong/80">Намалюємо з фото →</span>
+        <span className="font-medium text-accent">Немає вашої?</span>
+        <span className="text-sm text-ink-muted">Намалюємо з фото →</span>
       </Link>
     </div>
   );
@@ -49,7 +49,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
         <Link
           key={collection.id}
           href={`/collections/${collection.slug}`}
-          className="group flex flex-col rounded-card border border-plum/20 bg-surface p-4 transition hover:border-plum focus:outline-none focus:ring-2 focus:ring-plum"
+          className="group flex flex-col border-t border-ink pt-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           <div className="flex gap-2">
             {(collection.previewUrls.length > 0 ? collection.previewUrls : [null, null, null])

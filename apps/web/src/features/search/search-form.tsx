@@ -47,7 +47,7 @@ export function SearchForm({ compact = false }: { compact?: boolean }) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Порода, колекція, принт…"
-          className="h-11 w-full rounded-card border border-line bg-surface pl-10 pr-3 text-sm text-ink placeholder:text-ink-subtle focus:border-ink focus:outline-none focus:ring-2 focus:ring-accent"
+          className="h-11 w-full rounded-card border border-line bg-surface pl-10 pr-3 text-sm text-ink placeholder:text-ink-subtle focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink"
         />
       </div>
     </form>

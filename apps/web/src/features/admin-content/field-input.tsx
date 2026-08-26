@@ -2,6 +2,7 @@
 
 import { emptyItem, type Field } from './fields';
 import { ImageDropTarget } from './image-drop-target';
+import { inputClass } from '@/components/ui';
 
 /**
  * Одне поле форми, побудоване з опису.
@@ -12,9 +13,6 @@ import { ImageDropTarget } from './image-drop-target';
  * замість того, щоб уронити весь екран на `undefined.map`.
  */
 
-const inputCls =
-  'w-full rounded-card border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none';
-const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-ink-subtle';
 
 function asString(v: unknown): string { return typeof v === 'string' ? v : ''; }
 function asNumber(v: unknown, fallback: number): number { return typeof v === 'number' ? v : fallback; }
@@ -82,9 +80,9 @@ export function FieldInput({
     case 'text':
       return (
         <div>
-          <label className={labelCls} htmlFor={id}>{field.label}</label>
+          <label className="label-eyebrow" htmlFor={id}>{field.label}</label>
           <input
-            id={id} type="text" className={`${inputCls} mt-1`} value={asString(value)}
+            id={id} type="text" className={`${inputClass()} w-full mt-1`} value={asString(value)}
             placeholder={field.placeholder ?? ''}
             onChange={(e) => onChange(e.target.value)}
           />
@@ -96,9 +94,9 @@ export function FieldInput({
     case 'rich':
       return (
         <div>
-          <label className={labelCls} htmlFor={id}>{field.label}</label>
+          <label className="label-eyebrow" htmlFor={id}>{field.label}</label>
           <textarea
-            id={id} rows={field.rows ?? 3} className={`${inputCls} mt-1 leading-relaxed`}
+            id={id} rows={field.rows ?? 3} className={`${inputClass()} w-full mt-1 leading-relaxed`}
             value={asString(value)} onChange={(e) => onChange(e.target.value)}
           />
           {help}
@@ -108,10 +106,10 @@ export function FieldInput({
     case 'number':
       return (
         <div>
-          <label className={labelCls} htmlFor={id}>{field.label}</label>
+          <label className="label-eyebrow" htmlFor={id}>{field.label}</label>
           <input
             id={id} type="number" min={field.min} max={field.max}
-            className={`${inputCls} mt-1 w-28 tabular-nums`}
+            className={`${inputClass()} mt-1 w-28 tabular-nums`}
             value={asNumber(value, field.min)}
             onChange={(e) => {
               const n = Number(e.target.value);
@@ -129,9 +127,9 @@ export function FieldInput({
       const numeric = field.options.every((o) => /^\d+$/.test(o.value));
       return (
         <div>
-          <label className={labelCls} htmlFor={id}>{field.label}</label>
+          <label className="label-eyebrow" htmlFor={id}>{field.label}</label>
           <select
-            id={id} className={`${inputCls} mt-1`}
+            id={id} className={`${inputClass()} w-full mt-1`}
             value={String(value ?? field.options[0]?.value ?? '')}
             onChange={(e) => onChange(numeric ? Number(e.target.value) : e.target.value)}
           >
@@ -160,7 +158,7 @@ export function FieldInput({
       const img = asRecord(value);
       return (
         <fieldset className="rounded-card border border-line p-3">
-          <legend className={labelCls}>{field.label}</legend>
+          <legend className="label-eyebrow">{field.label}</legend>
           <ImageDropTarget
             url={asString(img['url'])}
             alt={asString(img['alt'])}
@@ -174,12 +172,12 @@ export function FieldInput({
           />
           <div className="mt-2 flex flex-col gap-2">
             <input
-              type="text" className={inputCls} placeholder="Опис для тих, хто не бачить картинку"
+              type="text" className={`${inputClass()} w-full`} placeholder="Опис для тих, хто не бачить картинку" aria-label="Опис для тих, хто не бачить картинку"
               value={asString(img['alt'])}
               onChange={(e) => onChange({ ...img, alt: e.target.value })}
             />
             <input
-              type="text" className={inputCls} placeholder="Підпис під картинкою"
+              type="text" className={`${inputClass()} w-full`} placeholder="Підпис під картинкою" aria-label="Підпис під картинкою"
               value={asString(img['caption'])}
               onChange={(e) => onChange({ ...img, caption: e.target.value })}
             />
@@ -192,7 +190,7 @@ export function FieldInput({
       const ops = listOps(value, onChange);
       return (
         <fieldset className="rounded-card border border-line p-3">
-          <legend className={labelCls}>{field.label}</legend>
+          <legend className="label-eyebrow">{field.label}</legend>
           <div className="flex flex-col gap-3">
             {ops.items.map((raw, i) => {
               const img = asRecord(raw);
@@ -209,12 +207,12 @@ export function FieldInput({
                       onClear={() => ops.set(i, { ...img, url: '' })}
                     />
                     <input
-                      type="text" className={inputCls} placeholder="Опис картинки"
+                      type="text" className={`${inputClass()} w-full`} placeholder="Опис картинки" aria-label="Опис картинки"
                       value={asString(img['alt'])}
                       onChange={(e) => ops.set(i, { ...img, alt: e.target.value })}
                     />
                     <input
-                      type="text" className={inputCls} placeholder="Підпис"
+                      type="text" className={`${inputClass()} w-full`} placeholder="Підпис" aria-label="Підпис"
                       value={asString(img['caption'])}
                       onChange={(e) => ops.set(i, { ...img, caption: e.target.value })}
                     />
@@ -238,19 +236,19 @@ export function FieldInput({
       const ops = listOps(value, onChange);
       return (
         <fieldset className="rounded-card border border-line p-3">
-          <legend className={labelCls}>{field.label}</legend>
+          <legend className="label-eyebrow">{field.label}</legend>
           <div className="flex flex-col gap-2">
             {ops.items.map((raw, i) => {
               const link = asRecord(raw);
               return (
                 <div key={i} className="flex gap-2">
                   <input
-                    type="text" className={inputCls} placeholder="Напис на кнопці"
+                    type="text" className={`${inputClass()} w-full`} placeholder="Напис на кнопці" aria-label="Напис на кнопці"
                     value={asString(link['label'])}
                     onChange={(e) => ops.set(i, { ...link, label: e.target.value })}
                   />
                   <input
-                    type="text" className={inputCls} placeholder="/адреса"
+                    type="text" className={`${inputClass()} w-full`} placeholder="/адреса" aria-label="/адреса"
                     value={asString(link['href'])}
                     onChange={(e) => ops.set(i, { ...link, href: e.target.value })}
                   />
@@ -276,12 +274,12 @@ export function FieldInput({
       const ops = listOps(value, onChange);
       return (
         <fieldset className="rounded-card border border-line p-3">
-          <legend className={labelCls}>{field.label}</legend>
+          <legend className="label-eyebrow">{field.label}</legend>
           <div className="flex flex-col gap-2">
             {ops.items.map((raw, i) => (
               <div key={i} className="flex gap-2">
                 <textarea
-                  rows={2} className={`${inputCls} leading-relaxed`} value={asString(raw)}
+                  rows={2} className={`${inputClass()} w-full leading-relaxed`} value={asString(raw)}
                   aria-label={`${field.itemLabel} ${i + 1}`}
                   onChange={(e) => ops.set(i, e.target.value)}
                 />
@@ -304,7 +302,7 @@ export function FieldInput({
       const ops = listOps(value, onChange);
       return (
         <fieldset className="rounded-card border border-line p-3">
-          <legend className={labelCls}>{field.label}</legend>
+          <legend className="label-eyebrow">{field.label}</legend>
           <div className="flex flex-col gap-3">
             {ops.items.map((raw, i) => {
               const item = asRecord(raw);

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { PrintThumb } from '@/components/print-thumb';
+import { Button, Skeleton, ErrorBanner, inputClass, FieldShell } from '@/components/ui';
+import { readRememberedSize, rememberSize } from '../remembered-size';
 import { useCheckoutReadyPrint } from '../hooks/useCheckoutReadyPrint';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
@@ -23,6 +25,14 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   const [fabricId, setFabricId] = useState<string | null>(null);
   const [colourId, setColourId] = useState<string | null>(null);
   const [sizeId, setSizeId] = useState<string | null>(null);
+
+  /**
+   * Напис розміру з минулого візиту. Читається один раз після монтування —
+   * на сервері `localStorage` не існує, і читання під час рендера дало б
+   * розбіжність розмітки.
+   */
+  const [rememberedLabel, setRememberedLabel] = useState<string | null>(null);
+  useEffect(() => { setRememberedLabel(readRememberedSize()); }, []);
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -58,10 +68,34 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     return selectableSizes(garment.sizes, data.variants, garment.id, fabricId, colourId);
   }, [data, garment, fabricId, colourId]);
 
+  /**
+   * Переанкорення розміру.
+   *
+   * Порядок вибору тут і є всією «розумністю» екрана: якщо поточний розмір
+   * ще доступний — лишаємо його; інакше беремо той, який людина обирала
+   * минулого разу; і лише якщо його теж немає — перший зі списку.
+   *
+   * Запамʼятований розмір, якого немає в наявності, свідомо не підставляється:
+   * підставити недоступний варіант означало б показати кнопку «Оплатити»
+   * вимкненою одразу після відкриття сторінки.
+   */
   useEffect(() => {
     if (sizes.length === 0) return;
-    setSizeId((current) => (current && sizes.some((s) => s.id === current) ? current : sizes[0]?.id ?? null));
-  }, [sizes]);
+    setSizeId((current) => {
+      if (current !== null && sizes.some((s) => s.id === current)) return current;
+      const remembered = rememberedLabel === null
+        ? undefined
+        : sizes.find((s) => s.label === rememberedLabel && s.state !== 'UNAVAILABLE');
+      return remembered?.id ?? sizes[0]?.id ?? null;
+    });
+  }, [sizes, rememberedLabel]);
+
+  /** Кожен свідомий вибір розміру стає підказкою для наступного разу. */
+  function chooseSize(id: string): void {
+    setSizeId(id);
+    const picked = sizes.find((s) => s.id === id);
+    if (picked) { rememberSize(picked.label); setRememberedLabel(picked.label); }
+  }
 
   // Найдешевший варіант кожного виробу — для кнопок вибору. Рахується з
   // цін, які прислав сервер, а не з базової: після надбавок «база + друк»
@@ -83,15 +117,28 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     : undefined;
 
   if (isLoading) {
-    return <p className="text-ink-muted">Завантаження…</p>;
+    // Каркас тієї самої форми, що й готова сторінка: інакше вміст стрибає
+    // на місце, і людина встигає натиснути не туди.
+    return (
+      <div className="grid gap-10 md:grid-cols-2">
+        <Skeleton className="aspect-square w-full" />
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-9 w-3/4" />
+          <Skeleton className="h-7 w-1/3" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-2/3" />
+          <Skeleton className="mt-4 h-13 w-full" />
+        </div>
+      </div>
+    );
   }
   if (isError || !data) {
-    return <p className="text-danger">Не вдалося завантажити принт.</p>;
+    return <ErrorBanner>Не вдалося завантажити принт.</ErrorBanner>;
   }
   if (data.garments.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl text-ink">{data.print.title}</h1>
+        <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
         <p className="mt-4 text-ink-muted">
           Поки що немає жодного виробу у вітрині, тож замовити цей принт нема на чому.
           Напишіть нам — зробимо вручну.
@@ -134,19 +181,19 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       <Gallery images={data.images} fallback={data.print.previewUrl} title={data.print.title} />
 
       <div>
-        <h1 className="text-2xl text-ink">{data.print.title}</h1>
-        <p className="mt-2 text-xl font-semibold text-ink" aria-live="polite">
-          {formatUAH(minor(totalMinor))}
+        <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
+        <div className="mt-3 border-t border-ink pt-3" aria-live="polite">
+          <p className="font-display text-3xl font-bold text-ink">{formatUAH(minor(totalMinor))}</p>
           {garment && (
-            <span className="ml-2 text-sm font-normal text-ink-subtle">
+            <p className="mt-1 text-sm text-ink-subtle">
               {formatUAH(minor(garmentPriceMinor))} виріб + {formatUAH(minor(data.printPriceMinor))} друк
-            </span>
+            </p>
           )}
-        </p>
+        </div>
 
         {data.garments.length > 1 && (
           <fieldset className="mt-6">
-            <legend className="mb-2 text-sm font-medium text-ink-muted">Виріб</legend>
+            <legend className="label-eyebrow mb-2">Виріб</legend>
             <div className="flex flex-wrap gap-2">
               {data.garments.map((g) => (
                 <button
@@ -155,8 +202,8 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
                   aria-pressed={g.id === garment?.id}
                   onClick={() => setGarmentId(g.id)}
                   className={[
-                    'rounded-pill border-2 px-4 py-1.5 text-sm font-medium transition',
-                    g.id === garment?.id ? 'border-ink bg-ink text-surface' : 'border-line text-ink-muted hover:border-ink-subtle',
+                    'min-h-10 rounded-pill border px-4 text-sm font-medium transition',
+                    g.id === garment?.id ? 'border-ink bg-ink text-surface' : 'border-line text-ink hover:border-ink',
                   ].join(' ')}
                 >
                   {g.name}
@@ -177,7 +224,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
         {garment && garment.fabrics.length > 1 && (
           <fieldset className="mt-6">
-            <legend className="mb-2 text-sm font-medium text-ink-muted">Тканина</legend>
+            <legend className="label-eyebrow mb-2">Тканина</legend>
             <div className="flex flex-wrap gap-2">
               {garment.fabrics.map((f) => (
                 <button
@@ -186,8 +233,8 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
                   aria-pressed={f.id === fabricId}
                   onClick={() => setFabricId(f.id)}
                   className={[
-                    'rounded-pill border-2 px-4 py-1.5 text-sm font-medium transition',
-                    f.id === fabricId ? 'border-ink bg-ink text-surface' : 'border-line text-ink-muted hover:border-ink-subtle',
+                    'min-h-10 rounded-pill border px-4 text-sm font-medium transition',
+                    f.id === fabricId ? 'border-ink bg-ink text-surface' : 'border-line text-ink hover:border-ink',
                   ].join(' ')}
                 >
                   {f.name}
@@ -199,7 +246,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
         {colours.length > 0 && (
           <fieldset className="mt-6">
-            <legend id="colour-label" className="mb-2 text-sm font-medium text-ink-muted">Колір</legend>
+            <legend id="colour-label" className="label-eyebrow mb-2">Колір</legend>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="colour-label">
               {colours.map((c) => (
                 <ColourSwatch key={c.id} colour={c} selected={c.id === colourId} onSelect={setColourId} />
@@ -221,12 +268,23 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
         {sizes.length > 0 && (
           <fieldset className="mt-6">
-            <legend id="size-label" className="mb-2 text-sm font-medium text-ink-muted">Розмір</legend>
+            <legend id="size-label" className="label-eyebrow mb-2">Розмір</legend>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="size-label">
               {sizes.map((s) => (
-                <SizeButton key={s.id} size={s} selected={s.id === sizeId} onSelect={setSizeId} />
+                <SizeButton
+                  key={s.id}
+                  size={s}
+                  selected={s.id === sizeId}
+                  remembered={rememberedLabel !== null && s.label === rememberedLabel}
+                  onSelect={chooseSize}
+                />
               ))}
             </div>
+            {rememberedLabel !== null && (
+              <p className="mt-2 text-xs text-ink-subtle">
+                Минулого разу ви брали {rememberedLabel} — позначено крапкою.
+              </p>
+            )}
           </fieldset>
         )}
 
@@ -238,50 +296,63 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </div>
         )}
 
-        {!checkoutOpen && (
-          <button
-            type="button"
-            disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
-            onClick={() => setCheckoutOpen(true)}
-            className="mt-8 w-full rounded-card bg-ink px-6 py-3 font-semibold text-surface transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Оплатити
-          </button>
-        )}
+        {/*
+          Смуга купівлі липне до низу екрана на телефоні. Причина не в моді:
+          селектори кольору й розміру разом із таблицею розмірів забирають
+          більше висоти, ніж є в екрана, тож кнопка «Оплатити» опинялася поза
+          полем зору саме тоді, коли вибір нарешті зроблено. На широкому
+          екрані вона нікуди не липне — там усе видно й так.
+        */}
+        <div className="sticky bottom-0 z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          {!checkoutOpen && (
+            <>
+              <Button
+                size="lg"
+                full
+                disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
+                onClick={() => setCheckoutOpen(true)}
+              >
+                Оплатити {formatUAH(minor(totalMinor))}
+              </Button>
+              <p className="mt-2 text-center text-xs text-ink-subtle md:text-left">
+                Гроші списуються після того, як ми підтвердили замовлення.
+              </p>
+            </>
+          )}
 
-        {checkoutOpen && (
-          <form className="mt-8 flex flex-col gap-3" onSubmit={handleCheckoutSubmit}>
-            <label className="flex flex-col gap-1 text-sm text-ink-muted">
-              Ім&rsquo;я
-              <input
-                type="text"
-                required
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="rounded-card border border-line px-3 py-2 text-ink focus:border-ink"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm text-ink-muted">
-              Телефон
-              <input
-                type="tel"
-                required
-                placeholder="+380XXXXXXXXX"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="rounded-card border border-line px-3 py-2 text-ink focus:border-ink"
-              />
-            </label>
-            {checkoutError && <p className="text-sm text-danger" role="alert">{checkoutError}</p>}
-            <button
-              type="submit"
-              disabled={checkout.isPending}
-              className="rounded-card bg-ink px-6 py-3 font-semibold text-surface transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {checkout.isPending ? 'Оформлюємо…' : `Оплатити ${formatUAH(minor(totalMinor))}`}
-            </button>
-          </form>
-        )}
+          {checkoutOpen && (
+            <form className="flex flex-col gap-3" onSubmit={handleCheckoutSubmit}>
+              <FieldShell label="Імʼя" htmlFor="checkout-name">
+                <input
+                  id="checkout-name"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className={`${inputClass()} w-full`}
+                />
+              </FieldShell>
+              <FieldShell label="Телефон" htmlFor="checkout-phone" hint="У форматі +380XXXXXXXXX">
+                <input
+                  id="checkout-phone"
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  inputMode="tel"
+                  placeholder="+380XXXXXXXXX"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className={`${inputClass(checkoutError !== null)} w-full`}
+                />
+              </FieldShell>
+              {checkoutError !== null && <ErrorBanner>{checkoutError}</ErrorBanner>}
+              <Button type="submit" size="lg" full disabled={checkout.isPending}>
+                {checkout.isPending ? 'Оформлюємо…' : `Оплатити ${formatUAH(minor(totalMinor))}`}
+              </Button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -311,7 +382,7 @@ function Gallery({
       <img
         src={current.url}
         alt={current.alt}
-        className="aspect-square w-full rounded-card border border-line object-cover"
+        className="aspect-square w-full bg-surface-sunken object-cover"
       />
       {list.length > 1 && (
         <div className="mt-3 flex gap-2">
@@ -323,8 +394,8 @@ function Gallery({
               aria-label={`Фото ${index + 1} з ${list.length}`}
               aria-current={index === active}
               className={[
-                'w-1/5 overflow-hidden rounded-card border transition',
-                index === active ? 'border-accent ring-2 ring-accent' : 'border-line hover:border-ink',
+                'w-1/5 overflow-hidden border-2 transition',
+                index === active ? 'border-ink' : 'border-transparent hover:border-line-strong',
               ].join(' ')}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

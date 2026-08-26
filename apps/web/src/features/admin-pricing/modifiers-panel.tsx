@@ -9,6 +9,7 @@ import { ApiError } from '@/lib/api-client';
 import { AmountField, fromStored, toStored } from './amount-field';
 import { createModifier, deleteModifier, updateModifier } from './rules-api';
 import { RULES_KEY } from './rules-key';
+import { ConfirmButton, ErrorBanner } from '@/components/ui';
 
 const TARGET_LABEL: Record<PriceModifierTarget, string> = {
   SIZE_LABEL: 'Розмір',
@@ -53,9 +54,9 @@ export function ModifiersPanel({ data }: { data: AdminPriceRulesDto }) {
       </div>
 
       {error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {error instanceof ApiError ? error.message : 'Не вдалося зберегти'}
-        </p>
+        </ErrorBanner>
       )}
 
       {data.modifiers.length === 0 && !adding && (
@@ -153,14 +154,7 @@ function ModifierRow({
         />
       </td>
       <td className="px-3 py-2 text-right">
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={busy}
-          className="text-sm text-ink-subtle hover:text-danger"
-        >
-          Видалити
-        </button>
+        <ConfirmButton onConfirm={onDelete} disabled={busy} question="Видалити надбавку?" />
       </td>
     </tr>
   );
@@ -310,7 +304,7 @@ function NewModifierForm({
         <button
           type="submit"
           disabled={!canSubmit || create.isPending}
-          className="rounded-card bg-ink px-4 py-2 text-sm text-surface disabled:opacity-40"
+          className="min-h-10 rounded-pill bg-ink px-5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-40"
         >
           Створити
         </button>

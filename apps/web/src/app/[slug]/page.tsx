@@ -80,7 +80,7 @@ export default async function ContentPage({ params }: Params) {
       {faq.length > 0 && (
         <JsonLd data={faqJsonLd(faq)} />
       )}
-      <nav aria-label="Хлібні крихти" className="mx-auto max-w-6xl px-6 pt-8 text-sm text-ink-muted">
+      <nav aria-label="Хлібні крихти" className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 text-sm text-ink-muted">
         <Link href="/" className="hover:underline">Головна</Link>
         <span className="px-1.5">·</span>
         <span className="text-ink">{page.title}</span>

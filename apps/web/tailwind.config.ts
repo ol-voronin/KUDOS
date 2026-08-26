@@ -3,48 +3,66 @@ import type { Config } from 'tailwindcss';
 /**
  * Tokens only — no raw hex in components.
  *
- * Палітра свідомо яскравіша за першу версію: чорний текст на білому читався
- * як технічна документація, а не як магазин одягу. Але яскравість тут не в
- * заливці великих площин кольором — вона в трьох насичених акцентах, які
- * розводять секції за змістом:
+ * ── Чому палітра змінилася ─────────────────────────────────────────────
+ * Попередня версія розводила секції чотирма насиченими акцентами. Коли
+ * зʼявилися справжні фотографії, стало видно проблему: кольорові площини
+ * сперечаються з принтом, а принт — це і є товар. Обидва сайти, на які
+ * рівняється замовник (durnevshop, vidro), тримають інтерфейс майже
+ * безбарвним і віддають увесь голос зйомці.
  *
- *   accent  (теракота) — дія: кнопки, ціни, «купити»
- *   teal    (смарагд)  — довіра: гарантії, оплата, B2B
- *   sun     (вохра)    — радість: подарунки, новинки, «весела» частина
- *   plum    (слива)    — колекції: жанри, творчість
+ * Тому тепер так:
  *
- * Фон під фото товару лишається білим: кремовий підмішує жовтизну в білі
- * футболки, а їх у Native Spirit половина асортименту. Кольорові зони —
- * лише під текстовими секціями, де фото немає.
+ *   ink / surface / line   — усе, з чого складається інтерфейс
+ *   ghost                  — блідий відтінок чорнила для «слова-привида»
+ *   accent                 — ОДИН колір, і тільки там, де є подія:
+ *                            знижка, новинка, помилка вводу, видалення
+ *
+ * `teal / sun / plum` лишилися як ключі (їх використовують десятки місць і
+ * тип `Tone` у <Section>), але їхні значення приглушені до майже-нейтральних
+ * тонів. Вони більше не «кольорові зони», а ледь помітні підкладки, які
+ * розрізняють сенс, не перетягуючи погляд.
  */
 export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: '#17120e', muted: '#5b5248', subtle: '#8a8175' },
-        /** raised === DEFAULT навмисно: картку тримає рамка, не заливка. */
-        surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#faf6f0' },
-        line: { DEFAULT: '#e8e2d8', strong: '#cfc6b7' },
+        ink: { DEFAULT: '#0b0b0b', muted: '#5c5c56', subtle: '#8e8e87' },
+        /** raised === DEFAULT навмисно: картку тримає лінія, не заливка. */
+        surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#f6f6f3' },
+        line: { DEFAULT: '#e4e4df', strong: '#c9c9c2' },
+        /** Слово-привид: другий склад заголовка, який дочитує сенс. */
+        ghost: '#e9e9e4',
 
-        accent: { DEFAULT: '#d9531e', soft: '#ffe9dc', strong: '#ad3d11', ink: '#6f2708' },
-        teal:   { DEFAULT: '#0f7368', soft: '#dcf3ef', strong: '#0a5850', ink: '#06342f' },
-        sun:    { DEFAULT: '#c98a00', soft: '#fdf0cf', strong: '#a06d00', ink: '#5a3d00' },
-        plum:   { DEFAULT: '#7b2d5e', soft: '#fae4f1', strong: '#5f2149', ink: '#3a1330' },
+        accent: { DEFAULT: '#ff3b14', soft: '#ffeae4', strong: '#d92e0c', ink: '#7a1a05' },
 
-        info: { DEFAULT: '#3a5a85', soft: '#e6ecf3' },
-        danger: { DEFAULT: '#a83226', soft: '#f8e7e3' },
-        ok: { DEFAULT: '#0f7368', soft: '#dcf3ef' },
+        /* Приглушені: підкладка має читатися як папір, а не як плакат. */
+        teal:   { DEFAULT: '#0e6b60', soft: '#eaf3f1', strong: '#0a5049', ink: '#06342f' },
+        sun:    { DEFAULT: '#8a6a00', soft: '#f7f2e2', strong: '#6d5400', ink: '#463600' },
+        plum:   { DEFAULT: '#5e2b4a', soft: '#f5edf2', strong: '#48203a', ink: '#2e1425' },
+
+        info: { DEFAULT: '#3a5a85', soft: '#edf1f6' },
+        danger: { DEFAULT: '#c02a12', soft: '#fdeae6' },
+        ok: { DEFAULT: '#0e6b60', soft: '#eaf3f1' },
       },
       spacing: { '4.5': '1.125rem', '18': '4.5rem' },
-      borderRadius: { card: '0.25rem', pill: '9999px' },
+      /**
+       * `card` майже нуль: у цьому напрямку прямокутник — свідома форма.
+       * Заокруглення лишається тільки там, де елемент має читатися як
+       * натискний — кнопки й чіпи (`pill`).
+       */
+      borderRadius: { card: '2px', pill: '9999px' },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Arial Narrow', 'var(--font-sans)', 'sans-serif'],
       },
       fontSize: {
-        'hero': ['clamp(2.5rem, 2rem + 2.5vw, 3.75rem)', { lineHeight: '1.05', letterSpacing: '-0.02em' }],
+        /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */
+        'hero': ['clamp(2.5rem, 1.6rem + 4vw, 5rem)', { lineHeight: '0.9', letterSpacing: '-0.02em' }],
+        /** Заголовок секції — той самий набір, на щабель менший. */
+        'section': ['clamp(1.75rem, 1.2rem + 2.4vw, 3rem)', { lineHeight: '0.94', letterSpacing: '-0.015em' }],
       },
+      letterSpacing: { label: '0.16em' },
     },
   },
   plugins: [],

@@ -8,6 +8,7 @@ import { BreedStrip, CollectionStrip, plural } from '@/features/home/blocks';
 import { SearchForm } from '@/features/search/search-form';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
+import { ButtonLink } from '@/components/ui';
 
 interface Search { searchParams?: { q?: string } }
 
@@ -30,7 +31,7 @@ export default async function SearchPage({ searchParams }: Search) {
 
   return (
     <PublicShell>
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <h1 className="font-display text-3xl font-bold text-ink">
           {q ? <>Пошук: <span className="text-ink-muted">{q}</span></> : 'Пошук'}
         </h1>
@@ -89,12 +90,12 @@ function NothingFound({ query }: { query: string }) {
         не бути, але намалювати з фото ми можемо будь-кого.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
-        <Link href="/svoya-ideya" className="inline-flex min-h-11 items-center rounded-card bg-ink px-5 text-sm font-semibold text-surface">
+        <ButtonLink href="/svoya-ideya">
           Замовити свій принт
-        </Link>
-        <Link href="/prints" className="inline-flex min-h-11 items-center rounded-card border border-line px-5 text-sm font-medium text-ink">
+        </ButtonLink>
+        <ButtonLink href="/prints" variant="quiet">
           Дивитись усі принти
-        </Link>
+        </ButtonLink>
       </div>
     </div>
   );

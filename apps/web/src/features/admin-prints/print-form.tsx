@@ -10,6 +10,7 @@ import { PrintThumb } from '@/components/print-thumb';
 import { Field, Select, SubmitButton } from '@/features/forms/fields';
 import { PrintImageUploader } from './image-uploader';
 import { createBreed, createPrint, deletePrint, getPrintOptions, updatePrint } from './api';
+import { ConfirmButton, useToast, ErrorBanner } from '@/components/ui';
 
 const SIZE_TIERS: ReadonlyArray<{ value: PrintSizeTier; label: string }> = [
   { value: 'MINI', label: 'MINI — до 15×20 см · 500 ₴' },
@@ -30,6 +31,7 @@ const SIZE_TIERS: ReadonlyArray<{ value: PrintSizeTier; label: string }> = [
 export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const isEdit = Boolean(initial);
 
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -81,6 +83,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: ['admin-prints'] });
+      toast('Принт збережено');
       router.push(`/admin/prints/${saved.id}`);
       router.refresh();
     },
@@ -91,6 +94,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
     mutationFn: () => deletePrint(initial!.id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-prints'] });
+      toast('Принт видалено');
       router.push('/admin/prints');
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : 'Не вдалося видалити'),
@@ -200,7 +204,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
             checked={isPublished}
             disabled={!canPublish}
             onChange={(e) => setIsPublished(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 rounded-card border-line text-accent focus:ring-2 focus:ring-accent disabled:opacity-40"
+            className="mt-0.5 h-5 w-5 shrink-0 rounded-card border-line text-accent focus:ring-2 focus:ring-ink disabled:opacity-40"
           />
           <span className="text-sm">
             <span className={canPublish ? 'font-medium text-ink' : 'font-medium text-ink-subtle'}>
@@ -217,9 +221,9 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
         </label>
 
         {formError && (
-          <p role="alert" className="rounded-card border border-danger bg-danger-soft p-3 text-sm font-medium text-danger">
+          <ErrorBanner>
             {formError}
-          </p>
+          </ErrorBanner>
         )}
 
         <SubmitButton pending={save.isPending}>
@@ -227,14 +231,13 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
         </SubmitButton>
 
         {isEdit && (
-          <button
-            type="button"
-            onClick={() => remove.mutate()}
+          <ConfirmButton
+            onConfirm={() => remove.mutate()}
             disabled={remove.isPending}
-            className="min-h-11 w-full rounded-card border border-line px-4 text-sm font-medium text-danger transition hover:border-danger disabled:opacity-50"
-          >
-            Видалити принт
-          </button>
+            label="Видалити принт"
+            question="Видалити принт назавжди?"
+            size="md"
+          />
         )}
       </aside>
     </form>
@@ -310,7 +313,7 @@ function OptionPicker({
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleCreate(); } }}
             placeholder="Нова порода"
             aria-label={`Додати до «${legend}»`}
-            className="h-11 min-w-0 flex-1 rounded-card border border-line bg-surface-raised px-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+            className="h-11 min-w-0 flex-1 rounded-card border border-line bg-surface-raised px-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-ink"
           />
           <button
             type="button" onClick={() => void handleCreate()} disabled={busy || draft.trim().length < 2}

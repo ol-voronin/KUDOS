@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatUAH, minor, type AdminGarmentDto, type AdminPricingDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { getPricing, updateGarment, updatePrintPrices } from './api';
+import { TableSkeleton, useToast, ErrorBanner } from '@/components/ui';
 
 const KEY = ['admin-pricing'];
 
@@ -29,20 +30,21 @@ const TIER_LABEL: Record<string, string> = {
  */
 export function PricingTable() {
   const qc = useQueryClient();
+  const toast = useToast();
   const { data, isLoading, isError } = useQuery({ queryKey: KEY, queryFn: getPricing });
 
   const save = useMutation({
     mutationFn: ({ id, ...dto }: { id: string; basePriceMinor?: number; isPublished?: boolean }) =>
       updateGarment(id, dto),
-    onSuccess: (fresh) => qc.setQueryData(KEY, fresh),
+    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); toast('Ціну збережено'); },
   });
 
   const savePrints = useMutation({
     mutationFn: updatePrintPrices,
-    onSuccess: (fresh) => qc.setQueryData(KEY, fresh),
+    onSuccess: (fresh) => { qc.setQueryData(KEY, fresh); toast('Ціну збережено'); },
   });
 
-  if (isLoading) return <p className="text-ink-muted">Завантаження…</p>;
+  if (isLoading) return <TableSkeleton rows={5} cols={4} />;
   if (isError || !data) return <p className="text-danger">Не вдалося завантажити ціни.</p>;
 
   const cheapestPrint = data.printPrices.length > 0
@@ -54,9 +56,9 @@ export function PricingTable() {
   return (
     <div className="flex flex-col gap-10">
       {error && (
-        <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger" role="alert">
+        <ErrorBanner>
           {error instanceof ApiError ? error.message : 'Не вдалося зберегти'}
-        </p>
+        </ErrorBanner>
       )}
 
       <section>

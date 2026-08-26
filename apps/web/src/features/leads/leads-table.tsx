@@ -5,6 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LeadStatus } from '@dt/contracts';
 import { leadsExportUrl, listLeads, updateLeadStatus } from './api';
 import { LeadDetailPanel } from './lead-detail-panel';
+import {
+  Button, Chip, EmptyState, ErrorBanner, TableSkeleton,
+  TableWrap, Thead, Th, Tr, Td, inputClass,
+} from '@/components/ui';
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: 'Нова',
@@ -100,8 +104,8 @@ export function LeadsTable() {
           aria-pressed={status === ''}
           onClick={() => { setStatus(''); setPage(1); }}
           className={[
-            'rounded-pill px-3 py-1.5 text-sm font-medium transition',
-            status === '' ? 'bg-ink text-surface' : 'bg-surface-sunken text-ink-muted hover:text-ink',
+            'tap-sm min-h-8 rounded-pill border px-3 text-sm transition',
+            status === '' ? 'border-ink bg-ink font-semibold text-surface' : 'border-line text-ink-muted hover:border-ink hover:text-ink',
           ].join(' ')}
         >
           Усі {counts.data ? counts.data.all : ''}
@@ -113,8 +117,8 @@ export function LeadsTable() {
             aria-pressed={status === s}
             onClick={() => { setStatus(s); setPage(1); }}
             className={[
-              'rounded-pill px-3 py-1.5 text-sm font-medium transition',
-              status === s ? 'bg-ink text-surface' : 'bg-surface-sunken text-ink-muted hover:text-ink',
+              'tap-sm min-h-8 rounded-pill border px-3 text-sm transition',
+              status === s ? 'border-ink bg-ink font-semibold text-surface' : 'border-line text-ink-muted hover:border-ink hover:text-ink',
             ].join(' ')}
           >
             {STATUS_PILL_LABELS[s]} {counts.data ? counts.data.byStatus[s] : ''}
@@ -130,58 +134,61 @@ export function LeadsTable() {
           value={phoneInput}
           onChange={(e) => setPhoneInput(e.target.value)}
           placeholder="+380…"
-          className="rounded-card border border-line bg-surface-raised px-3 py-1.5 text-sm focus:border-ink"
+          className={`${inputClass()} w-44`}
         />
 
         <a
           href={leadsExportUrl(status || undefined, phone || undefined)}
-          className="ml-auto rounded-card border border-line px-3 py-1.5 text-sm transition hover:border-ink"
+          className="tap-sm ml-auto inline-flex min-h-8 items-center rounded-pill border border-line px-3 text-sm font-semibold text-ink transition hover:border-ink"
         >
           Експорт CSV
         </a>
       </div>
 
-      {isLoading && <p className="text-ink-muted">Завантаження…</p>}
-      {isError && <p className="text-danger">Не вдалося завантажити заявки.</p>}
-      {data && data.items.length === 0 && <p className="text-ink-muted">Заявок немає.</p>}
+      {isLoading && <TableSkeleton rows={5} cols={5} />}
+      {isError && <ErrorBanner>Не вдалося завантажити заявки.</ErrorBanner>}
+      {data && data.items.length === 0 && (
+        <EmptyState
+          title={status === '' ? 'Заявок ще немає' : 'У цьому статусі порожньо'}
+          hint={status === ''
+            ? 'Щойно хтось надішле форму на сайті, вона зʼявиться тут — і одразу полетить у Telegram.'
+            : 'Спробуйте інший статус або зніміть фільтр.'}
+        />
+      )}
 
       {data && data.items.length > 0 && (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-ink-muted">
-              <th className="py-2 pr-4">№</th>
-              <th className="py-2 pr-4">Ім&rsquo;я</th>
-              <th className="py-2 pr-4">Телефон</th>
-              <th className="py-2 pr-4">Повідомлення</th>
-              <th className="py-2 pr-4">Telegram</th>
-              <th className="py-2 pr-4">Статус</th>
-            </tr>
-          </thead>
+        <TableWrap minWidth="46rem">
+          <Thead>
+            <Th>№</Th>
+            <Th>Ім&rsquo;я</Th>
+            <Th>Телефон</Th>
+            <Th>Повідомлення</Th>
+            <Th>Telegram</Th>
+            <Th>Статус</Th>
+          </Thead>
           <tbody>
             {data.items.map((lead) => (
-              <tr key={lead.id} className="border-b border-line">
-                <td className="py-2 pr-4">
+              <Tr key={lead.id}>
+                <Td>
                   <button
                     type="button"
                     onClick={() => setSelectedLeadId(lead.id)}
-                    className="underline decoration-dotted underline-offset-2 hover:text-accent"
+                    className="tap-sm font-semibold underline decoration-dotted underline-offset-2"
                   >
                     {lead.number}
                   </button>
-                </td>
-                <td className="py-2 pr-4">{lead.name}</td>
-                <td className="py-2 pr-4">{lead.phone}</td>
-                <td className="max-w-xs truncate py-2 pr-4" title={lead.message ?? ''}>
+                </Td>
+                <Td>{lead.name}</Td>
+                <Td className="whitespace-nowrap tabular-nums">{lead.phone}</Td>
+                <Td className="max-w-xs truncate" title={lead.message ?? ''}>
                   {lead.message ?? '—'}
-                </td>
-                <td className="py-2 pr-4">
-                  {lead.telegramSentAt ? (
-                    <span className="text-ok">доставлено</span>
-                  ) : (
-                    <span className="text-danger" title={lead.telegramError ?? ''}>не долетіло</span>
-                  )}
-                </td>
-                <td className="py-2 pr-4">
+                </Td>
+                <Td>
+                  {lead.telegramSentAt
+                    ? <Chip tone="ok">доставлено</Chip>
+                    : <span title={lead.telegramError ?? ''}><Chip tone="danger">не долетіло</Chip></span>}
+                </Td>
+                <Td>
                   <label className="sr-only" htmlFor={`lead-status-${lead.id}`}>
                     Статус заявки №{lead.number}
                   </label>
@@ -192,42 +199,30 @@ export function LeadsTable() {
                       mutation.mutate({ id: lead.id, nextStatus: e.target.value as LeadStatus })
                     }
                     disabled={mutation.isPending}
-                    className="rounded-card border border-line bg-surface-raised px-2 py-1 text-sm focus:border-ink"
+                    className={`${inputClass()} py-1`}
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                     ))}
                   </select>
-                  <span className="sr-only"> </span>
-                  <StatusBadge status={lead.status} />
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
+        </TableWrap>
       )}
 
       {data && data.total > data.perPage && (
         <div className="mt-4 flex items-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="rounded-card border border-line px-3 py-1 transition hover:border-ink disabled:opacity-40 disabled:hover:border-line"
-          >
+          <Button variant="quiet" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
             Назад
-          </button>
+          </Button>
           <span className="text-ink-muted">
             {page} з {Math.ceil(data.total / data.perPage)}
           </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page * data.perPage >= data.total}
-            className="rounded-card border border-line px-3 py-1 transition hover:border-ink disabled:opacity-40 disabled:hover:border-line"
-          >
+          <Button variant="quiet" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page * data.perPage >= data.total}>
             Далі
-          </button>
+          </Button>
         </div>
       )}
 
