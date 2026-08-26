@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AnyBlock, BlockList, unknownTokens } from '@dt/contracts';
+import { ARTICLE_PAGES } from './articles';
 import { MARKETING_PAGES } from './marketing';
 
 /**
@@ -20,6 +21,7 @@ const legal = JSON.parse(
 const allSeeds = [
   ...Object.entries(legal).map(([slug, d]) => ({ slug, title: d.title, blocks: d.blocks })),
   ...MARKETING_PAGES.map((p) => ({ slug: p.slug, title: p.title, blocks: p.blocks as unknown[] })),
+  ...ARTICLE_PAGES.map((p) => ({ slug: p.slug, title: p.title, blocks: p.blocks as unknown[] })),
 ];
 
 /** Усі рядки, які побачить читач: щоб перевіряти текст, а не структуру. */
@@ -35,9 +37,9 @@ function textsOf(blocks: unknown[]): string[] {
 }
 
 describe('перенесені сторінки', () => {
-  it('усі чотири на місці', () => {
+  it('усі на місці', () => {
     expect(allSeeds.map((s) => s.slug).sort())
-      .toEqual(['oferta', 'pryvatnist', 'spivpratsia', 'svoya-ideya']);
+      .toEqual(['oferta', 'pryvatnist', 'spivpratsia', 'svoya-ideya', 'yak-praty-odyah-z-pryntom']);
   });
 
   it.each(allSeeds)('$slug — блоки проходять схему', ({ blocks }) => {
@@ -90,9 +92,23 @@ describe('перенесені сторінки', () => {
   });
 
   it('кожна сторінка починається з героя', () => {
+    const articleSlugs = new Set(ARTICLE_PAGES.map((a) => a.slug));
     for (const seed of allSeeds) {
+      if (articleSlugs.has(seed.slug)) continue;
       const first = AnyBlock.parse((seed.blocks as unknown[])[0]);
       expect(first.type, seed.slug).toBe('hero');
+    }
+  });
+
+  /**
+   * У матеріалу заголовок, дата й обкладинка малюються самим маршрутом
+   * `/statti/[slug]`, а не блоком. Герой усередині статті означав би другий
+   * H1 на сторінці — і для читача, і для пошуку це той самий дефект.
+   */
+  it('матеріал не починається з героя — його шапку малює маршрут', () => {
+    for (const seed of ARTICLE_PAGES) {
+      const first = AnyBlock.parse(seed.blocks[0]);
+      expect(first.type, seed.slug).not.toBe('hero');
     }
   });
 

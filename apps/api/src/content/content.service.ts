@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AnyBlock, ErrorCode, type PageDto, type PageKind, type PageListDto, type RedirectDto } from '@dt/contracts';
+import { AnyBlock, ErrorCode, type LinkedTerm, type PageDto, type PageKind, type PageListDto, type RedirectDto } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { readingMinutes } from './reading-time';
 
 /** Рядок версії так, як його віддає Prisma. Виноситься, щоб не повторювати select. */
 const VERSION_SELECT = {
@@ -8,6 +9,24 @@ const VERSION_SELECT = {
   seoTitle: true, seoDescription: true, noindex: true,
   blocks: true,
 } as const;
+
+/** Породи й колекції матеріалу. Виноситься, щоб список і сторінка збиралися однаково. */
+const TERMS_SELECT = {
+  breeds: { select: { breed: { select: { slug: true, name: true } } } },
+  collections: { select: { collection: { select: { slug: true, title: true } } } },
+} as const;
+
+interface TermRows {
+  breeds: Array<{ breed: { slug: string; name: string } }>;
+  collections: Array<{ collection: { slug: string; title: string } }>;
+}
+
+function terms(row: TermRows): { breeds: LinkedTerm[]; collections: LinkedTerm[] } {
+  return {
+    breeds: row.breeds.map((b) => ({ slug: b.breed.slug, name: b.breed.name })),
+    collections: row.collections.map((c) => ({ slug: c.collection.slug, name: c.collection.title })),
+  };
+}
 
 @Injectable()
 export class ContentService {
@@ -48,8 +67,9 @@ export class ContentService {
     const page = await this.prisma.db.page.findFirst({
       where: { slug, locale: 'UK', versions: { some: { status: 'PUBLISHED' } } },
       select: {
-        slug: true, kind: true, locale: true, publishedAt: true,
+        slug: true, kind: true, locale: true, publishedAt: true, updatedAt: true,
         versions: { where: { status: 'PUBLISHED' }, take: 1, select: VERSION_SELECT },
+        ...TERMS_SELECT,
       },
     });
 
@@ -57,6 +77,8 @@ export class ContentService {
     if (!page || !version) {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Сторінку не знайдено' });
     }
+
+    const blocks = this.parseBlocks(version.blocks, page.slug);
 
     return {
       slug: page.slug,
@@ -71,7 +93,10 @@ export class ContentService {
         noindex: version.noindex,
       },
       publishedAt: page.publishedAt?.toISOString() ?? null,
-      blocks: this.parseBlocks(version.blocks, page.slug),
+      updatedAt: page.updatedAt.toISOString(),
+      readingMinutes: readingMinutes(blocks),
+      ...terms(page),
+      blocks,
     };
   }
 
@@ -92,21 +117,39 @@ export class ContentService {
     return { toSlug: row.toSlug };
   }
 
-  /** Список опублікованих сторінок: стрічка матеріалів і карта сайту. */
-  async listPages(kind?: PageKind): Promise<PageListDto> {
+  /**
+   * Список опублікованих сторінок: стрічка матеріалів, карта сайту, блок
+   * «останні статті».
+   *
+   * Фільтри за породою й колекцією тут же, а не окремим методом: «усі
+   * матеріали» й «матеріали про коргі» відрізняються одним `where`, і два
+   * методи розійшлися б на першій же зміні полів картки.
+   */
+  async listPages(options: {
+    kind?: PageKind;
+    breedSlug?: string;
+    collectionSlug?: string;
+    limit?: number;
+  } = {}): Promise<PageListDto> {
     const rows = await this.prisma.db.page.findMany({
       where: {
         locale: 'UK',
-        ...(kind ? { kind } : {}),
+        ...(options.kind ? { kind: options.kind } : {}),
+        ...(options.breedSlug ? { breeds: { some: { breed: { slug: options.breedSlug } } } } : {}),
+        ...(options.collectionSlug
+          ? { collections: { some: { collection: { slug: options.collectionSlug } } } }
+          : {}),
         versions: { some: { status: 'PUBLISHED' } },
       },
       orderBy: [{ publishedAt: 'desc' }, { position: 'asc' }],
+      ...(options.limit === undefined ? {} : { take: options.limit }),
       select: {
         slug: true, kind: true, publishedAt: true, updatedAt: true,
         versions: {
           where: { status: 'PUBLISHED' }, take: 1,
-          select: { title: true, excerpt: true, coverUrl: true },
+          select: { title: true, excerpt: true, coverUrl: true, blocks: true },
         },
+        ...TERMS_SELECT,
       },
     });
 
@@ -121,6 +164,8 @@ export class ContentService {
           coverUrl: v.coverUrl,
           publishedAt: p.publishedAt?.toISOString() ?? null,
           updatedAt: p.updatedAt.toISOString(),
+          readingMinutes: readingMinutes(this.parseBlocks(v.blocks, p.slug)),
+          ...terms(p),
         }];
       }),
     };

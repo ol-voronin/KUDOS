@@ -26,6 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // відповідає, тож у карті вона стоїть нарівні з каталогом.
     { url: `${BASE}/vyroby`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/statti`, changeFrequency: 'weekly', priority: 0.7 },
   ];
 
   /**
@@ -36,7 +37,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * перевіряє, що вона опублікована й доступна ззовні.
    */
   const contentPages: MetadataRoute.Sitemap = (pages?.items ?? []).map((p) => ({
-    url: `${BASE}/${p.slug}`,
+    // Матеріал живе під /statti — і в карті сайту має стояти саме та адреса,
+    // на яку веде сайт. Адреса, з якої йде 301, у карті — це прямий сигнал
+    // пошуку, що карту ніхто не перевіряв.
+    url: p.kind === 'ARTICLE' ? `${BASE}/statti/${p.slug}` : `${BASE}/${p.slug}`,
     lastModified: p.updatedAt,
     changeFrequency: p.kind === 'ARTICLE' ? ('monthly' as const) : ('yearly' as const),
     priority: p.kind === 'ARTICLE' ? 0.7 : 0.5,

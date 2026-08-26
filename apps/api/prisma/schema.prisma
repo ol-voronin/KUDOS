@@ -350,6 +350,7 @@ model Collection {
   prints    PrintCollection[]
   rules     PrintGarmentRule[]
   discounts Discount[]
+  articles  PageCollection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -366,7 +367,8 @@ model Breed {
   /// коргі / вельш-коргі / corgi — all point at the same breed page.
   synonyms String[]
 
-  prints PrintBreed[]
+  prints   PrintBreed[]
+  articles PageBreed[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -641,6 +643,8 @@ model Site {
   redirects Redirect[]
   versions  PageVersion[]
   members   SiteMember[]
+  pageBreeds     PageBreed[]
+  pageCollections PageCollection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -702,7 +706,9 @@ model Page {
   revalidatedAt   DateTime?
   revalidateError String    @default("")
 
-  versions PageVersion[]
+  versions    PageVersion[]
+  breeds      PageBreed[]
+  collections PageCollection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -754,6 +760,47 @@ model PageVersion {
   @@unique([pageId, number])
   @@index([pageId, status])
   @@index([siteId])
+}
+
+/// Матеріал ↔ порода.
+///
+/// Стаття «Як доглядати вовну коргі» має стояти на сторінці коргі, а не
+/// губитися в стрічці за датою. Це і є та причина, чому блог тут узагалі
+/// потрібен: він не «новини», а довгий хвіст запитів, які приводять на
+/// породні сторінки.
+///
+/// `siteId` дублює `page.siteId` — з тієї самої причини, що й у `PageVersion`:
+/// без нього запит «усі матеріали про цю породу» довелося б щоразу вести
+/// через сторінку, і рано чи пізно хтось цього не зробить.
+model PageBreed {
+  siteId  String @db.Uuid
+  pageId  String @db.Uuid
+  breedId String @db.Uuid
+
+  site  Site  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  breed Breed @relation(fields: [breedId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([pageId, breedId])
+  @@index([siteId, breedId])
+}
+
+/// Матеріал ↔ колекція. Те саме, але для жанру, а не для породи.
+model PageCollection {
+  siteId       String @db.Uuid
+  pageId       String @db.Uuid
+  collectionId String @db.Uuid
+
+  site       Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  page       Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([pageId, collectionId])
+  @@index([siteId, collectionId])
 }
 
 /// Картинка у сховищі.

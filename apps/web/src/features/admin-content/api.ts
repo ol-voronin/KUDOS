@@ -1,6 +1,7 @@
 import {
   AdminPageDto, AdminPageListDto,
   type AdminDraftSaveDto, type AdminPageCreateDto, type AdminPageUpdateDto,
+  type AdminPageTermsDto,
 } from '@dt/contracts';
 import { z } from 'zod';
 import { apiFetch } from '@/lib/api-client';
@@ -41,4 +42,11 @@ export function restoreVersion(id: string, versionId: string): Promise<AdminPage
 
 export function deletePage(id: string): Promise<{ ok: true }> {
   return apiFetch(`${BASE}/${id}`, z.object({ ok: z.literal(true) }), { method: 'DELETE' });
+}
+
+export function setPageTerms(id: string, dto: AdminPageTermsDto): Promise<AdminPageDto> {
+  return apiFetch(`${BASE}/${id}/terms`, AdminPageDto, {
+    method: 'PATCH',
+    body: JSON.stringify(dto),
+  });
 }

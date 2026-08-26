@@ -5,7 +5,8 @@ import {
   Cards, Cta, Faq, Features, Gallery, Hero, ImageText, Legal, Quote, Steps, Text,
 } from './blocks/static-blocks';
 import {
-  BreedStripBlockView, CollectionStripBlockView, LeadFormBlockView, PrintGridBlockView,
+  ArticleListBlockView, BreedStripBlockView, CollectionStripBlockView,
+  LeadFormBlockView, PrintGridBlockView,
 } from './blocks/dynamic-blocks';
 
 /**
@@ -28,7 +29,7 @@ type Renderers = Record<BlockType, true>;
 const IMPLEMENTED: Renderers = {
   hero: true, text: true, legal: true, steps: true, cards: true, features: true,
   faq: true, cta: true, leadForm: true, imageText: true, gallery: true, quote: true,
-  printGrid: true, breedStrip: true, collectionStrip: true,
+  articleList: true, printGrid: true, breedStrip: true, collectionStrip: true,
 };
 
 function renderBlock(block: AnyBlock): ReactNode {
@@ -45,6 +46,7 @@ function renderBlock(block: AnyBlock): ReactNode {
     case 'gallery': return <Gallery block={block} />;
     case 'quote': return <Quote block={block} />;
     case 'leadForm': return <LeadFormBlockView block={block} />;
+    case 'articleList': return <ArticleListBlockView block={block} />;
     case 'printGrid': return <PrintGridBlockView block={block} />;
     case 'breedStrip': return <BreedStripBlockView block={block} />;
     case 'collectionStrip': return <CollectionStripBlockView block={block} />;

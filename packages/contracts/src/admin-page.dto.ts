@@ -14,7 +14,7 @@ const Slug = z.string().min(1).max(160).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'keb
  */
 export const RESERVED_SLUGS = [
   'admin', 'api', 'prints', 'collections', 'breeds', 'vyroby', 'search',
-  'order', 'zayavka', 'sitemap.xml', 'robots.txt', '_next',
+  'order', 'zayavka', 'statti', 'sitemap.xml', 'robots.txt', '_next',
 ] as const;
 
 export const AdminVersionSummaryDto = z.object({
@@ -55,10 +55,22 @@ export const AdminPageSummaryDto = z.object({
 });
 export type AdminPageSummaryDto = z.infer<typeof AdminPageSummaryDto>;
 
+/** Довідник для селектів привʼязки. Їде разом зі сторінкою, щоб форма не робила другий запит. */
+export const AdminTermOptionDto = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+export type AdminTermOptionDto = z.infer<typeof AdminTermOptionDto>;
+
 export const AdminPageDto = AdminPageSummaryDto.extend({
   draft: AdminVersionDto.nullable(),
   published: AdminVersionDto.nullable(),
   history: z.array(AdminVersionSummaryDto),
+  /** Привʼязки матеріалу. Для звичайної сторінки просто порожні. */
+  breedIds: z.array(z.string().uuid()),
+  collectionIds: z.array(z.string().uuid()),
+  breedOptions: z.array(AdminTermOptionDto),
+  collectionOptions: z.array(AdminTermOptionDto),
 });
 export type AdminPageDto = z.infer<typeof AdminPageDto>;
 
@@ -84,6 +96,18 @@ export const AdminPageUpdateDto = z.object({
   position: z.number().int().min(0).max(999).optional(),
 });
 export type AdminPageUpdateDto = z.infer<typeof AdminPageUpdateDto>;
+
+/**
+ * Привʼязки матеріалу до порід і колекцій.
+ *
+ * Приходять цілком, а не по одній: «додати одну» і «прибрати одну» — це два
+ * ендпоінти, дві помилки й два стани форми, коли достатньо одного списку.
+ */
+export const AdminPageTermsDto = z.object({
+  breedIds: z.array(z.string().uuid()).max(20).default([]),
+  collectionIds: z.array(z.string().uuid()).max(20).default([]),
+});
+export type AdminPageTermsDto = z.infer<typeof AdminPageTermsDto>;
 
 /** Збереження чернетки. Приходить цілком — часткове збереження блоків не має сенсу. */
 export const AdminDraftSaveDto = z.object({

@@ -16,6 +16,7 @@ const NAV = [
   { href: '/vyroby', label: 'Вироби' },
   { href: '/collections', label: 'Колекції' },
   { href: '/svoya-ideya', label: 'Свій принт' },
+  { href: '/statti', label: 'Статті' },
   { href: '/spivpratsia', label: 'Співпраця' },
 ];
 
@@ -93,6 +94,7 @@ export function PublicFooter() {
 
         <nav aria-label="Компанія" className="flex flex-col gap-2">
           <p className="font-medium text-ink">Компанія</p>
+          <Link href="/statti" className="text-ink-muted transition hover:text-accent">Статті</Link>
           <Link href="/spivpratsia" className="text-ink-muted transition hover:text-accent">Співпраця та опт</Link>
           <Link href="/zayavka" className="text-ink-muted transition hover:text-accent">Залишити заявку</Link>
           <Link href="/oferta" className="text-ink-muted transition hover:text-accent">Публічна оферта</Link>

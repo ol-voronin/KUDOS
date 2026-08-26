@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
-  AdminDraftSaveDto, AdminPageCreateDto, AdminPageUpdateDto,
+  AdminDraftSaveDto, AdminPageCreateDto, AdminPageTermsDto, AdminPageUpdateDto,
   type AdminPageDto, type AdminPageListDto,
 } from '@dt/contracts';
 import { JwtAuthGuard, type AuthenticatedRequest } from '../auth/jwt-auth.guard';
@@ -49,6 +49,14 @@ export class ContentAdminController {
     @Body(new ZodValidationPipe(AdminPageUpdateDto)) dto: AdminPageUpdateDto,
   ): Promise<AdminPageDto> {
     return this.content.update(id, dto);
+  }
+
+  @Patch(':id/terms')
+  setTerms(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(AdminPageTermsDto)) dto: AdminPageTermsDto,
+  ): Promise<AdminPageDto> {
+    return this.content.setTerms(id, dto);
   }
 
   @Patch(':id/draft')

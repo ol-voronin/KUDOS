@@ -241,6 +241,19 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
     summary: (b) => (b.type === 'printGrid' ? `${excerptOf(b.heading)} · ${b.source}${b.sourceSlug ? ` ${b.sourceSlug}` : ''}` : ''),
   },
 
+  articleList: {
+    label: 'Останні статті',
+    hint: 'Три-чотири свіжі матеріали. Сам блок нічого не знає про каталог — його можна ставити на будь-яку сторінку.',
+    fields: [
+      HEADING,
+      { kind: 'textarea', name: 'lead', label: 'Підзаголовок', help: 'Необовʼязково. Один рядок під заголовком.' },
+      { kind: 'number', name: 'limit', label: 'Скільки показати', min: 1, max: 12 },
+      { kind: 'text', name: 'moreHref', label: 'Посилання «усі статті»', help: 'Зазвичай /statti. Порожньо — посилання не буде.' },
+    ],
+    create: (id) => ({ id, type: 'articleList', tone: 'plain', heading: 'Статті', lead: '', limit: 3, moreHref: '/statti' }),
+    summary: (b) => (b.type === 'articleList' ? excerptOf(b.heading) : ''),
+  },
+
   breedStrip: {
     label: 'Смуга порід',
     hint: 'Плитки порід із каталогу. Головний вхід із пошуку.',

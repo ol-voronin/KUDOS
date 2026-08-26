@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import { PageDto, RedirectDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { BlockRenderer } from '@/features/content/block-renderer';
@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title,
       ...(description !== '' ? { description } : {}),
-      type: page.kind === 'ARTICLE' ? 'article' : 'website',
+      type: 'website',
       ...(page.coverUrl !== '' ? { images: [page.coverUrl] } : {}),
     },
   };
@@ -62,6 +62,11 @@ export default async function ContentPage({ params }: Params) {
     if (moved) permanentRedirect(`/${moved.toSlug}`);
     notFound();
   }
+
+  // Матеріали живуть під /statti. Показувати їх ще й тут означало б дві
+  // адреси з тим самим текстом: пошук вибрав би одну сам, і не обовʼязково
+  // ту, на яку ведуть посилання з сайту.
+  if (page.kind === 'ARTICLE') redirect(`/statti/${page.slug}`);
 
   // Розмітка FAQ збирається з блоків, а не пишеться редактором окремо:
   // два джерела питань розійшлися б на першій же правці.

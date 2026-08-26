@@ -225,6 +225,23 @@ export const PrintGridBlock = z.object({
   moreHref: ShortText.default(''),
 });
 
+/**
+ * Останні матеріали.
+ *
+ * Блок ядра, а не магазину: стрічка статей потрібна будь-якому сайту, і
+ * нічого про принти вона не знає. Саме тому тут немає фільтра за породою —
+ * він затягнув би каталог у ядро заради однієї зручності. Матеріали про
+ * породу показує сама породна сторінка, де цей звʼязок і живе.
+ */
+export const ArticleListBlock = z.object({
+  ...base,
+  type: z.literal('articleList'),
+  heading: ShortText.default(''),
+  lead: InlineText.default(''),
+  limit: z.number().int().min(1).max(12).default(3),
+  moreHref: ShortText.default('/statti'),
+});
+
 export const BreedStripBlock = z.object({
   ...base,
   type: z.literal('breedStrip'),
@@ -257,6 +274,7 @@ export type LeadFormBlock = z.infer<typeof LeadFormBlock>;
 export type ImageTextBlock = z.infer<typeof ImageTextBlock>;
 export type GalleryBlock = z.infer<typeof GalleryBlock>;
 export type QuoteBlock = z.infer<typeof QuoteBlock>;
+export type ArticleListBlock = z.infer<typeof ArticleListBlock>;
 export type PrintGridBlock = z.infer<typeof PrintGridBlock>;
 export type BreedStripBlock = z.infer<typeof BreedStripBlock>;
 export type CollectionStripBlock = z.infer<typeof CollectionStripBlock>;
@@ -274,6 +292,7 @@ export type CollectionStripBlock = z.infer<typeof CollectionStripBlock>;
 const CORE_BLOCKS = [
   HeroBlock, TextBlock, LegalBlock, StepsBlock, CardsBlock, FeaturesBlock,
   FaqBlock, CtaBlock, LeadFormBlock, ImageTextBlock, GalleryBlock, QuoteBlock,
+  ArticleListBlock,
 ] as const;
 
 const SHOP_BLOCKS = [PrintGridBlock, BreedStripBlock, CollectionStripBlock] as const;
@@ -289,7 +308,7 @@ export type BlockType = AnyBlock['type'];
  */
 export const CORE_BLOCK_TYPES = [
   'hero', 'text', 'cards', 'steps', 'features', 'faq', 'cta', 'leadForm',
-  'imageText', 'gallery', 'quote', 'legal',
+  'imageText', 'gallery', 'quote', 'articleList', 'legal',
 ] as const satisfies readonly BlockType[];
 
 export const SHOP_BLOCK_TYPES = [

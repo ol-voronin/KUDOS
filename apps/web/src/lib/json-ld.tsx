@@ -53,6 +53,58 @@ export function breedItemListJsonLd(
   };
 }
 
+/**
+ * Стаття.
+ *
+ * `author` — організація, а не людина: підписувати матеріали іменем, якого
+ * немає на сайті, гірше, ніж не підписувати. `dateModified` окремо від
+ * `datePublished` навмисно — саме він каже пошуку, що матеріал оновлюють.
+ */
+export function articleJsonLd(article: {
+  title: string;
+  description: string;
+  url: string;
+  coverUrl: string;
+  publishedAt: string | null;
+  updatedAt: string;
+}, baseUrl: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    ...(article.description !== '' ? { description: article.description } : {}),
+    mainEntityOfPage: { '@type': 'WebPage', '@id': article.url },
+    ...(article.coverUrl !== ''
+      ? { image: [article.coverUrl.startsWith('http') ? article.coverUrl : `${baseUrl}${article.coverUrl}`] }
+      : {}),
+    ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
+    dateModified: article.updatedAt,
+    author: { '@type': 'Organization', name: site.brand, url: baseUrl },
+    publisher: { '@type': 'Organization', name: site.brand, url: baseUrl },
+  };
+}
+
+/**
+ * Хлібні крихти.
+ *
+ * Пошук малює їх замість голої адреси в результатах — це те, що видно, а не
+ * те, що «правильно за специфікацією».
+ */
+export function breadcrumbJsonLd(
+  trail: ReadonlyArray<{ name: string; url: string }>,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
 /** Рендериться як <script type="application/ld+json"> у серверному компоненті. */
 export function JsonLd({ data }: { data: unknown }) {
   return (

@@ -1,10 +1,11 @@
 import type {
-  BreedStripBlock, CollectionStripBlock, LeadFormBlock, PrintGridBlock,
+  ArticleListBlock, BreedStripBlock, CollectionStripBlock, LeadFormBlock, PrintGridBlock,
 } from '@dt/contracts';
 import {
-  BreedListDto, BreedPageDto, CollectionListDto, CollectionPageDto, PrintListDto,
+  BreedListDto, BreedPageDto, CollectionListDto, CollectionPageDto, PageListDto, PrintListDto,
   type PrintCardDto,
 } from '@dt/contracts';
+import { ArticleGrid } from '@/features/articles/article-card';
 import { PublicLeadForm } from '@/features/leads/public-lead-form';
 import { BreedStrip, CollectionStrip } from '@/features/home/blocks';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
@@ -51,6 +52,32 @@ export async function PrintGridBlockView({ block }: { block: PrintGridBlock }) {
         />
       )}
       <PrintGrid prints={prints} />
+    </>
+  );
+}
+
+/**
+ * Останні матеріали на будь-якій сторінці.
+ *
+ * Блок ядра: ходить лише в перелік сторінок і нічого не знає про каталог.
+ * Порожня стрічка не малюється зовсім — заголовок «Статті» над порожнечею
+ * читається як зламаний сайт.
+ */
+export async function ArticleListBlockView({ block }: { block: ArticleListBlock }) {
+  const data = await serverFetchOrNull(`/content/pages?kind=ARTICLE&limit=${block.limit}`, PageListDto);
+  const articles = (data?.items ?? []).slice(0, block.limit);
+  if (articles.length === 0) return null;
+
+  return (
+    <>
+      {(block.heading !== '' || block.moreHref !== '') && (
+        <SectionHead
+          title={block.heading}
+          {...(block.moreHref !== '' ? { href: block.moreHref } : {})}
+        />
+      )}
+      {block.lead !== '' && <InlineParagraph text={block.lead} className="mb-6 max-w-prose text-ink-muted" />}
+      <ArticleGrid articles={articles} />
     </>
   );
 }

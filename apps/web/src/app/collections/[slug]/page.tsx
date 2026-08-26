@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CollectionListDto, BreedListDto, CollectionPageDto } from '@dt/contracts';
+import { CollectionListDto, BreedListDto, CollectionPageDto, PageListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
+import { ArticleGrid } from '@/features/articles/article-card';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { BreedStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
@@ -53,6 +54,12 @@ export default async function CollectionPage({ params }: Params) {
 
   // Порожня колекція — не тупик: показуємо породи як робочий лістинг,
   // щоб людині було куди йти далі, а не просто «тут нічого немає».
+  const articles = (await serverFetchOrNull(
+    `/content/pages?kind=ARTICLE&collection=${params.slug}&limit=3`,
+    PageListDto,
+    300,
+  ))?.items ?? [];
+
   const breeds = prints.length === 0
     ? (await serverFetchOrNull('/catalog/breeds', BreedListDto, 3600))?.items ?? []
     : [];
@@ -121,6 +128,13 @@ export default async function CollectionPage({ params }: Params) {
             </div>
           )}
         </div>
+
+        {articles.length > 0 && (
+          <section className="mt-16">
+            <SectionHead title="Про цю колекцію" subtitle="Матеріали, привʼязані до неї в редакторі." />
+            <ArticleGrid articles={articles} />
+          </section>
+        )}
 
         <section className="mt-16">
           <SectionHead title="Дивитись інакше" subtitle="Той самий каталог, згрупований по-іншому." />

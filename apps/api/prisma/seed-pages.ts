@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BlockList } from '@dt/contracts';
 import type { TenantClient } from '../src/common/tenancy';
+import { ARTICLE_PAGES } from './pages/articles';
 import { MARKETING_PAGES, type PageSeed } from './pages/marketing';
 import { withSite } from './tenant-client';
 
@@ -133,7 +134,7 @@ async function upsertPage(
 async function main(): Promise<void> {
   console.info(`база: ${targetSummary()}`);
 
-  const seeds: PageSeed[] = [...legalSeeds(), ...MARKETING_PAGES];
+  const seeds: PageSeed[] = [...legalSeeds(), ...MARKETING_PAGES, ...ARTICLE_PAGES];
   const report: string[] = [];
 
   await withSite(async (prisma, siteId) => {

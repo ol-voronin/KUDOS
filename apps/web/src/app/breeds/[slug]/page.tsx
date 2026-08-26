@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { BreedListDto, BreedPageDto, CollectionListDto } from '@dt/contracts';
+import { BreedListDto, BreedPageDto, CollectionListDto, PageListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
+import { ArticleGrid } from '@/features/articles/article-card';
 import { PublicLeadForm } from '@/features/leads/public-lead-form';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { CollectionStrip } from '@/features/home/blocks';
@@ -77,6 +78,15 @@ export default async function BreedPage({ params }: Params) {
     ? (await serverFetchOrNull('/catalog/collections', CollectionListDto, 3600))?.items ?? []
     : [];
 
+  // Матеріали про цю породу. Це і є та причина, заради якої блог тут
+  // існує: стаття «Як доглядати вовну коргі» має стояти там, куди людина
+  // приходить із пошуку по коргі, а не губитися в стрічці за датою.
+  const articles = (await serverFetchOrNull(
+    `/content/pages?kind=ARTICLE&breed=${params.slug}&limit=3`,
+    PageListDto,
+    300,
+  ))?.items ?? [];
+
   return (
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(breed.name, prints, BASE)} />}
@@ -120,6 +130,15 @@ export default async function BreedPage({ params }: Params) {
             ? <PrintGrid prints={prints} />
             : <EmptyBreed name={breed.name} collections={collections} />}
         </div>
+
+        {articles.length > 0 && (
+          <section className="mt-14">
+            <h2 className="font-display text-xl font-bold text-ink">Про {breed.name.toLowerCase()}</h2>
+            <div className="mt-6">
+              <ArticleGrid articles={articles} />
+            </div>
+          </section>
+        )}
 
         {/* Міст у «свою ідею» — навіть коли принти є: свій пес завжди свій. */}
         {prints.length > 0 && (

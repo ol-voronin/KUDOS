@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { slugify, type AdminPageSummaryDto } from '@dt/contracts';
+import { slugify, type AdminPageSummaryDto, type PageKind } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { createPage, listPages } from './api';
 
@@ -20,12 +20,13 @@ export function PagesTable() {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [touchedSlug, setTouchedSlug] = useState(false);
+  const [kind, setKind] = useState<PageKind>('PAGE');
 
   const create = useMutation({
-    mutationFn: () => createPage({ slug, kind: 'PAGE', title }),
+    mutationFn: () => createPage({ slug, kind, title }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: KEY });
-      setCreating(false); setTitle(''); setSlug(''); setTouchedSlug(false);
+      setCreating(false); setTitle(''); setSlug(''); setTouchedSlug(false); setKind('PAGE');
     },
   });
 
@@ -60,7 +61,23 @@ export function PagesTable() {
                 className="mt-1 w-full rounded-card border border-line px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink focus:border-ink focus:outline-none"
               />
               <span className="mt-1 block font-normal normal-case tracking-normal text-ink-subtle">
-                Сторінка буде за адресою /{slug || '…'}
+                Буде за адресою {kind === 'ARTICLE' ? '/statti/' : '/'}{slug || '…'}
+              </span>
+            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+              Тип
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as PageKind)}
+                className="mt-1 w-full rounded-card border border-line px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink focus:border-ink focus:outline-none"
+              >
+                <option value="PAGE">Сторінка</option>
+                <option value="ARTICLE">Матеріал</option>
+              </select>
+              <span className="mt-1 block font-normal normal-case tracking-normal text-ink-subtle">
+                {/* Тип вибирається один раз, при створенні: змінити його потім —
+                    це змінити адресу, тобто зламати всі посилання на матеріал. */}
+                Матеріал живе в стрічці, має дату й привʼязку до порід. Змінити потім не можна.
               </span>
             </label>
           </div>

@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnyBlock, BlockList as BlockListSchema, type AdminPageDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { BlockList } from './block-list';
-import { getPage, publishPage, restoreVersion, saveDraft, unpublishPage, updatePage } from './api';
+import { getPage, publishPage, restoreVersion, saveDraft, setPageTerms, unpublishPage, updatePage } from './api';
 
 /**
  * Редактор сторінки.
@@ -127,7 +127,13 @@ export function PageEditor({ id }: { id: string }) {
           <Link href="/admin/storinky" className="text-sm text-ink-muted hover:underline">← Усі сторінки</Link>
           <h1 className="mt-1 truncate font-display text-2xl font-bold text-ink">{draft.title || page.slug}</h1>
           <p className="mt-1 text-sm text-ink-subtle">
-            <a href={`/${page.slug}`} target="_blank" rel="noreferrer" className="underline">/{page.slug}</a>
+            <a
+              href={page.kind === 'ARTICLE' ? `/statti/${page.slug}` : `/${page.slug}`}
+              target="_blank" rel="noreferrer" className="underline"
+            >
+              {page.kind === 'ARTICLE' ? `/statti/${page.slug}` : `/${page.slug}`}
+            </a>
+            {page.kind === 'ARTICLE' && <span className="ml-2 rounded-card bg-teal-soft px-1.5 py-0.5 text-xs text-teal-ink">стаття</span>}
             {page.isSystem && <span className="ml-2 rounded-card bg-surface-sunken px-1.5 py-0.5 text-xs">системна</span>}
             {!page.isPublished && <span className="ml-2 rounded-card bg-sun-soft px-1.5 py-0.5 text-xs text-sun-ink">не на сайті</span>}
           </p>
@@ -211,6 +217,8 @@ export function PageEditor({ id }: { id: string }) {
           </div>
         </div>
       </section>
+
+      {page.kind === 'ARTICLE' && <TermsPanel page={page} pageKey={key} />}
 
       <section className="rounded-card border border-line bg-surface p-4">
         <h2 className="mb-1 font-display text-lg font-bold text-ink">Як сторінка виглядає в пошуку</h2>
@@ -322,6 +330,111 @@ function History({
       <p className="mt-3 text-xs text-ink-subtle">
         Повернення кладе стару версію в чернетку, а не одразу на сайт: спершу подивіться, що саме повертаєте.
       </p>
+    </section>
+  );
+}
+
+/**
+ * Привʼязки матеріалу до порід і колекцій.
+ *
+ * Показуємо тільки для статей — звичайній сторінці ці звʼязки нема куди
+ * подіти. Саме вони роблять блог не стрічкою новин, а довгим хвостом
+ * запитів: матеріал стає на породну сторінку, куди люди й приходять із
+ * пошуку.
+ *
+ * Зберігається окремо від чернетки, одразу: це властивість сторінки, а не
+ * її тексту, і чекати на публікацію тут нема сенсу.
+ */
+function TermsPanel({ page, pageKey }: { page: AdminPageDto; pageKey: unknown[] }) {
+  const qc = useQueryClient();
+  const [breedIds, setBreedIds] = useState<string[]>(page.breedIds);
+  const [collectionIds, setCollectionIds] = useState<string[]>(page.collectionIds);
+
+  useEffect(() => { setBreedIds(page.breedIds); }, [page.breedIds]);
+  useEffect(() => { setCollectionIds(page.collectionIds); }, [page.collectionIds]);
+
+  const save = useMutation({
+    mutationFn: (next: { breedIds: string[]; collectionIds: string[] }) => setPageTerms(page.id, next),
+    onSuccess: (fresh) => qc.setQueryData(pageKey, fresh),
+  });
+
+  function toggle(list: string[], id: string): string[] {
+    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+  }
+
+  return (
+    <section className="rounded-card border border-line bg-surface p-4">
+      <h2 className="mb-1 font-display text-lg font-bold text-ink">Про що матеріал</h2>
+      <p className="mb-4 text-sm text-ink-muted">
+        Матеріал зʼявиться на сторінках вибраних порід і колекцій — там, куди люди приходять
+        із пошуку.
+      </p>
+
+      {page.breedOptions.length > 0 && (
+        <fieldset className="mb-4">
+          <legend className={labelCls}>Породи</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {page.breedOptions.map((b) => {
+              const on = breedIds.includes(b.id);
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={save.isPending}
+                  onClick={() => {
+                    const next = toggle(breedIds, b.id);
+                    setBreedIds(next);
+                    save.mutate({ breedIds: next, collectionIds });
+                  }}
+                  className={[
+                    'rounded-pill border px-3 py-1 text-sm transition',
+                    on ? 'border-ink bg-ink text-surface' : 'border-line text-ink-muted hover:border-ink',
+                  ].join(' ')}
+                >
+                  {b.name}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      {page.collectionOptions.length > 0 && (
+        <fieldset>
+          <legend className={labelCls}>Колекції</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {page.collectionOptions.map((c) => {
+              const on = collectionIds.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={save.isPending}
+                  onClick={() => {
+                    const next = toggle(collectionIds, c.id);
+                    setCollectionIds(next);
+                    save.mutate({ breedIds, collectionIds: next });
+                  }}
+                  className={[
+                    'rounded-pill border px-3 py-1 text-sm transition',
+                    on ? 'border-ink bg-ink text-surface' : 'border-line text-ink-muted hover:border-ink',
+                  ].join(' ')}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      {save.error && (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          {save.error instanceof ApiError ? save.error.message : 'Не вдалося зберегти привʼязки'}
+        </p>
+      )}
     </section>
   );
 }
