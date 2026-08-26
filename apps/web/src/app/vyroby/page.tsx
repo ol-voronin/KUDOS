@@ -5,17 +5,21 @@ import { PublicShell } from '@/components/public-shell';
 import { Section } from '@/components/section';
 import { RangeCard } from '@/features/catalog/components/RangeCard';
 import { serverFetchOrNull } from '@/lib/server-api';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: `Вироби: футболки, світшоти, худі — тканини, кольори, розміри | ${site.brand}`,
-  description:
-    'Сім виробів власного пошиття: класична та оверсайз футболки, гібриди, світшот і худі. '
-    + 'Склад тканини, щільність, повна розмірна сітка й усі доступні кольори.',
-  alternates: { canonical: '/vyroby' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSettings();
+  return {
+    title: `Вироби: футболки, світшоти, худі — тканини, кольори, розміри | ${site.brand}`,
+    description:
+      'Сім виробів власного пошиття: класична та оверсайз футболки, гібриди, світшот і худі. '
+      + 'Склад тканини, щільність, повна розмірна сітка й усі доступні кольори.',
+    alternates: { canonical: '/vyroby' },
+  
+  };
+}
 
 /**
  * Асортимент як окрема сторінка.
@@ -28,6 +32,7 @@ export const metadata: Metadata = {
  * сторінки.
  */
 export default async function RangePage() {
+  const site = await getSettings();
   const range = await serverFetchOrNull('/catalog/range', RangeDto, 300);
   const garments = range?.garments ?? [];
   const cheapestPrint = range && range.printPrices.length > 0

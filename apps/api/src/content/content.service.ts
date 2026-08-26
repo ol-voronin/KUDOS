@@ -1,7 +1,34 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AnyBlock, ErrorCode, type LinkedTerm, type PageDto, type PageKind, type PageListDto, type RedirectDto } from '@dt/contracts';
+import {
+  AnyBlock, ErrorCode, substituteTokens,
+  type LinkedTerm, type PageDto, type PageKind, type PageListDto, type RedirectDto,
+} from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { readingMinutes } from './reading-time';
+import { SettingsService } from './settings.service';
+
+/**
+ * Підстановка `{{токенів}}` у всьому, що поїде на сайт.
+ *
+ * Робиться тут, на сервері, а не в браузері — і це рішення, а не деталь.
+ * Поки таблиця значень жила у вебі, вона була другою копією реквізитів:
+ * телефон у базі один, у `config/site.ts` інший, і розходяться вони тихо.
+ * Тепер сторінка приїжджає вже з реальним телефоном, а у вебі немає ані
+ * таблиці токенів, ані самих реквізитів.
+ *
+ * Ходимо по всіх рядках, включно з адресами: `{{telegramUrl}}` у посиланні —
+ * законний і найкорисніший випадок.
+ */
+function substituteDeep<T>(value: T, tokens: Readonly<Record<string, string>>): T {
+  if (typeof value === 'string') return substituteTokens(value, tokens) as unknown as T;
+  if (Array.isArray(value)) return value.map((v) => substituteDeep(v, tokens)) as unknown as T;
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = substituteDeep(v, tokens);
+    return out as T;
+  }
+  return value;
+}
 
 /** Рядок версії так, як його віддає Prisma. Виноситься, щоб не повторювати select. */
 const VERSION_SELECT = {
@@ -32,7 +59,10 @@ function terms(row: TermRows): { breeds: LinkedTerm[]; collections: LinkedTerm[]
 export class ContentService {
   private readonly log = new Logger(ContentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
+  ) {}
 
   /**
    * Розбір блоків, збережених у JSONB.
@@ -79,8 +109,9 @@ export class ContentService {
     }
 
     const blocks = this.parseBlocks(version.blocks, page.slug);
+    const tokens = await this.settings.tokens();
 
-    return {
+    return substituteDeep({
       slug: page.slug,
       kind: page.kind,
       locale: page.locale,
@@ -97,7 +128,7 @@ export class ContentService {
       readingMinutes: readingMinutes(blocks),
       ...terms(page),
       blocks,
-    };
+    }, tokens);
   }
 
   /**
@@ -153,7 +184,9 @@ export class ContentService {
       },
     });
 
-    return {
+    const tokens = await this.settings.tokens();
+
+    return substituteDeep({
       items: rows.flatMap((p) => {
         const v = p.versions[0];
         return v === undefined ? [] : [{
@@ -168,6 +201,6 @@ export class ContentService {
           ...terms(p),
         }];
       }),
-    };
+    }, tokens);
   }
 }

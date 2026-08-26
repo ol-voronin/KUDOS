@@ -4,15 +4,19 @@ import { CollectionListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { CollectionStrip } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: `Колекції — ${site.brand}`,
-  description: 'Принти зібрані за настроєм: портрети, журнальні обкладинки, характери.',
-  alternates: { canonical: '/collections' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSettings();
+  return {
+    title: `Колекції — ${site.brand}`,
+    description: 'Принти зібрані за настроєм: портрети, журнальні обкладинки, характери.',
+    alternates: { canonical: '/collections' },
+  
+  };
+}
 
 export default async function CollectionsPage() {
   const data = await serverFetchOrNull('/catalog/collections', CollectionListDto, 300);

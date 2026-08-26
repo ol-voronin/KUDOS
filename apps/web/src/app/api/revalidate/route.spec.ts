@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const revalidatePath = vi.fn();
-vi.mock('next/cache', () => ({ revalidatePath: (p: string) => revalidatePath(p) }));
+vi.mock('next/cache', () => ({
+  revalidatePath: (p: string, type?: string) => (type === undefined ? revalidatePath(p) : revalidatePath(p, type)),
+}));
 
 const { POST } = await import('./route');
 
@@ -73,4 +75,10 @@ describe('POST /api/revalidate', () => {
     expect(res.status).toBe(400);
     expect(revalidatePath).not.toHaveBeenCalled();
   });
+  it('«*» скидає весь сайт одним викликом', async () => {
+    const res = await POST(post({ paths: ['*'] }, 's3cret-value'));
+    expect(res.status).toBe(200);
+    expect(revalidatePath).toHaveBeenCalledWith('/', 'layout');
+  });
+
 });

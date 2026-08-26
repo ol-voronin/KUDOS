@@ -1,4 +1,4 @@
-import { site } from '@/config/site';
+import type { SiteSettingsDto } from '@dt/contracts';
 
 /**
  * JSON-LD. Єдине місце, де формуються структуровані дані.
@@ -7,7 +7,7 @@ import { site } from '@/config/site';
  * дає видимий результат у видачі — відповіді розкриваються прямо в пошуку.
  */
 
-export function organizationJsonLd(baseUrl: string) {
+export function organizationJsonLd(baseUrl: string, site: SiteSettingsDto) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -67,7 +67,7 @@ export function articleJsonLd(article: {
   coverUrl: string;
   publishedAt: string | null;
   updatedAt: string;
-}, baseUrl: string) {
+}, baseUrl: string, site: SiteSettingsDto) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',

@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
 import { PublicShell } from '@/components/public-shell';
 import { PublicLeadForm } from '@/features/leads/public-lead-form';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
-export const metadata: Metadata = {
-  title: `Залишити заявку — ${site.brand}`,
-  description: 'Напишіть, що вас цікавить. Відповідаємо того ж дня.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSettings();
+  return {
+    title: `Залишити заявку — ${site.brand}`,
+    description: 'Напишіть, що вас цікавить. Відповідаємо того ж дня.',
+  
+  };
+}
 
 export default function LeadPage() {
   return (

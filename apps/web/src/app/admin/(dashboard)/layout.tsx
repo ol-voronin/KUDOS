@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from '@/features/auth/session';
 import { LogoutButton } from '@/features/auth/logout-button';
 import { AdminNav } from '@/features/admin-shell/admin-nav';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
+  const site = await getSettings();
   const session = await getServerSession();
   if (!session) redirect('/admin/login');
 

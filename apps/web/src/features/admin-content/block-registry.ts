@@ -230,6 +230,7 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
       HEADING,
       { kind: 'select', name: 'source', label: 'Які принти', options: [
         { value: 'latest', label: 'Найновіші' },
+        { value: 'ready', label: 'Готові до відправки' },
         { value: 'collection', label: 'З колекції' },
         { value: 'breed', label: 'За породою' },
       ] },

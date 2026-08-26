@@ -7,11 +7,12 @@ import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { BreedStrip, CollectionStrip, plural } from '@/features/home/blocks';
 import { SearchForm } from '@/features/search/search-form';
 import { serverFetchOrNull } from '@/lib/server-api';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 interface Search { searchParams?: { q?: string } }
 
-export function generateMetadata({ searchParams }: Search): Metadata {
+export async function generateMetadata({ searchParams }: Search): Promise<Metadata> {
+  const site = await getSettings();
   const q = searchParams?.q?.trim();
   return {
     title: q ? `Пошук: ${q} — ${site.brand}` : `Пошук — ${site.brand}`,

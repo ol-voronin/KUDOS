@@ -1,14 +1,16 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
-  BlockList, ErrorCode,
+  BlockList, ErrorCode, substituteTokens,
   type AdminDraftSaveDto, type AdminPageCreateDto, type AdminPageDto,
   type AdminPageListDto, type AdminPageSummaryDto, type AdminPageTermsDto,
+  type AdminPreviewDto,
   type AdminPageUpdateDto,
   type AdminVersionDto,
 } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { requireSiteId } from '../common/site-context';
 import { RevalidateService } from './revalidate.service';
+import { SettingsService } from './settings.service';
 
 /** Версія з автором — рівно те, що читають усі методи нижче. */
 const VERSION_SELECT = {
@@ -30,6 +32,7 @@ export class ContentAdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly revalidate: RevalidateService,
+    private readonly settings: SettingsService,
   ) {}
 
   // ── читання ───────────────────────────────────────────────────────────────
@@ -371,6 +374,53 @@ export class ContentAdminService {
       blocks: parsed.success ? parsed.data : [],
       note: `відкат до версії ${version.number}`,
     }, authorId);
+  }
+
+  /**
+   * Чернетка так, як її побачить відвідувач: із підставленими токенами.
+   *
+   * Це і є причина окремого методу. Редактор мусить показувати `{{phone}}`,
+   * бо це те, що людина написала й буде правити. Перегляд мусить показувати
+   * номер, бо це те, що надрукується на сайті. Одна відповідь на два різні
+   * питання не буває правильною.
+   */
+  async preview(id: string): Promise<AdminPreviewDto> {
+    const page = await this.prisma.db.page.findUnique({
+      where: { id },
+      select: {
+        slug: true,
+        versions: {
+          where: { status: { in: ['DRAFT', 'PUBLISHED'] } },
+          select: { status: true, title: true, blocks: true },
+        },
+      },
+    });
+    if (!page) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Сторінку не знайдено' });
+
+    const rows = page.versions as Array<{ status: string; title: string; blocks: unknown }>;
+    const version = rows.find((v) => v.status === 'DRAFT') ?? rows.find((v) => v.status === 'PUBLISHED');
+    if (!version) return { isDraft: false, title: page.slug, blocks: [] };
+
+    const parsed = BlockList.safeParse(version.blocks);
+    const tokens = await this.settings.tokens();
+    const render = (text: string): string => substituteTokens(text, tokens);
+
+    const deep = <T,>(value: T): T => {
+      if (typeof value === 'string') return render(value) as unknown as T;
+      if (Array.isArray(value)) return value.map(deep) as unknown as T;
+      if (value !== null && typeof value === 'object') {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value)) out[k] = deep(v);
+        return out as T;
+      }
+      return value;
+    };
+
+    return {
+      isDraft: version.status === 'DRAFT',
+      title: render(version.title),
+      blocks: parsed.success ? deep(parsed.data) : [],
+    };
   }
 
   async remove(id: string): Promise<{ ok: true }> {

@@ -17,6 +17,12 @@ import { NextResponse } from 'next/server';
  *
  * Шляхи перевіряються: приймаємо тільки те, що починається зі слеша й не
  * містить `..`. Інакше формально можна попросити перебудувати що завгодно.
+ *
+ * Окремий випадок — `*`: скинути весь сайт. Він потрібен рівно для одного —
+ * зміни налаштувань: телефон стоїть у футері кожної сторінки й у текстах
+ * половини з них, і перелічити «які саме сторінки залежать від телефону»
+ * неможливо. Просити скидання по одній сторінці тут означало б гарантовано
+ * забути якусь.
  */
 
 function safeEqual(a: string, b: string): boolean {
@@ -46,6 +52,11 @@ export async function POST(request: Request) {
 
   if (!Array.isArray(paths) || paths.length === 0 || paths.length > 50) {
     return NextResponse.json({ error: 'Очікується paths: масив від 1 до 50 шляхів' }, { status: 400 });
+  }
+
+  if (paths.includes('*')) {
+    revalidatePath('/', 'layout');
+    return NextResponse.json({ ok: true, revalidated: ['*'] });
   }
 
   const clean = paths.filter(

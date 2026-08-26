@@ -4,15 +4,19 @@ import { PageListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { ArticleGrid } from '@/features/articles/article-card';
 import { serverFetchOrNull } from '@/lib/server-api';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: `Статті — ${site.brand}`,
-  description: 'Про породи, догляд за одягом із принтом і те, як ми його робимо.',
-  alternates: { canonical: '/statti' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSettings();
+  return {
+    title: `Статті — ${site.brand}`,
+    description: 'Про породи, догляд за одягом із принтом і те, як ми його робимо.',
+    alternates: { canonical: '/statti' },
+  
+  };
+}
 
 /**
  * Стрічка матеріалів.

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { site } from '@/config/site';
+import { useSiteSettings } from '@/app/providers';
 import { ApiError } from '@/lib/api-client';
 import { Consent, Field, Select, SubmitButton, SuccessPanel, TextArea } from '@/features/forms/fields';
 import { createCustomRequest } from './api';
@@ -27,6 +27,7 @@ const GARMENTS = [
 ] as const;
 
 export function CustomRequestForm() {
+  const site = useSiteSettings();
   const [dogName, setDogName] = useState('');
   const [dogBreed, setDogBreed] = useState('');
   const [mood, setMood] = useState('');

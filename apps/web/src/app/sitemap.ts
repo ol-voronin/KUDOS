@@ -36,15 +36,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * Оферта потрапляє сюди свідомо: Monobank при підключенні еквайрингу
    * перевіряє, що вона опублікована й доступна ззовні.
    */
-  const contentPages: MetadataRoute.Sitemap = (pages?.items ?? []).map((p) => ({
-    // Матеріал живе під /statti — і в карті сайту має стояти саме та адреса,
-    // на яку веде сайт. Адреса, з якої йде 301, у карті — це прямий сигнал
-    // пошуку, що карту ніхто не перевіряв.
-    url: p.kind === 'ARTICLE' ? `${BASE}/statti/${p.slug}` : `${BASE}/${p.slug}`,
-    lastModified: p.updatedAt,
-    changeFrequency: p.kind === 'ARTICLE' ? ('monthly' as const) : ('yearly' as const),
-    priority: p.kind === 'ARTICLE' ? 0.7 : 0.5,
-  }));
+  const contentPages: MetadataRoute.Sitemap = (pages?.items ?? [])
+    // Головна вже стоїть у списку вище під адресою `/`. Її ж slug `home`
+    // дав би другий рядок на ту саму сторінку.
+    .filter((p) => p.slug !== 'home')
+    .map((p) => ({
+      // Матеріал живе під /statti — і в карті сайту має стояти саме та
+      // адреса, на яку веде сайт. Адреса, з якої йде 301, у карті — це
+      // прямий сигнал пошуку, що карту ніхто не перевіряв.
+      url: p.kind === 'ARTICLE' ? `${BASE}/statti/${p.slug}` : `${BASE}/${p.slug}`,
+      lastModified: p.updatedAt,
+      changeFrequency: p.kind === 'ARTICLE' ? ('monthly' as const) : ('yearly' as const),
+      priority: p.kind === 'ARTICLE' ? 0.7 : 0.5,
+    }));
 
   if (!data) return [...staticPages, ...contentPages];
 

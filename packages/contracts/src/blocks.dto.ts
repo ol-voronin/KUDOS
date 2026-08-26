@@ -77,12 +77,28 @@ export function isSafeHref(href: string): boolean {
     || /^https?:\/\//.test(href);
 }
 
+/**
+ * Адреса, яка ще не адреса, а підстановка: рівно `{{telegramUrl}}`.
+ *
+ * Дозволяється лише в тому, що зберігається, — і лише цілком, без хвостів.
+ * Сенс: посилання на телеграм у блоці має вести туди ж, куди й у футері, а
+ * не бути другою копією контакту, яка розійдеться при зміні.
+ *
+ * Безпеку це не послаблює, бо перевірок три, і кожна на своєму місці:
+ * налаштування не приймають telegramUrl, який не починається з http(s);
+ * сюди потрапляє лише підстановка цілком; а на рендері адреса перевіряється
+ * ще раз — уже підставленим значенням.
+ */
+export function isTokenHref(href: string): boolean {
+  return /^\{\{\w+\}\}$/.test(href);
+}
+
 /** Кнопка. `href` — або внутрішній шлях, або http(s); ніяких `javascript:`. */
 export const BlockLink = z.object({
   label: ShortText.min(1),
   href: z.string().min(1).max(500).refine(
-    isSafeHref,
-    { message: 'посилання має починатися з /, #, http(s)://, mailto: або tel:' },
+    (v) => isSafeHref(v) || isTokenHref(v),
+    { message: 'посилання має починатися з /, #, http(s)://, mailto: або tel: — або бути підстановкою на кшталт {{telegramUrl}}' },
   ),
   /** Другорядна кнопка малюється контуром, а не заливкою. */
   secondary: z.boolean().default(false),
@@ -218,7 +234,7 @@ export const PrintGridBlock = z.object({
   ...base,
   type: z.literal('printGrid'),
   heading: ShortText.default(''),
-  source: z.enum(['latest', 'collection', 'breed']).default('latest'),
+  source: z.enum(['latest', 'ready', 'collection', 'breed']).default('latest'),
   /** Потрібен для source = collection | breed. */
   sourceSlug: ShortText.default(''),
   limit: z.number().int().min(1).max(24).default(8),

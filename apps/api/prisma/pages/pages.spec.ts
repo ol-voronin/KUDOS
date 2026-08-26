@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AnyBlock, BlockList, unknownTokens } from '@dt/contracts';
 import { ARTICLE_PAGES } from './articles';
+import { HOME_PAGE } from './home';
 import { MARKETING_PAGES } from './marketing';
 
 /**
@@ -19,6 +20,7 @@ const legal = JSON.parse(
 ) as Record<string, { title: string; seoTitle: string; seoDescription: string; blocks: unknown[] }>;
 
 const allSeeds = [
+  { slug: HOME_PAGE.slug, title: HOME_PAGE.title, blocks: HOME_PAGE.blocks as unknown[] },
   ...Object.entries(legal).map(([slug, d]) => ({ slug, title: d.title, blocks: d.blocks })),
   ...MARKETING_PAGES.map((p) => ({ slug: p.slug, title: p.title, blocks: p.blocks as unknown[] })),
   ...ARTICLE_PAGES.map((p) => ({ slug: p.slug, title: p.title, blocks: p.blocks as unknown[] })),
@@ -39,7 +41,7 @@ function textsOf(blocks: unknown[]): string[] {
 describe('перенесені сторінки', () => {
   it('усі на місці', () => {
     expect(allSeeds.map((s) => s.slug).sort())
-      .toEqual(['oferta', 'pryvatnist', 'spivpratsia', 'svoya-ideya', 'yak-praty-odyah-z-pryntom']);
+      .toEqual(['home', 'oferta', 'pryvatnist', 'spivpratsia', 'svoya-ideya', 'yak-praty-odyah-z-pryntom']);
   });
 
   it.each(allSeeds)('$slug — блоки проходять схему', ({ blocks }) => {
@@ -105,6 +107,22 @@ describe('перенесені сторінки', () => {
    * `/statti/[slug]`, а не блоком. Герой усередині статті означав би другий
    * H1 на сторінці — і для читача, і для пошуку це той самий дефект.
    */
+  /**
+   * Якорі головної — це `id` блоків. На них посилаються кнопки цієї ж
+   * сторінки, тож перейменування блока тихо ламає кнопку. Тест фіксує саме
+   * ті два, що використовуються в посиланнях.
+   */
+  it('головна зберігає якорі, на які сама ж посилається', () => {
+    const ids = HOME_PAGE.blocks.map((b) => b.id);
+    expect(ids).toContain('породи');
+    expect(ids).toContain('новинки');
+
+    const hrefs = HOME_PAGE.blocks.flatMap((b) => ('links' in b ? b.links.map((l) => l.href) : []));
+    for (const href of hrefs.filter((h) => h.startsWith('#'))) {
+      expect(ids, href).toContain(href.slice(1));
+    }
+  });
+
   it('матеріал не починається з героя — його шапку малює маршрут', () => {
     for (const seed of ARTICLE_PAGES) {
       const first = AnyBlock.parse(seed.blocks[0]);

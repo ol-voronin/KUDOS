@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { LoginForm } from '@/features/auth/login-form';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 export const metadata: Metadata = { title: 'Вхід' };
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const site = await getSettings();
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-6">
       <div className="w-full max-w-sm">

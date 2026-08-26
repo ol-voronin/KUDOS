@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { site } from '@/config/site';
+import { useSiteSettings } from '@/app/providers';
 import { ApiError } from '@/lib/api-client';
 import { Consent, Field, SubmitButton, SuccessPanel, TextArea } from '@/features/forms/fields';
 import { createLead } from './public-api';
@@ -18,6 +18,7 @@ import { createLead } from './public-api';
  * Telegram, але видно контекст.
  */
 export function PublicLeadForm({ source, compact = false }: { source: string; compact?: boolean }) {
+  const site = useSiteSettings();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');

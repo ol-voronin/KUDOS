@@ -8,11 +8,19 @@ import { ContentService } from './content.service';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 import { RevalidateService } from './revalidate.service';
+import { SettingsAdminController, SiteChromeController } from './settings.controller';
+import { SettingsService } from './settings.service';
 
 @Module({
   imports: [AuthModule],
-  controllers: [ContentController, ContentAdminController, MediaController],
-  providers: [ContentService, ContentAdminService, MediaService, RevalidateService, PrismaService],
-  exports: [ContentService],
+  controllers: [
+    ContentController, ContentAdminController, MediaController,
+    SiteChromeController, SettingsAdminController,
+  ],
+  providers: [
+    ContentService, ContentAdminService, MediaService, RevalidateService,
+    SettingsService, PrismaService,
+  ],
+  exports: [ContentService, SettingsService],
 })
 export class ContentModule {}

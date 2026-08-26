@@ -9,7 +9,7 @@ import { BreedStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
 
@@ -24,6 +24,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const site = await getSettings();
   const data = await serverFetchOrNull(`/catalog/collections/${params.slug}`, CollectionPageDto);
   if (!data) return { title: 'Колекцію не знайдено' };
 

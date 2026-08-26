@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type {
   CardsBlock, CtaBlock, FaqBlock, FeaturesBlock, GalleryBlock, HeroBlock,
   ImageTextBlock, LegalBlock, QuoteBlock, StepsBlock, TextBlock,
@@ -14,6 +15,27 @@ import { BlockHeading, BlockLinks } from './shared';
  * який реально ловить помилки при зміні блока.
  */
 
+/**
+ * Заголовок героя, у якому частину можна виділити кольором: `**отак**`.
+ *
+ * Той самий прийом, що й у решті текстів, але тут він малюється не жирним, а
+ * акцентним кольором — бо в заголовку жирним уже все. Це єдине оформлення,
+ * яке редактор може задати в H1, і його достатньо: «Ваш пес — **на вашій
+ * футболці**».
+ */
+function HeroHeading({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, i) => (
+        i % 2 === 1
+          ? <span key={i} className="text-accent">{part}</span>
+          : <Fragment key={i}>{part}</Fragment>
+      ))}
+    </>
+  );
+}
+
 export function Hero({ block }: { block: HeroBlock }) {
   return (
     <>
@@ -22,7 +44,9 @@ export function Hero({ block }: { block: HeroBlock }) {
           {block.eyebrow}
         </p>
       )}
-      <h1 className="max-w-3xl font-display text-hero font-bold text-ink">{block.heading}</h1>
+      <h1 className="max-w-3xl font-display text-hero font-bold text-ink">
+        <HeroHeading text={block.heading} />
+      </h1>
       <InlineParagraph text={block.lead} className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted" />
       {block.footnote.trim() !== '' && (
         <p className="mt-4 text-sm text-ink-subtle">{block.footnote}</p>

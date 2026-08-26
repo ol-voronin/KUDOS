@@ -5,7 +5,7 @@ import { PrintOfferDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintOfferView } from '@/features/catalog/components/PrintOfferView';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
 
@@ -17,6 +17,7 @@ export const revalidate = 60;
  * пошук, це найдешевша з можливих помилок і найдорожча за наслідками.
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const site = await getSettings();
   const offer = await serverFetchOrNull(`/catalog/prints/${params.slug}`, PrintOfferDto);
   if (!offer) return { title: 'Принт не знайдено' };
 

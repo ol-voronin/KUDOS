@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Onest, Unbounded } from 'next/font/google';
 import '../styles/globals.css';
 import { Providers } from './providers';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 /**
  * Абсолютна адреса сайту. Без неї Next лишає canonical відносним
@@ -20,20 +20,24 @@ const unbounded = Unbounded({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(BASE),
-  // Простий рядок, а не `{ default, template }`: кожна сторінка вже додає
-  // назву бренду сама, і шаблон приклеював другу — вийшло
-  // «Футболки з принтом Коргі — Kudos print — Doggie Tale».
-  title: `${site.brand} — одяг з принтом вашої собаки`,
-  description: 'Одяг для тих, у кого є собака.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSettings();
+  return {
+    metadataBase: new URL(BASE),
+    // Простий рядок, а не `{ default, template }`: кожна сторінка вже додає
+    // назву бренду сама, і шаблон приклеював другу — вийшло
+    // «Футболки з принтом Коргі — Kudos print — Doggie Tale».
+    title: `${site.brand} — одяг з принтом вашої собаки`,
+    description: 'Одяг для тих, у кого є собака.',
+  };
+}
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const settings = await getSettings();
   return (
     <html lang="uk" className={`${onest.variable} ${unbounded.variable}`}>
       <body>
-        <Providers>{children}</Providers>
+        <Providers settings={settings}>{children}</Providers>
       </body>
     </html>
   );

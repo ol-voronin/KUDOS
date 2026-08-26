@@ -10,7 +10,7 @@ import { CollectionStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
 
@@ -35,6 +35,7 @@ export const revalidate = 300;
 export const dynamicParams = true;
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const site = await getSettings();
   const data = await serverFetchOrNull(`/catalog/breeds/${params.slug}`, BreedPageDto);
   if (!data) return { title: 'Породу не знайдено' };
 
@@ -81,6 +82,7 @@ export default async function BreedPage({ params }: Params) {
   // Матеріали про цю породу. Це і є та причина, заради якої блог тут
   // існує: стаття «Як доглядати вовну коргі» має стояти там, куди людина
   // приходить із пошуку по коргі, а не губитися в стрічці за датою.
+  const site = await getSettings();
   const articles = (await serverFetchOrNull(
     `/content/pages?kind=ARTICLE&breed=${params.slug}&limit=3`,
     PageListDto,

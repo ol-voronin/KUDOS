@@ -645,6 +645,8 @@ model Site {
   members   SiteMember[]
   pageBreeds     PageBreed[]
   pageCollections PageCollection[]
+  settings   SiteSettings?
+  menu       MenuItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -760,6 +762,80 @@ model PageVersion {
   @@unique([pageId, number])
   @@index([pageId, status])
   @@index([siteId])
+}
+
+enum MenuArea {
+  HEADER
+  FOOTER
+}
+
+/// Реквізити, контакти й дрібні числа сайту.
+///
+/// Досі це був файл `config/site.ts` у вебі. Для одного сайту так і треба
+/// було; для установки, у якій сайтів багато, константа в коді означає, що
+/// другий клієнт неможливий без деплою.
+///
+/// Ці ж значення підставляються в тексти через `{{brand}}`, `{{email}}`,
+/// `{{cityIn}}` — і саме тому вони мусять жити в одному місці. Реквізити
+/// ФОП в офері та в футері, набрані руками двічі, розходяться не одразу, а
+/// тоді, коли зміниться телефон і хтось згадає про футер, але не про
+/// пункт 1.2 договору.
+model SiteSettings {
+  siteId String @id @db.Uuid
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  brand String
+
+  /// Сторона договору в офері. Без цього оферта юридично порожня.
+  legalEntityName  String @default("")
+  legalEntityShort String @default("")
+  /// РНОКПП, 10 цифр. ЄДРПОУ юросіб сюди не пишеться.
+  taxNumber        String @default("")
+
+  phone        String @default("")
+  /// Той самий номер у людському вигляді: «+380 50 864 63 55».
+  phoneDisplay String @default("")
+  telegram     String @default("")
+  telegramUrl  String @default("")
+  /// Пошта для звернень щодо персональних даних. Telegram тут не рахується:
+  /// політика зобовʼязана дати канал, на який можна написати офіційно.
+  email        String @default("")
+
+  city         String @default("")
+  /// Місцевий відмінок із прийменником: «шиємо у Харкові».
+  cityIn       String @default("")
+  workingHours String @default("")
+
+  /// Безкоштовна доставка від цієї суми, у копійках.
+  freeShippingFromMinor Int @default(0)
+  /// Скільки днів на повернення виробу з каталогу.
+  returnDays            Int @default(14)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Пункт меню — у шапці або в футері.
+///
+/// Таблиця, а не масив у налаштуваннях: пункти переставляють, вимикають на
+/// час і додають частіше, ніж змінюють телефон. Порядок як число — щоб
+/// «підняти вище» не означало переписати весь список.
+model MenuItem {
+  id     String   @id @default(uuid()) @db.Uuid
+  siteId String   @db.Uuid
+  site   Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  area   MenuArea
+
+  /// Колонка футера: «Каталог», «Компанія». У шапці порожній рядок.
+  group    String  @default("")
+  label    String
+  href     String
+  position Int     @default(0)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId, area, position])
 }
 
 /// Матеріал ↔ порода.

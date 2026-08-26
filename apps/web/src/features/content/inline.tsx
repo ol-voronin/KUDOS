@@ -1,12 +1,16 @@
 import { Fragment, type ReactNode } from 'react';
 import { isSafeHref, type ContentToken } from '@dt/contracts';
-import { site } from '@/config/site';
 
 /**
  * Розбір тексту з мінімальною розміткою.
  *
- * Дозволено рівно два прийоми — `[текст](адреса)` і `**виділення**` — плюс
- * підстановки `{{email}}`. Усе інше лишається звичайним текстом.
+ * Дозволено рівно два прийоми — `[текст](адреса)` і `**виділення**`. Усе
+ * інше лишається звичайним текстом.
+ *
+ * Підстановок `{{email}}` тут більше немає: їх робить API, коли віддає
+ * сторінку. Доти таблиця значень жила тут — і була другою копією реквізитів
+ * поруч із базою, тобто рівно тим механізмом, який рано чи пізно показує
+ * покупцеві старий телефон.
  *
  * Чому не Markdown і не HTML. Поле, у яке можна написати HTML, рано чи пізно
  * приймає `<script>`, і редактор вмісту стає точкою входу в сайт. Поле з
@@ -19,36 +23,6 @@ import { site } from '@/config/site';
  * окремі типи блоків — і це правильний обмін.
  */
 
-/**
- * Значення, які не можна дублювати в тексті.
- *
- * Реквізити ФОП і контакти в офері мусять бути тими самими, що у футері.
- * Якщо їх набирати руками, вони розійдуться — не одразу, а тоді, коли
- * зміниться телефон і хтось згадає про футер, але не про пункт 1.2.
- */
-const TOKENS: Readonly<Record<ContentToken, string>> = {
-  brand: site.brand,
-  email: site.email,
-  phone: site.phoneDisplay ?? site.phone,
-  telegram: site.telegram,
-  telegramUrl: site.telegramUrl,
-  city: site.city,
-  cityIn: site.cityIn,
-  legalEntity: site.legalEntityName,
-  legalEntityShort: site.legalEntityShort,
-  taxNumber: site.taxNumber,
-  returnDays: String(site.returnDays),
-  freeShippingFrom: String(Math.round(site.freeShippingFromMinor / 100)),
-};
-
-/** Невідома підстановка лишається як є — щоб помилку було видно, а не з'їдено. */
-export function substitute(text: string): string {
-  return text.replace(/\{\{(\w+)\}\}/g, (whole, key: string) => {
-    const value = (TOKENS as Readonly<Record<string, string | undefined>>)[key];
-    return value ?? whole;
-  });
-}
-
 const PATTERN = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
 
 function isExternal(href: string): boolean {
@@ -56,7 +30,7 @@ function isExternal(href: string): boolean {
 }
 
 export function Inline({ text }: { text: string }): ReactNode {
-  const source = substitute(text);
+  const source = text;
   const out: ReactNode[] = [];
   let last = 0;
   let key = 0;

@@ -5,15 +5,19 @@ import { PublicShell } from '@/components/public-shell';
 import { PrintGrid } from '@/features/home/print-card';
 import { plural } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: `Усі принти — ${site.brand}`,
-  description: `Каталог принтів із собаками на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`,
-  alternates: { canonical: '/prints' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSettings();
+  return {
+    title: `Усі принти — ${site.brand}`,
+    description: `Каталог принтів із собаками на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`,
+    alternates: { canonical: '/prints' },
+  
+  };
+}
 
 const PER_PAGE = 24;
 

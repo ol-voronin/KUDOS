@@ -11,10 +11,13 @@ const Slug = z.string().min(1).max(160).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'keb
  * маршрут виграє в динамічного мовчки, тож сторінка зі slug `prints`
  * створилася б, опублікувалася б і просто ніколи не відкрилася. Автор
  * шукав би помилку в блоках, а її там немає.
+ *
+ * `home` у списку з іншої причини: ця адреса вже зайнята головною сторінкою,
+ * яка живе в базі під нею й показується за `/`.
  */
 export const RESERVED_SLUGS = [
   'admin', 'api', 'prints', 'collections', 'breeds', 'vyroby', 'search',
-  'order', 'zayavka', 'statti', 'sitemap.xml', 'robots.txt', '_next',
+  'order', 'zayavka', 'statti', 'home', 'sitemap.xml', 'robots.txt', '_next',
 ] as const;
 
 export const AdminVersionSummaryDto = z.object({
@@ -96,6 +99,21 @@ export const AdminPageUpdateDto = z.object({
   position: z.number().int().min(0).max(999).optional(),
 });
 export type AdminPageUpdateDto = z.infer<typeof AdminPageUpdateDto>;
+
+/**
+ * Перегляд чернетки так, як її побачить відвідувач.
+ *
+ * Окремий тип, а не «AdminPageDto, з якого візьмемо draft»: у перегляді
+ * підстановки вже зроблені — там, де в редакторі стоїть `{{phone}}`, тут
+ * справжній номер. Інакше перегляд показував би схоже, а не те саме, і
+ * довіряти йому було б не можна.
+ */
+export const AdminPreviewDto = z.object({
+  isDraft: z.boolean(),
+  title: z.string(),
+  blocks: BlockList,
+});
+export type AdminPreviewDto = z.infer<typeof AdminPreviewDto>;
 
 /**
  * Привʼязки матеріалу до порід і колекцій.

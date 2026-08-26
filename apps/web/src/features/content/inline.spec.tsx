@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Inline, substitute } from './inline';
-import { site } from '@/config/site';
+import { Inline } from './inline';
 
 /**
  * Розбір тексту блоків.
@@ -11,18 +10,6 @@ import { site } from '@/config/site';
  * Редактор вмісту не має бути способом виконати чужий код на сайті.
  */
 const html = (text: string): string => renderToStaticMarkup(<Inline text={text} />);
-
-describe('substitute', () => {
-  it('підставляє відомі значення', () => {
-    expect(substitute('пишіть на {{email}}')).toBe(`пишіть на ${site.email}`);
-  });
-
-  it('лишає невідому підстановку як є', () => {
-    // Мовчки зʼїсти означає показати покупцеві речення з діркою й не дати
-    // жодного сліду, де саме помилка.
-    expect(substitute('{{emial}}')).toBe('{{emial}}');
-  });
-});
 
 describe('Inline', () => {
   it('робить посилання', () => {
@@ -44,9 +31,12 @@ describe('Inline', () => {
     expect(html('це **важливо**')).toContain('<strong');
   });
 
-  it('поєднує підстановку з посиланням', () => {
+  it('підстановку, яку не зробив сервер, не перетворює на посилання', () => {
+    // Підстановки робить API. Якщо сюди все ж доїхав `{{token}}`, це помилка
+    // даних — і краще показати її як текст, ніж зробити з неї адресу.
     const out = html('[пошта]({{telegramUrl}})');
-    expect(out).toContain(`href="${site.telegramUrl}"`);
+    expect(out).not.toContain('href="{{telegramUrl}}"');
+    expect(out).toContain('пошта');
   });
 
   it('не пропускає HTML із тексту', () => {

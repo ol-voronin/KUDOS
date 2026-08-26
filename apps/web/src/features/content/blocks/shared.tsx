@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { BlockLink } from '@dt/contracts';
+import { isSafeHref, type BlockLink } from '@dt/contracts';
 import { Inline } from '../inline';
 
 /** Кнопки блока. Перша — заливкою, решта контуром, якщо не сказано інакше. */
@@ -8,6 +8,17 @@ export function BlockLinks({ links, className = '' }: { links: readonly BlockLin
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       {links.map((l, i) => {
+        // Адреса перевіряється ще раз, уже підставленим значенням: у схемі
+        // могла лежати підстановка `{{telegramUrl}}`, а що саме в неї
+        // підставилося — вирішують налаштування. Небезпечна адреса лишається
+        // написом, а не стає робочою кнопкою.
+        if (!isSafeHref(l.href)) {
+          return (
+            <span key={`${l.href}-${i}`} className="flex min-h-12 items-center px-6 text-sm text-ink-subtle">
+              {l.label}
+            </span>
+          );
+        }
         const secondary = l.secondary || i > 0;
         const cls = secondary
           ? 'border-2 border-ink text-ink hover:bg-ink hover:text-surface'

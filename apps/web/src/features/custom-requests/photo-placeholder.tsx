@@ -1,4 +1,4 @@
-import { site } from '@/config/site';
+import { useSiteSettings } from '@/app/providers';
 
 /**
  * Заглушка замість завантаження фото.
@@ -12,6 +12,7 @@ import { site } from '@/config/site';
  * зрозуміти, що це так задумано, і що від неї нічого не загубилось.
  */
 export function PhotoPlaceholder() {
+  const site = useSiteSettings();
   return (
     <div className="rounded-card border border-dashed border-line-strong bg-surface-sunken p-5">
       <div className="flex items-start gap-3">

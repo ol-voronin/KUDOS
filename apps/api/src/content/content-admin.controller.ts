@@ -5,7 +5,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import {
   AdminDraftSaveDto, AdminPageCreateDto, AdminPageTermsDto, AdminPageUpdateDto,
-  type AdminPageDto, type AdminPageListDto,
+  type AdminPageDto, type AdminPageListDto, type AdminPreviewDto,
 } from '@dt/contracts';
 import { JwtAuthGuard, type AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -66,6 +66,11 @@ export class ContentAdminController {
     @Req() req: AuthenticatedRequest,
   ): Promise<AdminPageDto> {
     return this.content.saveDraft(id, dto, req.admin.sub);
+  }
+
+  @Get(':id/preview')
+  preview(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminPreviewDto> {
+    return this.content.preview(id);
   }
 
   @Post(':id/publish')

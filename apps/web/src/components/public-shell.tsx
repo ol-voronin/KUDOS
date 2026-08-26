@@ -1,26 +1,34 @@
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import { site } from '@/config/site';
+import type { MenuItemDto } from '@dt/contracts';
 import { SearchForm } from '@/features/search/search-form';
+import { getChrome } from '@/lib/site-settings';
 
 /**
- * Меню — тільки те, що працює.
+ * Меню — з бази, а не з масиву в цьому файлі.
  *
- * Раніше тут висіли «Вироби» і «Подарунок» як неклікабельні написи: ідея
- * була показати майбутню структуру. На практиці людина бачить пункт меню й
- * тисне на нього, а він мертвий — це читається як зламаний сайт, а не як
- * «скоро буде».
+ * Правило, яке лишилося з часів масиву, нікуди не поділося: у меню тільки
+ * те, що працює. Мертвий пункт читається як зламаний сайт, а не як «скоро
+ * буде» — тому вимкнені пункти сюди не приїжджають узагалі, їх відсіює API.
+ *
+ * Групування футера — за полем `group`: колонка називається так, як її
+ * назвали в адмінці, а не так, як тут колись написали руками.
  */
-const NAV = [
-  { href: '/prints', label: 'Каталог' },
-  { href: '/vyroby', label: 'Вироби' },
-  { href: '/collections', label: 'Колекції' },
-  { href: '/svoya-ideya', label: 'Свій принт' },
-  { href: '/statti', label: 'Статті' },
-  { href: '/spivpratsia', label: 'Співпраця' },
-];
+function groupFooter(menu: readonly MenuItemDto[]): Array<[string, MenuItemDto[]]> {
+  const groups = new Map<string, MenuItemDto[]>();
+  for (const item of menu) {
+    if (item.area !== 'FOOTER') continue;
+    const list = groups.get(item.group) ?? [];
+    list.push(item);
+    groups.set(item.group, list);
+  }
+  return [...groups.entries()];
+}
 
-export function PublicHeader() {
+export async function PublicHeader() {
+  const { settings: site, menu } = await getChrome();
+  const nav = menu.filter((m) => m.area === 'HEADER');
+
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3.5">
@@ -29,9 +37,9 @@ export function PublicHeader() {
         </Link>
 
         <nav aria-label="Основна навігація" className="hidden items-center gap-6 md:flex">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
               className="text-sm font-medium text-ink transition hover:text-accent"
             >
@@ -73,7 +81,10 @@ export function PublicHeader() {
   );
 }
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  const { settings: site, menu } = await getChrome();
+  const columns = groupFooter(menu);
+
   return (
     <footer className="border-t border-line bg-surface-sunken">
       <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -84,22 +95,16 @@ export function PublicFooter() {
           </p>
         </div>
 
-        <nav aria-label="Каталог" className="flex flex-col gap-2">
-          <p className="font-medium text-ink">Каталог</p>
-          <Link href="/prints" className="text-ink-muted transition hover:text-accent">Усі принти</Link>
-          <Link href="/collections" className="text-ink-muted transition hover:text-accent">Колекції</Link>
-          <Link href="/vyroby" className="text-ink-muted transition hover:text-accent">Вироби, тканини, розміри</Link>
-          <Link href="/svoya-ideya" className="text-ink-muted transition hover:text-accent">Свій принт із фото</Link>
-        </nav>
-
-        <nav aria-label="Компанія" className="flex flex-col gap-2">
-          <p className="font-medium text-ink">Компанія</p>
-          <Link href="/statti" className="text-ink-muted transition hover:text-accent">Статті</Link>
-          <Link href="/spivpratsia" className="text-ink-muted transition hover:text-accent">Співпраця та опт</Link>
-          <Link href="/zayavka" className="text-ink-muted transition hover:text-accent">Залишити заявку</Link>
-          <Link href="/oferta" className="text-ink-muted transition hover:text-accent">Публічна оферта</Link>
-          <Link href="/pryvatnist" className="text-ink-muted transition hover:text-accent">Конфіденційність</Link>
-        </nav>
+        {columns.map(([title, items]) => (
+          <nav key={title} aria-label={title} className="flex flex-col gap-2">
+            <p className="font-medium text-ink">{title}</p>
+            {items.map((item) => (
+              <Link key={item.id} href={item.href} className="text-ink-muted transition hover:text-accent">
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ))}
 
         <div className="flex flex-col gap-2">
           <p className="font-medium text-ink">Звʼязок</p>

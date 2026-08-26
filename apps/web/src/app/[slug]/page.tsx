@@ -4,10 +4,9 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import { PageDto, RedirectDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { BlockRenderer } from '@/features/content/block-renderer';
-import { substitute } from '@/features/content/inline';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { faqJsonLd, JsonLd } from '@/lib/json-ld';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
 
@@ -26,17 +25,16 @@ async function load(slug: string): Promise<PageDto | null> {
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const site = await getSettings();
   const page = await load(params.slug);
   if (!page) return { title: 'Сторінку не знайдено' };
 
   // Порожнє SEO-поле означає «взяти зі сторінки». Змушувати редактора
   // дублювати заголовок у два поля — вірний спосіб отримати їх різними.
   const title = page.seo.title.trim() !== ''
-    ? substitute(page.seo.title)
+    ? page.seo.title
     : `${page.title} — ${site.brand}`;
-  const description = substitute(
-    page.seo.description.trim() !== '' ? page.seo.description : page.excerpt,
-  );
+  const description = page.seo.description.trim() !== '' ? page.seo.description : page.excerpt;
 
   return {
     title,
@@ -63,6 +61,11 @@ export default async function ContentPage({ params }: Params) {
     notFound();
   }
 
+  // Головна живе за адресою `/`, а в базі — під slug `home`. Без цього
+  // редіректу той самий документ відкривався б за двома адресами, і пошук
+  // сам обрав би, яку вважати головною.
+  if (page.slug === 'home') permanentRedirect('/');
+
   // Матеріали живуть під /statti. Показувати їх ще й тут означало б дві
   // адреси з тим самим текстом: пошук вибрав би одну сам, і не обовʼязково
   // ту, на яку ведуть посилання з сайту.
@@ -75,7 +78,7 @@ export default async function ContentPage({ params }: Params) {
   return (
     <PublicShell>
       {faq.length > 0 && (
-        <JsonLd data={faqJsonLd(faq.map((i) => ({ q: i.q, a: substitute(i.a) })))} />
+        <JsonLd data={faqJsonLd(faq)} />
       )}
       <nav aria-label="Хлібні крихти" className="mx-auto max-w-6xl px-6 pt-8 text-sm text-ink-muted">
         <Link href="/" className="hover:underline">Головна</Link>

@@ -2,7 +2,7 @@ import type {
   ArticleListBlock, BreedStripBlock, CollectionStripBlock, LeadFormBlock, PrintGridBlock,
 } from '@dt/contracts';
 import {
-  BreedListDto, BreedPageDto, CollectionListDto, CollectionPageDto, PageListDto, PrintListDto,
+  BreedListDto, BreedPageDto, CollectionListDto, CollectionPageDto, HomeDto, PageListDto, PrintListDto,
   type PrintCardDto,
 } from '@dt/contracts';
 import { ArticleGrid } from '@/features/articles/article-card';
@@ -28,6 +28,12 @@ import { InlineParagraph } from '../inline';
  */
 
 async function loadPrints(block: PrintGridBlock): Promise<readonly PrintCardDto[]> {
+  // «Готові до відправки» — не фільтр каталогу, а зріз, який уже рахує API
+  // для головної: принти на виробах, що фізично є на складі.
+  if (block.source === 'ready') {
+    const data = await serverFetchOrNull('/catalog/home', HomeDto);
+    return data?.readyToShip ?? [];
+  }
   if (block.source === 'collection' && block.sourceSlug !== '') {
     const data = await serverFetchOrNull(`/catalog/collections/${block.sourceSlug}`, CollectionPageDto);
     return data?.prints ?? [];

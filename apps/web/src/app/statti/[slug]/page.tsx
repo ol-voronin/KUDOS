@@ -6,10 +6,9 @@ import { PageDto, PageListDto, RedirectDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { ArticleGrid, articleDate } from '@/features/articles/article-card';
 import { BlockRenderer } from '@/features/content/block-renderer';
-import { substitute } from '@/features/content/inline';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { articleJsonLd, breadcrumbJsonLd, faqJsonLd, JsonLd } from '@/lib/json-ld';
-import { site } from '@/config/site';
+import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
 
@@ -29,15 +28,14 @@ export async function generateStaticParams() {
 export const dynamicParams = true;
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const site = await getSettings();
   const page = await load(params.slug);
   if (!page || page.kind !== 'ARTICLE') return { title: 'Матеріал не знайдено' };
 
   const title = page.seo.title.trim() !== ''
-    ? substitute(page.seo.title)
+    ? page.seo.title
     : `${page.title} — ${site.brand}`;
-  const description = substitute(
-    page.seo.description.trim() !== '' ? page.seo.description : page.excerpt,
-  );
+  const description = page.seo.description.trim() !== '' ? page.seo.description : page.excerpt;
 
   return {
     title,
@@ -84,26 +82,29 @@ export default async function ArticlePage({ params }: Params) {
   const relatedQuery = page.breeds[0]
     ? `/content/pages?kind=ARTICLE&breed=${page.breeds[0].slug}&limit=4`
     : '/content/pages?kind=ARTICLE&limit=4';
-  const related = await serverFetchOrNull(relatedQuery, PageListDto, 300);
+  const [related, settings] = await Promise.all([
+    serverFetchOrNull(relatedQuery, PageListDto, 300),
+    getSettings(),
+  ]);
   const siblings = (related?.items ?? []).filter((a) => a.slug !== page.slug).slice(0, 3);
 
   return (
     <PublicShell>
       <JsonLd data={articleJsonLd({
         title: page.title,
-        description: substitute(page.excerpt),
+        description: page.excerpt,
         url: `${BASE}/statti/${page.slug}`,
         coverUrl: page.coverUrl,
         publishedAt: page.publishedAt,
         updatedAt: page.updatedAt,
-      }, BASE)} />
+      }, BASE, settings)} />
       <JsonLd data={breadcrumbJsonLd([
         { name: 'Головна', url: `${BASE}/` },
         { name: 'Статті', url: `${BASE}/statti` },
         { name: page.title, url: `${BASE}/statti/${page.slug}` },
       ])} />
       {faq.length > 0 && (
-        <JsonLd data={faqJsonLd(faq.map((i) => ({ q: i.q, a: substitute(i.a) })))} />
+        <JsonLd data={faqJsonLd(faq)} />
       )}
 
       <article className="mx-auto max-w-3xl px-6 py-10">
