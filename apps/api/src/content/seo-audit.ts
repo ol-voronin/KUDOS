@@ -100,7 +100,11 @@ function imagesOf(blocks: BlockList): Array<{ url: string; alt: string }> {
     if (Array.isArray(value)) { for (const v of value) walk(v); return; }
     if (value !== null && typeof value === 'object') {
       const row = value as Record<string, unknown>;
-      if (typeof row['url'] === 'string' && 'alt' in row) {
+      // Порожня адреса — це не картинка без опису, а відсутня картинка.
+      // Фон героя необовʼязковий: коли його не поставили, поле лишається
+      // порожнім рядком, і рахувати це за дефект означало б вішати
+      // попередження «картинка без опису» на кожну сторінку без фото.
+      if (typeof row['url'] === 'string' && row['url'].trim() !== '' && 'alt' in row) {
         out.push({ url: row['url'], alt: String(row['alt'] ?? '') });
       }
       for (const v of Object.values(row)) walk(v);

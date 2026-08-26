@@ -112,6 +112,22 @@ export const BlockImage = z.object({
 });
 export type BlockImage = z.infer<typeof BlockImage>;
 
+/**
+ * Те саме, але картинки може не бути.
+ *
+ * Порожня адреса тут — не «недозаповнене поле», а осмислений стан: у героя
+ * вона перемикає режим із набірного на повноекранний. `BlockImage` для цього
+ * не годиться — там `url` обовʼязково непорожній, і саме на цьому впали
+ * сіди, коли герой отримав фон: схема відкидала блок цілком через
+ * порожній рядок, якого ми й хотіли.
+ */
+export const OptionalBlockImage = z.object({
+  url: z.string().max(1000).default(''),
+  alt: ShortText.default(''),
+  caption: ShortText.default(''),
+});
+export type OptionalBlockImage = z.infer<typeof OptionalBlockImage>;
+
 /** Спільне для всіх блоків. `id` потрібен для порядку й для ключів у React. */
 const base = { id: z.string().min(1).max(64), tone: BlockTone.default('plain') };
 
@@ -140,7 +156,7 @@ export const HeroBlock = z.object({
   footnote: ShortText.default(''),
   links: z.array(BlockLink).max(3).default([]),
   /** Фон на весь екран. Порожня адреса — набірний варіант без фото. */
-  image: BlockImage.default({ url: '', alt: '', caption: '' }),
+  image: OptionalBlockImage.default({ url: '', alt: '', caption: '' }),
 });
 
 export const TextBlock = z.object({
@@ -329,6 +345,17 @@ const CORE_BLOCKS = [
 const SHOP_BLOCKS = [PrintGridBlock, BreedStripBlock, CollectionStripBlock] as const;
 
 export const AnyBlock = z.discriminatedUnion('type', [...CORE_BLOCKS, ...SHOP_BLOCKS]);
+
+/**
+ * Блок **до** розбору схемою: поля з `.default()` тут необовʼязкові.
+ *
+ * Саме цей тип потрібен джерелам даних — сідам, фікстурам, імпортам. Вони
+ * пишуться руками й проходять через `BlockList.parse()`, який і підставляє
+ * значення за замовчуванням. Якщо типізувати їх вихідним типом, кожне нове
+ * поле з `.default()` ламає компіляцію в усіх сідах одночасно — хоча саме
+ * від цього `.default()` мав захистити.
+ */
+export type AnyBlockInput = z.input<typeof AnyBlock>;
 export type AnyBlock = z.infer<typeof AnyBlock>;
 
 export type BlockType = AnyBlock['type'];

@@ -6,6 +6,7 @@ function hero(heading = 'Заголовок'): BlockList[number] {
   return {
     type: 'hero', id: 'h', tone: 'plain',
     eyebrow: '', heading, lead: '', footnote: '', links: [],
+    image: { url: '', alt: '', caption: '' },
   } as BlockList[number];
 }
 

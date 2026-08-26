@@ -117,7 +117,10 @@ describe('перенесені сторінки', () => {
     expect(ids).toContain('породи');
     expect(ids).toContain('новинки');
 
-    const hrefs = HOME_PAGE.blocks.flatMap((b) => ('links' in b ? b.links.map((l) => l.href) : []));
+    // `links` у типі сіду необовʼязкове (значення підставляє схема при
+    // розборі), тож перевіряємо наявність, а не лише ключ.
+    const hrefs = HOME_PAGE.blocks.flatMap((b) =>
+      'links' in b && b.links !== undefined ? b.links.map((l) => l.href) : []);
     for (const href of hrefs.filter((h) => h.startsWith('#'))) {
       expect(ids, href).toContain(href.slice(1));
     }

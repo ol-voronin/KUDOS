@@ -1,4 +1,4 @@
-import type { AnyBlock } from '@dt/contracts';
+import type { AnyBlockInput } from '@dt/contracts';
 
 /**
  * Дві маркетингові сторінки, перенесені з верстки.
@@ -17,7 +17,7 @@ export interface PageSeed {
   excerpt: string;
   seoTitle: string;
   seoDescription: string;
-  blocks: AnyBlock[];
+  blocks: AnyBlockInput[];
 }
 
 export const COOPERATION: PageSeed = {
