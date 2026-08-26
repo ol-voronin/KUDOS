@@ -9,7 +9,9 @@ import { Inline } from '../inline';
  * `components/ui/button`. Цей файл вирішує лише те, що вирішувати саме йому —
  * яка з кнопок блока головна і чи взагалі можна довіряти адресі.
  */
-export function BlockLinks({ links, className = '' }: { links: readonly BlockLink[]; className?: string }) {
+export function BlockLinks({
+  links, className = '', onDark = false,
+}: { links: readonly BlockLink[]; className?: string; onDark?: boolean }) {
   if (links.length === 0) return null;
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
@@ -24,13 +26,14 @@ export function BlockLinks({ links, className = '' }: { links: readonly BlockLin
           );
         }
         const secondary = l.secondary || i > 0;
+        // На фотографії чорна кнопка тоне в затемненні, а обведена чорним
+        // не читається зовсім. Тому там своя пара: біла заливка і біле
+        // обведення.
+        const variant = onDark
+          ? (secondary ? 'onDarkOutline' : 'onDark')
+          : (secondary ? 'outline' : 'primary');
         return (
-          <ButtonLink
-            key={`${l.href}-${i}`}
-            href={l.href}
-            variant={secondary ? 'outline' : 'primary'}
-            size="lg"
-          >
+          <ButtonLink key={`${l.href}-${i}`} href={l.href} variant={variant} size="lg">
             {l.label}
           </ButtonLink>
         );

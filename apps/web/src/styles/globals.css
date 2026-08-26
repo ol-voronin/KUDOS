@@ -3,7 +3,18 @@
 @tailwind utilities;
 
 @layer base {
-  html { font-family: theme('fontFamily.sans'); }
+  html {
+    font-family: theme('fontFamily.sans');
+    /*
+     * Плавна прокрутка для якорів у меню («#породи», «#заявка») — і одразу
+     * відступ, щоб липка шапка не з'їдала заголовок, до якого приїхали.
+     */
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
   body { @apply bg-surface text-ink antialiased; }
 
   /*
@@ -70,5 +81,76 @@
   .skeleton { @apply animate-pulse rounded-card bg-surface-sunken; }
   @media (prefers-reduced-motion: reduce) {
     .skeleton { @apply animate-none; }
+  }
+
+  /* ── рух ──────────────────────────────────────────────────────────
+     Правило одне на весь сайт: рух пояснює, звідки взявся елемент, і
+     ніколи не є прикрасою. Тому всі тривалості короткі (200–600 мс), усі
+     зсуви маленькі (до 16 px), і все до одного вимикається під
+     `prefers-reduced-motion` — для людини з вестибулярними розладами
+     «жвавий» інтерфейс означає нудоту, а не задоволення.            */
+
+  /* Посилання: підкреслення виїжджає з лівого краю, а не блимає. */
+  .link-sweep {
+    @apply relative transition-colors duration-200 hover:text-ink;
+  }
+  .link-sweep::after {
+    content: '';
+    @apply absolute -bottom-0.5 left-0 h-px w-full origin-right scale-x-0 bg-current transition-transform duration-300 ease-out;
+  }
+  .link-sweep:hover::after { @apply origin-left scale-x-100; }
+
+  /* Пункт меню в шапці: той самий прийом, але дрібнішим набором. */
+  .nav-link {
+    @apply relative text-sm text-ink transition-opacity duration-200 hover:opacity-60;
+  }
+
+  /* Поява при прокрутці. Клас `is-in` вішає спостерігач у `Reveal`. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity .55s cubic-bezier(.22,.61,.36,1), transform .55s cubic-bezier(.22,.61,.36,1);
+  }
+  .reveal.is-in { opacity: 1; transform: none; }
+  /* Сходинки затримки: заголовок, текст, кнопки — саме в такому порядку. */
+  .reveal-1 { transition-delay: .07s; }
+  .reveal-2 { transition-delay: .14s; }
+  .reveal-3 { transition-delay: .21s; }
+
+  .scroll-hint { animation: hint 2.4s ease-in-out infinite; }
+  @keyframes hint {
+    0%, 100% { transform: translate(-50%, 0); opacity: .7; }
+    50%      { transform: translate(-50%, 6px); opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .link-sweep::after { transition: none; }
+    .scroll-hint { animation: none; }
+  }
+
+  /* ── курсор ───────────────────────────────────────────────────────
+     Крапка з кільцем замість стрілки — і тільки там, де в цьому є сенс:
+     миша (`pointer: fine`), достатньо широкий екран, рух не вимкнено.
+     На тачскріні курсора немає взагалі, і підміняти його — гарантований
+     спосіб зламати сторінку на телефоні.                              */
+  @media (pointer: fine) and (min-width: 64rem) and (prefers-reduced-motion: no-preference) {
+    html.has-cursor, html.has-cursor * { cursor: none; }
+    .cursor-dot, .cursor-ring {
+      @apply pointer-events-none fixed left-0 top-0 z-[100] rounded-pill;
+      will-change: transform;
+    }
+    .cursor-dot { @apply h-1.5 w-1.5 bg-ink; }
+    .cursor-ring {
+      @apply h-9 w-9 border border-ink/35;
+      transition: width .2s ease, height .2s ease, background-color .2s ease, border-color .2s ease;
+    }
+    .cursor-ring.is-hot {
+      @apply h-14 w-14 border-ink/0 bg-ink/10;
+    }
+    /* Поверх фотографії курсор має бути світлим, інакше він зникає. */
+    .cursor-dot.on-dark { @apply bg-white; }
+    .cursor-ring.on-dark { @apply border-white/50; }
+    .cursor-ring.on-dark.is-hot { @apply border-white/0 bg-white/20; }
   }
 }

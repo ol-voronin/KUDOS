@@ -18,13 +18,20 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
   return (
     <Link
       href={`/prints/${print.slug}`}
-      className="group flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+      className="group reveal flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
     >
+      {/*
+        Фото ледь наближається під курсором. Рух живе на обгортці з
+        `overflow-hidden`, а не на самій картці: інакше зростала б уся
+        плитка й сусідні колонки смикалися б разом із нею.
+      */}
       <div className="relative overflow-hidden bg-surface-sunken">
-        <PrintThumb src={print.previewUrl} alt={print.title} />
+        <div className="transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none">
+          <PrintThumb src={print.previewUrl} alt={print.title} />
+        </div>
       </div>
 
-      <p className="mt-3 border-t border-ink pt-2 text-sm font-medium text-ink group-hover:underline">
+      <p className="mt-3 border-t border-ink pt-2 text-sm font-medium text-ink transition-opacity duration-200 group-hover:opacity-60">
         {print.title}
       </p>
 
@@ -90,7 +97,7 @@ export function SectionHead({
   href?: string; hrefLabel?: string;
 }) {
   return (
-    <div className="mb-6">
+    <div className="reveal mb-6">
       {eyebrow !== undefined && <p className="label-eyebrow mb-1">{eyebrow}</p>}
       <h2 className="text-section font-display font-bold uppercase text-ink">
         {title}

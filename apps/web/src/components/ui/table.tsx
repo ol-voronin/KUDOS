@@ -41,7 +41,13 @@ export function Th({ className = '', children, ...rest }: ThHTMLAttributes<HTMLT
 }
 
 export function Tr({ children }: { children: ReactNode }) {
-  return <tr className="border-b border-line align-middle">{children}</tr>;
+  return (
+    // Підсвітка рядка під курсором — не прикраса: у таблиці на шість
+    // колонок погляд губить, до якого рядка належить клітинка праворуч.
+    <tr className="border-b border-line align-middle transition-colors duration-150 hover:bg-surface-sunken">
+      {children}
+    </tr>
+  );
 }
 
 export function Td({ className = '', children, ...rest }: TdHTMLAttributes<HTMLTableCellElement>) {

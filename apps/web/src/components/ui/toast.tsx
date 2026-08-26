@@ -49,6 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={t.id}
             className={[
               'pointer-events-auto rounded-pill px-4 py-2 text-sm font-medium shadow-sm',
+              'animate-[toast-in_.3s_cubic-bezier(.22,.61,.36,1)] motion-reduce:animate-none',
               t.tone === 'ok' ? 'bg-ink text-surface' : 'bg-danger text-white',
             ].join(' ')}
           >

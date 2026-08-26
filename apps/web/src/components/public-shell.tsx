@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
 import type { MenuItemDto } from '@dt/contracts';
-import { SearchForm } from '@/features/search/search-form';
+import { HeaderBar } from '@/features/chrome/header-bar';
 import { getChrome } from '@/lib/site-settings';
-import { ButtonLink } from '@/components/ui';
 
 /**
  * Меню — з бази, а не з масиву в цьому файлі.
@@ -26,71 +25,18 @@ function groupFooter(menu: readonly MenuItemDto[]): Array<[string, MenuItemDto[]
   return [...groups.entries()];
 }
 
-/**
- * Шапка.
- *
- * Волосінь замість рамки, нуль заливок, назва по центру — так виглядають
- * обидва референси, і причина в них одна: шапка не товар. Єдина пляма
- * кольору тут — чорна пігулка «Каталог», яка веде туди, куди приходять за
- * покупкою; решта посилань лишаються текстом.
- */
 export async function PublicHeader() {
   const { settings: site, menu } = await getChrome();
   const nav = menu.filter((m) => m.area === 'HEADER');
-
   return (
-    <header className="sticky top-0 z-30 border-b border-ink bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-2.5 sm:px-6">
-        <ButtonLink href="/prints" size="sm" className="uppercase tracking-label">
-          Каталог
-        </ButtonLink>
-
-        <Link
-          href="/"
-          className="font-display text-base font-bold uppercase tracking-wide text-ink sm:text-lg"
-        >
-          {site.brand}
-        </Link>
-
-        <nav aria-label="Основна навігація" className="ml-auto hidden items-center gap-6 md:flex">
-          {nav.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className="text-sm text-ink transition hover:text-ink-muted"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-3 md:ml-0">
-          <div className="hidden lg:block">
-            {/* useSearchParams вимагає Suspense у серверному дереві. */}
-            <Suspense fallback={null}><SearchForm /></Suspense>
-          </div>
-          {/*
-            Було просто «Telegram» і «Заявка» — назви каналу й внутрішнього
-            терміна. Людина не зобовʼязана здогадуватись, що станеться після
-            натискання. Тепер у кнопці написано дію.
-          */}
-          <a
-            href={site.telegramUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="hidden text-sm text-ink transition hover:text-ink-muted sm:block"
-          >
-            Telegram
-          </a>
-          <Link href="/zayavka" className="text-sm font-semibold text-ink hover:text-ink-muted">
-            Свій принт
-          </Link>
-        </div>
-      </div>
-      <div className="border-t border-line px-4 py-2 sm:px-6 lg:hidden">
-        <Suspense fallback={null}><SearchForm compact /></Suspense>
-      </div>
-    </header>
+    <Suspense fallback={<div className="h-[4.4rem] border-b border-line" />}>
+      <HeaderBar
+        brand={site.brand}
+        nav={nav.map((m) => ({ id: m.id, href: m.href, label: m.label }))}
+        phone={site.phone}
+        phoneDisplay={site.phoneDisplay}
+      />
+    </Suspense>
   );
 }
 
@@ -112,7 +58,7 @@ export async function PublicFooter() {
           <nav key={title} aria-label={title} className="flex flex-col gap-2">
             <p className="label-eyebrow">{title}</p>
             {items.map((item) => (
-              <Link key={item.id} href={item.href} className="text-ink-muted transition hover:text-ink">
+              <Link key={item.id} href={item.href} className="link-sweep w-fit text-ink-muted">
                 {item.label}
               </Link>
             ))}
@@ -122,7 +68,7 @@ export async function PublicFooter() {
         <div className="flex flex-col gap-2">
           <p className="label-eyebrow">Звʼязок</p>
           {site.phoneDisplay && (
-            <a href={`tel:${site.phone}`} className="text-ink-muted transition hover:text-ink">
+            <a href={`tel:${site.phone}`} className="link-sweep w-fit text-ink-muted">
               {site.phoneDisplay}
             </a>
           )}
@@ -130,12 +76,12 @@ export async function PublicFooter() {
             href={site.telegramUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-ink-muted transition hover:text-ink"
+            className="link-sweep w-fit text-ink-muted"
           >
             Telegram: @{site.telegram}
           </a>
           {site.email && (
-            <a href={`mailto:${site.email}`} className="text-ink-muted transition hover:text-ink">
+            <a href={`mailto:${site.email}`} className="link-sweep w-fit text-ink-muted">
               {site.email}
             </a>
           )}
@@ -149,7 +95,7 @@ export async function PublicFooter() {
       */}
       <p
         aria-hidden
-        className="mx-auto max-w-7xl select-none overflow-hidden px-4 font-display text-[clamp(2.5rem,13vw,9rem)] font-bold uppercase leading-[0.8] tracking-tight text-ghost sm:px-6"
+        className="mx-auto max-w-7xl select-none overflow-hidden px-4 font-display text-[clamp(2rem,11vw,7.5rem)] font-extrabold uppercase leading-[0.9] tracking-tight text-ghost sm:px-6"
       >
         {site.brand}
       </p>
@@ -172,7 +118,20 @@ export async function PublicFooter() {
 export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <>
-      <a href="#main" className="skip-link">До змісту</a>
+      {/*
+        Посилання «до змісту» видно тільки з клавіатури. Раніше воно висіло
+        чорною пігулкою в лівому верхньому куті на кожній сторінці: клас
+        ховав його зсувом, але зсув застосовувався до `position: absolute`
+        всередині потоку — і елемент лишався у видимій частині екрана.
+        `sr-only` прибирає його з малюнка надійно, `focus:not-sr-only`
+        повертає рівно тоді, коли на нього стає фокус.
+      */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-ink focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-surface"
+      >
+        До змісту
+      </a>
       <div className="flex min-h-screen flex-col">
         <PublicHeader />
         <main id="main" className="flex-1">

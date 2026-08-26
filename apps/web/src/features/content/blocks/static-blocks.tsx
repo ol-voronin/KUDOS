@@ -29,7 +29,7 @@ import { BlockHeading, BlockLinks } from './shared';
  */
 const GHOST_MAX_WORDS = 2;
 
-function HeroHeading({ text }: { text: string }) {
+function HeroHeading({ text, onDark = false }: { text: string; onDark?: boolean }) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
   return (
     <>
@@ -39,21 +39,30 @@ function HeroHeading({ text }: { text: string }) {
         // лишається цілим. Пофарбувати половину заголовка в акцент означало б
         // замінити одну надто гучну помилку на іншу.
         const short = part.trim().split(/\s+/).length <= GHOST_MAX_WORDS;
-        return short
-          ? <span key={i} className="ghost-word">{part}</span>
-          : <Fragment key={i}>{part}</Fragment>;
+        if (!short) return <Fragment key={i}>{part}</Fragment>;
+        // На фотографії привида немає зовсім. Напівпрозорий білий на
+        // строкатому знімку не читається як прийом — читається як погано
+        // видно. Прийом лишається там, де під ним рівне тло.
+        return onDark
+          ? <Fragment key={i}>{part}</Fragment>
+          : <span key={i} className="ghost-word">{part}</span>;
       })}
     </>
   );
 }
 
 export function Hero({ block }: { block: HeroBlock }) {
+  return block.image.url === '' ? <HeroPlain block={block} /> : <HeroFull block={block} />;
+}
+
+/** Набірний варіант: сторінка статті, документа, розділу. */
+function HeroPlain({ block }: { block: HeroBlock }) {
   return (
     <>
       {block.eyebrow.trim() !== '' && (
         <p className="label-eyebrow mb-3">{block.eyebrow}</p>
       )}
-      <h1 className="max-w-4xl font-display text-hero font-bold uppercase text-ink">
+      <h1 className="max-w-4xl font-display text-hero font-extrabold uppercase text-ink">
         <HeroHeading text={block.heading} />
       </h1>
       <InlineParagraph text={block.lead} className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted" />
@@ -62,6 +71,66 @@ export function Hero({ block }: { block: HeroBlock }) {
       )}
       <BlockLinks links={block.links} className="mt-8" />
     </>
+  );
+}
+
+/**
+ * Фотографія на весь екран, текст поверх неї.
+ *
+ * Висота — `100svh` мінус шапка. Саме `svh`, а не `vh`: на телефоні `vh`
+ * рахується від висоти екрана без панелі браузера, тож кнопка під
+ * заголовком опиняється рівно під нижньою панеллю й здається обрізаною.
+ *
+ * Затемнення — градієнт, а не рівна плівка: угорі воно тримає білий текст,
+ * унизу — відпускає фотографію. Рівна плівка гасить знімок цілком, і тоді
+ * незрозуміло, навіщо він тут.
+ */
+function HeroFull({ block }: { block: HeroBlock }) {
+  return (
+    <section className="relative -mt-px flex min-h-[calc(100svh-4.4rem)] items-center justify-center overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={block.image.url}
+        alt={block.image.alt}
+        className="absolute inset-0 h-full w-full object-cover object-[50%_28%]"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/25 to-ink/45"
+      />
+      <div className="relative z-10 flex max-w-4xl flex-col items-center px-4 py-20 text-center sm:px-6">
+        {block.eyebrow.trim() !== '' && (
+          <p className="reveal label-eyebrow mb-4 text-white/70">{block.eyebrow}</p>
+        )}
+        {/*
+          На фотографії заголовок навмисно на щабель менший за той, що на
+          світлому: там він єдиний елемент і може бути скільки завгодно
+          великим, а тут конкурує зі знімком і мусить лишити його видимим.
+          `balance` тримає рядки приблизно рівними — довга українська фраза
+          інакше ламається як «чотири слова / одне».
+        */}
+        <h1 className="reveal reveal-1 max-w-3xl text-balance font-display text-[clamp(1.9rem,4.4vw,3.6rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm">
+          <HeroHeading text={block.heading} onDark />
+        </h1>
+        <InlineParagraph
+          text={block.lead}
+          className="reveal reveal-2 mt-5 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg"
+        />
+        {block.footnote.trim() !== '' && (
+          <p className="reveal reveal-2 mt-3 text-sm text-white/60">{block.footnote}</p>
+        )}
+        <div className="reveal reveal-3">
+          <BlockLinks links={block.links} className="mt-9 justify-center" onDark />
+        </div>
+      </div>
+
+      {/* Підказка, що сторінка продовжується. Зникає, щойно людина гортає. */}
+      <span aria-hidden className="scroll-hint absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-white/70">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M12 5v14M6 13l6 6 6-6" />
+        </svg>
+      </span>
+    </section>
   );
 }
 

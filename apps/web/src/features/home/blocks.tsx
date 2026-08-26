@@ -22,8 +22,9 @@ import { PrintThumb } from '@/components/print-thumb';
  * сусідніми секціями.
  */
 const TILE =
-  'flex min-h-[4.5rem] flex-col justify-center rounded-card bg-surface-sunken px-4 py-3 ' +
-  'transition hover:bg-ghost focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
+  'reveal flex min-h-[4.5rem] flex-col justify-center rounded-card bg-surface-sunken px-4 py-3 ' +
+  'transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ghost ' +
+  'motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
 
 export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
   return (
@@ -47,7 +48,7 @@ export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
       {/* Остання плитка — темна: вона єдина веде не в каталог, а в бриф. */}
       <Link
         href="/svoya-ideya"
-        className="flex min-h-[4.5rem] flex-col justify-center rounded-card bg-ink px-4 py-3 transition hover:bg-ink/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        className="reveal flex min-h-[4.5rem] flex-col justify-center rounded-card bg-ink px-4 py-3 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/85 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
       >
         <span className="font-display text-base font-semibold uppercase leading-tight text-surface">
           Немає вашої?
@@ -65,7 +66,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
         <Link
           key={collection.id}
           href={`/collections/${collection.slug}`}
-          className="group flex flex-col rounded-card bg-surface-sunken p-3 transition hover:bg-ghost focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+          className="group reveal flex flex-col rounded-card bg-surface-sunken p-3 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ghost motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           <div className="flex gap-2">
             {(collection.previewUrls.length > 0 ? collection.previewUrls : [null, null, null])

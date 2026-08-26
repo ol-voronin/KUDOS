@@ -9,7 +9,11 @@ import type { ReactNode } from 'react';
 
 /** Панель адмінки: рамка, білий папір, щільні відступи. */
 export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-card border border-line bg-surface p-4 ${className}`}>{children}</section>;
+  return (
+    <section className={`rounded-card border border-line bg-surface p-4 transition-colors duration-200 hover:border-line-strong ${className}`}>
+      {children}
+    </section>
+  );
 }
 
 /**
@@ -61,7 +65,7 @@ export function EmptyState({
   title, hint, action,
 }: { title: string; hint?: string; action?: ReactNode }) {
   return (
-    <div className="rounded-card border border-dashed border-line-strong bg-surface-sunken px-6 py-10 text-center">
+    <div className="animate-[fade-in_.4s_ease-out] rounded-card border border-dashed border-line-strong bg-surface-sunken px-6 py-10 text-center">
       <p className="font-display text-base font-bold text-ink">{title}</p>
       {hint !== undefined && <p className="mx-auto mt-2 max-w-sm text-sm text-ink-muted">{hint}</p>}
       {action !== undefined && <div className="mt-5 flex justify-center">{action}</div>}
@@ -76,7 +80,7 @@ export function EmptyState({
  */
 export function ErrorBanner({ children }: { children: ReactNode }) {
   return (
-    <p role="alert" className="rounded-card border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
+    <p role="alert" className="animate-[fade-in_.25s_ease-out] rounded-card border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
       {children}
     </p>
   );

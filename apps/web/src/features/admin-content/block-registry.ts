@@ -57,9 +57,13 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
       { kind: 'text', name: 'heading', label: 'Заголовок', help: 'Це H1 сторінки — він має бути один.' },
       { kind: 'rich', name: 'lead', label: 'Текст', rows: 4, help: RICH_HELP },
       { kind: 'text', name: 'footnote', label: 'Дрібний рядок під текстом', help: 'Наприклад: «Редакція від 25 серпня 2026 року».' },
+      {
+        kind: 'image', name: 'image', label: 'Фон на весь екран',
+        help: 'Поставте фото — і герой стане на весь екран, із білим текстом поверх. Лишіть порожнім — буде звичайний заголовок на світлому. Для вітрини потрібне саме фото: горизонтальне, людина з собакою, вільне місце по центру під напис.',
+      },
       LINKS(3),
     ],
-    create: (id) => ({ id, type: 'hero', tone: 'cream', eyebrow: '', heading: 'Заголовок сторінки', lead: '', footnote: '', links: [] }),
+    create: (id) => ({ id, type: 'hero', tone: 'cream', eyebrow: '', heading: 'Заголовок сторінки', lead: '', footnote: '', links: [], image: { url: '', alt: '', caption: '' } }),
     summary: (b) => (b.type === 'hero' ? excerptOf(b.heading) : ''),
   },
 

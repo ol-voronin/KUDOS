@@ -72,8 +72,11 @@ export function AdminNav() {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={[
-              'flex items-center justify-between rounded-pill px-3 py-2 text-sm transition',
-              active ? 'bg-ink font-semibold text-surface' : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
+              'flex items-center justify-between rounded-pill px-3 py-2 text-sm',
+              'transition-[background-color,color,transform] duration-200 motion-reduce:transition-none',
+              active
+                ? 'bg-ink font-semibold text-surface'
+                : 'text-ink-muted hover:translate-x-0.5 hover:bg-surface-sunken hover:text-ink',
             ].join(' ')}
           >
             <span>{item.label}</span>

@@ -98,6 +98,9 @@ importers:
       '@fontsource/oswald':
         specifier: '5'
         version: 5.3.0
+      '@fontsource/unbounded':
+        specifier: '5'
+        version: 5.3.0
       '@tanstack/react-query':
         specifier: ^5.59.16
         version: 5.101.4(react@18.3.1)
@@ -499,6 +502,9 @@ packages:
 
   '@fontsource/oswald@5.3.0':
     resolution: {integrity: sha512-16r2aHActe0pH+9FLdk/74/YxXM7HpGak05kAzx3RvSToiJwGvyhv6GvckPz+YuZmvL1nxWbEop2jAXRcXYPRg==}
+
+  '@fontsource/unbounded@5.3.0':
+    resolution: {integrity: sha512-pPD6hsTnjoQRr6pCsqMHbHBfauB4LZygCNQEUJHu+CO2wzDFHqELEFSG7sTwo5Z5Gr4q3OK0fIILOXBJDv6lcw==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -3011,6 +3017,8 @@ snapshots:
   '@fontsource-variable/onest@5.3.0': {}
 
   '@fontsource/oswald@5.3.0': {}
+
+  '@fontsource/unbounded@5.3.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:

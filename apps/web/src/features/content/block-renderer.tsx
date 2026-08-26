@@ -92,13 +92,27 @@ export function BlockRenderer({ blocks }: { blocks: readonly AnyBlock[] }) {
         це в React не вийде: блоки — серверні компоненти, і батько не знає,
         що поверне дитина, доки та не відрендериться.
       */}
-      {groupByTone(blocks).map((group, i) => (
-        <Section key={group[0]?.id ?? i} tone={group[0]?.tone ?? 'plain'} className="block-section">
-          <div className="block-stack flex flex-col gap-12">
-            {group.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
-          </div>
-        </Section>
-      ))}
+      {groupByTone(blocks).map((group, i) => {
+        /*
+         * Герой із фотографією малюється повз секцію.
+         *
+         * Секція дає максимальну ширину й вертикальні відступи — рівно те,
+         * від чого фон на весь екран має бути вільним. Загорнути його
+         * всередину означало б поле з боків і білі смуги згори й знизу:
+         * «на весь екран», якого видно рівно посередині.
+         */
+        const solo = group.length === 1 ? group[0] : undefined;
+        if (solo !== undefined && solo.type === 'hero' && solo.image.url !== '') {
+          return <div key={solo.id} data-cursor="light">{renderBlock(solo)}</div>;
+        }
+        return (
+          <Section key={group[0]?.id ?? i} tone={group[0]?.tone ?? 'plain'} className="block-section">
+            <div className="block-stack flex flex-col gap-12">
+              {group.map((block) => <div key={block.id} className="reveal">{renderBlock(block)}</div>)}
+            </div>
+          </Section>
+        );
+      })}
     </>
   );
 }

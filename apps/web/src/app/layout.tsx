@@ -12,19 +12,26 @@ import type { ReactNode } from 'react';
  *
  * @fontsource ставиться як звичайна залежність із npm: збірка більше не
  * залежить від доступу до fonts.googleapis.com узагалі.
+ *
+ * Сам набір — Unbounded. Це той самий шрифт, що стоїть у durnevshop
+ * (перевірено `getComputedStyle`: заголовок героя там Unbounded 700, лого —
+ * Unbounded 400). Вузький Oswald давав інший характер — ближчий до vidro, —
+ * і саме через нього сторінка «не була схожа».
  */
-import '@fontsource/oswald/cyrillic-400.css';
-import '@fontsource/oswald/cyrillic-500.css';
-import '@fontsource/oswald/cyrillic-600.css';
-import '@fontsource/oswald/cyrillic-700.css';
-import '@fontsource/oswald/latin-400.css';
-import '@fontsource/oswald/latin-500.css';
-import '@fontsource/oswald/latin-600.css';
-import '@fontsource/oswald/latin-700.css';
+import '@fontsource/unbounded/cyrillic-400.css';
+import '@fontsource/unbounded/cyrillic-500.css';
+import '@fontsource/unbounded/cyrillic-700.css';
+import '@fontsource/unbounded/cyrillic-800.css';
+import '@fontsource/unbounded/latin-400.css';
+import '@fontsource/unbounded/latin-500.css';
+import '@fontsource/unbounded/latin-700.css';
+import '@fontsource/unbounded/latin-800.css';
 import '@fontsource-variable/onest';
 import '../styles/globals.css';
 import { Providers } from './providers';
 import { Analytics } from '@/features/analytics/analytics';
+import { Reveal } from '@/features/motion/reveal';
+import { Cursor } from '@/features/motion/cursor';
 import { getSettings } from '@/lib/site-settings';
 import { getTracking } from '@/lib/tracking';
 
@@ -64,6 +71,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <Providers settings={settings}>
           {children}
+          {/*
+            Шар руху. Обидва компоненти нічого не малюють — вони лише
+            навішують спостерігачі, тож стоять після вмісту й не тримають
+            першу відмальовку.
+          */}
+          <Reveal />
+          <Cursor />
           {/* Після вмісту навмисно: статистика ніколи не має затримувати сторінку. */}
           <Analytics config={tracking} />
         </Providers>

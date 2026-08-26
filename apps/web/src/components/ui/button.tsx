@@ -20,7 +20,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'reac
  *   danger   — незворотне. Червоне обведення, заливка тільки під курсором,
  *              щоб випадкове влучання не виглядало як запрошення.
  */
-type Variant = 'primary' | 'accent' | 'outline' | 'quiet' | 'ghost' | 'danger';
+type Variant = 'primary' | 'accent' | 'outline' | 'quiet' | 'ghost' | 'danger' | 'onDark' | 'onDarkOutline';
 type Size = 'lg' | 'md' | 'sm';
 
 const VARIANT: Record<Variant, string> = {
@@ -30,6 +30,9 @@ const VARIANT: Record<Variant, string> = {
   quiet: 'border-line bg-transparent text-ink hover:border-ink',
   ghost: 'border-transparent bg-transparent text-ink-muted hover:text-ink',
   danger: 'border-danger bg-transparent text-danger hover:bg-danger hover:text-surface',
+  /* Пара для тексту поверх фотографії. */
+  onDark: 'border-white bg-white text-ink hover:bg-white/85',
+  onDarkOutline: 'border-white/70 bg-transparent text-white hover:bg-white hover:text-ink',
 };
 
 /**
@@ -53,7 +56,11 @@ const SIZE: Record<Size, string> = {
 function classes(variant: Variant, size: Size, full: boolean, extra?: string): string {
   return [
     'inline-flex items-center justify-center gap-2 rounded-pill border font-semibold',
-    'transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+    // Кнопка ледь піднімається під курсором і сідає назад при натисканні —
+    // рух на 1px, який відчувається, але не помічається.
+    'transition-[background-color,color,border-color,transform] duration-200',
+    'hover:-translate-y-px active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none',
+    'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0',
     VARIANT[variant],
     SIZE[size],
     full ? 'w-full' : '',

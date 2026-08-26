@@ -78,20 +78,31 @@ export default {
        * запасними варіантами й малює засічковим. Запасний стек має сенс лише
        * тоді, коли перший елемент — справжня назва, а не змінна.
        *
-       * Запасні варіанти теж не випадкові: усі вузькі й усі без засічок, щоб
-       * навіть у найгіршому випадку сторінка лишалася гротеском.
+       * Запасні варіанти теж не випадкові: усі без засічок, щоб навіть у
+       * найгіршому випадку сторінка лишалася гротеском, а не газетою.
        */
       fontFamily: {
         sans: ['Onest Variable', 'Onest', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        display: ['Oswald', 'Arial Narrow', 'Helvetica Neue Condensed', 'Liberation Sans Narrow', 'system-ui', 'sans-serif'],
+        display: ['Unbounded', 'Onest Variable', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
       },
       fontSize: {
         /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */
-        'hero': ['clamp(2.5rem, 1.6rem + 4vw, 5rem)', { lineHeight: '0.9', letterSpacing: '-0.02em' }],
+        'hero': ['clamp(2.1rem, 1.1rem + 4.4vw, 6rem)', { lineHeight: '0.95', letterSpacing: '-0.01em' }],
         /** Заголовок секції — той самий набір, на щабель менший. */
-        'section': ['clamp(1.75rem, 1.2rem + 2.4vw, 3rem)', { lineHeight: '0.94', letterSpacing: '-0.015em' }],
+        'section': ['clamp(1.4rem, 1rem + 1.9vw, 2.4rem)', { lineHeight: '1.02', letterSpacing: '-0.01em' }],
       },
       letterSpacing: { label: '0.16em' },
+      /*
+       * Дві анімації на весь застосунок. Обидві короткі й обидві про одне:
+       * пояснити, що елемент щойно зʼявився, а не був тут завжди.
+       */
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'toast-in': {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
+      },
     },
   },
   plugins: [],
