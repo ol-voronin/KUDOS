@@ -41,6 +41,18 @@ const BREEDS: Array<{ slug: string; name: string; synonyms: string[] }> = [
   { slug: 'bigl', name: 'Бігль', synonyms: ['beagle', 'бигль'] },
   { slug: 'mops', name: 'Мопс', synonyms: ['pug', 'мопсік'] },
   { slug: 'shi-tsu', name: 'Ши-тцу', synonyms: ['шицу', 'shih tzu', 'ші тцу'] },
+
+  // ── додані під готові принти ─────────────────────────────────────────
+  // Ці три взялися не з дослідження попиту, а з фотографій: на макетах
+  // «Бос дзвонить» і «Call of Woof» саме вони, і без запису в довіднику
+  // принт нема до чого прив'язати.
+  //
+  // Синоніми тут особливо важать. Офіційна назва «американський
+  // стафордширський тер'єр» у пошуку майже не вживається — люди пишуть
+  // «стаф» або «амстафф»; кане-корсо половина шукає латиницею.
+  { slug: 'staford', name: 'Стафордширський тер’єр', synonyms: ['стафорд', 'стаф', 'амстафф', 'staffordshire terrier', 'amstaff'] },
+  { slug: 'pudel', name: 'Пудель', synonyms: ['poodle', 'королівський пудель', 'той-пудель', 'пуделек'] },
+  { slug: 'kane-korso', name: 'Кане-корсо', synonyms: ['cane corso', 'кане корсо', 'корсо', 'італійський мастиф'] },
   /**
    * Метис — найважливіший запис у цьому списку.
    *
@@ -57,15 +69,25 @@ const BREEDS: Array<{ slug: string; name: string; synonyms: string[] }> = [
  *
  * `position` задає порядок на сайті. Опубліковані одразу: порожня колекція
  * усе одно має сторінку, яка працює й пропонує намалювати з нуля.
+ *
+ * Перші три — справжні лінійки, які вже зняті й продаються. Решта лишилася
+ * з розвідки, коли товару ще не існувало: вони не видалені (на них можуть
+ * посилатися принти й статті), але зняті з публікації міграцією
+ * `20260826190000_collections_hvistoria`. Тому `isPublished` тут більше не
+ * ставиться наосліп — інакше кожен прогін сіду знову вішав би сім порожніх
+ * жанрів на вітрину.
  */
-const COLLECTIONS: Array<{ slug: string; title: string; description: string }> = [
-  { slug: 'modni-zhurnaly', title: 'Модні журнали', description: 'Ваш пес на обкладинці Vogue, Elle чи GQ. Найпопулярніший жанр — і найкращий подарунок.' },
-  { slug: 'sobaky-v-bari', title: 'Собаки в барі', description: 'Компанія псів за барною стійкою. Той випадок, коли принт помічають раніше, ніж вас.' },
-  { slug: 'portrety', title: 'Портрети', description: 'Класичний портрет у стилі старих майстрів. Ренесанс, бароко, олія — з вашого фото.' },
-  { slug: 'kino', title: 'Кіно', description: 'Улюблені кадри й постери, у яких головну роль грає ваша собака.' },
-  { slug: 'znamenytosti', title: 'Знаменитості', description: 'Пес у образі того, кого впізнають без пояснень.' },
-  { slug: 'den-narodzhennia', title: 'День народження', description: 'Принт із датою, кличкою і віком. Найчастіше замовляють у подарунок — і саме тому строк тут важливіший за ціну.' },
-  { slug: 'muzyka', title: 'Музика', description: 'Обкладинки альбомів і сценічні образи. Від вінілу до стадіону.' },
+const COLLECTIONS: Array<{ slug: string; title: string; description: string; published: boolean }> = [
+  { slug: 'mystetstvo', title: 'Мистецтво бути шедевром', published: true, description: 'Шість полотен, які знає кожен. І шість морд, які знаєте тільки ви.' },
+  { slug: 'bos-dzvonyt', title: 'Бос дзвонить', published: true, description: 'Екран вхідного дзвінка, а в колі — ваш пес. Той самий макет можна зробити з вашого фото.' },
+  { slug: 'call-of-woof', title: 'Call of Woof', published: true, description: 'Welcome to blackout, soldier. Колекція, яку зрозуміють без пояснень усі, хто пережив зиму без світла.' },
+  { slug: 'modni-zhurnaly', title: 'Модні журнали', published: false, description: 'Ваш пес на обкладинці Vogue, Elle чи GQ. Найпопулярніший жанр — і найкращий подарунок.' },
+  { slug: 'sobaky-v-bari', title: 'Собаки в барі', published: false, description: 'Компанія псів за барною стійкою. Той випадок, коли принт помічають раніше, ніж вас.' },
+  { slug: 'portrety', title: 'Портрети', published: false, description: 'Класичний портрет у стилі старих майстрів. Ренесанс, бароко, олія — з вашого фото.' },
+  { slug: 'kino', title: 'Кіно', published: false, description: 'Улюблені кадри й постери, у яких головну роль грає ваша собака.' },
+  { slug: 'znamenytosti', title: 'Знаменитості', published: false, description: 'Пес у образі того, кого впізнають без пояснень.' },
+  { slug: 'den-narodzhennia', title: 'День народження', published: false, description: 'Принт із датою, кличкою і віком. Найчастіше замовляють у подарунок — і саме тому строк тут важливіший за ціну.' },
+  { slug: 'muzyka', title: 'Музика', published: false, description: 'Обкладинки альбомів і сценічні образи. Від вінілу до стадіону.' },
 ];
 
 async function main(): Promise<void> {
@@ -89,7 +111,11 @@ async function main(): Promise<void> {
     const row = await prisma.collection.upsert({
       where: { slug: collection.slug },
       update: { title: collection.title, description: collection.description, position: index },
-      create: { ...collection, position: index, isPublished: true },
+      create: {
+        slug: collection.slug, title: collection.title,
+        description: collection.description, position: index,
+        isPublished: collection.published,
+      },
       select: { id: true },
     });
     collectionIds.push(row.id);

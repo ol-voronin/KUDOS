@@ -81,9 +81,20 @@ export function BlockRenderer({ blocks }: { blocks: readonly AnyBlock[] }) {
   void IMPLEMENTED;
   return (
     <>
+      {/*
+        Класи `block-section` і `block-stack` — не оформлення, а гачки для
+        двох правил у globals.css. Динамічний блок, який нічого не знайшов
+        (порожня колекція, немає принтів у наявності), повертає `null` — але
+        обгортка навколо нього лишається, а разом із нею відступи секції.
+        На сторінці це смуга іншого кольору без жодного вмісту.
+
+        Порожнечу видно тільки після рендера, тож приховує її CSS. Зробити
+        це в React не вийде: блоки — серверні компоненти, і батько не знає,
+        що поверне дитина, доки та не відрендериться.
+      */}
       {groupByTone(blocks).map((group, i) => (
-        <Section key={group[0]?.id ?? i} tone={group[0]?.tone ?? 'plain'}>
-          <div className="flex flex-col gap-12">
+        <Section key={group[0]?.id ?? i} tone={group[0]?.tone ?? 'plain'} className="block-section">
+          <div className="block-stack flex flex-col gap-12">
             {group.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
           </div>
         </Section>

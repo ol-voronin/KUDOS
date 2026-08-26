@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Logger, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ErrorCode, type MenuItemCreateDto, type MenuItemDto, type MenuItemUpdateDto,
   type SiteChromeDto, type SiteSettingsDto, type SiteSettingsUpdateDto,
@@ -27,6 +27,8 @@ const SETTINGS_SELECT = {
  */
 @Injectable()
 export class SettingsService {
+  private readonly log = new Logger(SettingsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly revalidate: RevalidateService,
@@ -41,7 +43,19 @@ export class SettingsService {
    * що висить на ній місяцями.
    */
   private async refreshWholeSite(): Promise<void> {
-    await this.revalidate.revalidate(['*']);
+    const error = await this.revalidate.revalidate(['*']);
+    if (error !== '') {
+      // Результат раніше просто викидався — і це коштувало довгої розмови
+      // «змінив назву бренду, в адмінці збереглося, на сайті стара».
+      // Збереження справді відбулося, кеш справді не скинувся, і ніде
+      // жодного сліду: сторінки пишуть свою помилку в `Page.revalidateError`,
+      // а налаштування не мали куди.
+      //
+      // Публікацію це не зриває (дані вже в базі, кеш протухне сам), але в
+      // журналі тепер видно причину — зазвичай це незадані WEB_URL або
+      // REVALIDATE_SECRET на боці API.
+      this.log.warn(`Налаштування збережено, але кеш сайту не скинуто: ${error}`);
+    }
   }
 
   /**
