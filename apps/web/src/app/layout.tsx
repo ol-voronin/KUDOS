@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { Onest, Unbounded } from 'next/font/google';
 import '../styles/globals.css';
 import { Providers } from './providers';
+import { Analytics } from '@/features/analytics/analytics';
 import { getSettings } from '@/lib/site-settings';
+import { getTracking } from '@/lib/tracking';
 
 /**
  * Абсолютна адреса сайту. Без неї Next лишає canonical відносним
@@ -43,11 +45,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const settings = await getSettings();
+  const [settings, tracking] = await Promise.all([getSettings(), getTracking()]);
   return (
     <html lang="uk" className={`${onest.variable} ${unbounded.variable}`}>
       <body>
-        <Providers settings={settings}>{children}</Providers>
+        <Providers settings={settings}>
+          {children}
+          {/* Після вмісту навмисно: статистика ніколи не має затримувати сторінку. */}
+          <Analytics config={tracking} />
+        </Providers>
       </body>
     </html>
   );

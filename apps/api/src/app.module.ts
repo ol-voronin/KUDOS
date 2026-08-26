@@ -5,6 +5,7 @@ import { CorrelationIdMiddleware } from './common/correlation-id.middleware';
 import { HealthController } from './common/health.controller';
 import { PrismaService } from './common/prisma.service';
 import { AuthModule } from './auth/auth.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { ContentModule } from './content/content.module';
 import { SiteMiddleware } from './common/site.middleware';
@@ -17,6 +18,7 @@ import { PaymentsModule } from './payments/payments.module';
     // Assume every endpoint is publicly exposed, because it is.
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     AuthModule,
+    AnalyticsModule,
     CatalogModule,
     ContentModule,
     CustomRequestsModule,

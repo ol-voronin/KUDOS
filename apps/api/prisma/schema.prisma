@@ -647,6 +647,8 @@ model Site {
   pageCollections PageCollection[]
   settings   SiteSettings?
   menu       MenuItem[]
+  events      AnalyticsEvent[]
+  conversions ConversionAction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -822,6 +824,11 @@ model SiteSettings {
   /// тобто рівно те, чого ми уникаємо в блоках.
   googleSiteVerification String @default("")
 
+  /// Ідентифікатор потоку GA4: G-XXXXXXX. Порожньо — скрипт не вантажиться.
+  ga4MeasurementId String @default("")
+  /// Ідентифікатор конверсій Google Ads: AW-XXXXXXXXX.
+  googleAdsId      String @default("")
+
   /// Головний вимикач індексації.
   ///
   /// Потрібен не «про всяк випадок»: доки сайт живе на *.vercel.app, він
@@ -855,6 +862,72 @@ model MenuItem {
   updatedAt DateTime @updatedAt
 
   @@index([siteId, area, position])
+}
+
+/// Подія на сайті.
+///
+/// Своя таблиця, а не тільки GA4, і причина проста: GA4 — це чужа система,
+/// яка семплює дані, ховає деталі за порогами й може бути заблокована в
+/// половини відвідувачів розширенням. Власні цифри мають бути власними.
+///
+/// Персональних даних тут немає навмисно: ні IP, ні User-Agent, ні імені.
+/// `sessionId` — випадкове число на один візит, воно не ідентифікує людину
+/// й не переживає закриття вкладки. Саме тому для цієї таблиці не потрібен
+/// банер згоди: збирати нічого, що дозволяє когось упізнати.
+model AnalyticsEvent {
+  id     String @id @default(uuid()) @db.Uuid
+  siteId String @db.Uuid
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  /// page_view, lead_submitted, checkout_started, purchase, telegram_click.
+  name String
+  path String
+
+  /// Випадковий ідентифікатор візиту. Не людини.
+  sessionId String
+
+  /// Звідки прийшли. Зберігається як домен, без шляху: повний referrer
+  /// інколи містить пошуковий запит, а це вже дані людини.
+  referrerHost String @default("")
+
+  utmSource   String @default("")
+  utmMedium   String @default("")
+  utmCampaign String @default("")
+  utmTerm     String @default("")
+  utmContent  String @default("")
+  gclid       String @default("")
+
+  /// Для purchase — сума замовлення в копійках.
+  valueMinor Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([siteId, name, createdAt])
+  @@index([siteId, createdAt])
+  @@index([siteId, utmCampaign])
+}
+
+/// Дія-конверсія в Google Ads.
+///
+/// Таблиця, а не чотири поля в налаштуваннях: конверсії додають і вимикають
+/// частіше, ніж змінюють телефон, і кожна нова інакше означала б міграцію.
+model ConversionAction {
+  id     String @id @default(uuid()) @db.Uuid
+  siteId String @db.Uuid
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  /// Ім'я події, на яку спрацьовує: те саме, що в AnalyticsEvent.
+  event String
+  /// Мітка з Google Ads — друга частина `AW-123/AbCdEf`.
+  label String
+  /// Чи передавати суму. Для заявки суми немає, для оплати є.
+  sendValue Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteId, event])
 }
 
 /// Матеріал ↔ порода.
@@ -997,6 +1070,18 @@ model Order {
   /// Free-text note the customer left at checkout (e.g. "довжину коротше").
   note String?
 
+  /// Атрибуція — та сама, що й у заявки. Без неї неможливо сказати, яка
+  /// реклама принесла гроші, а не просто кліки.
+  utmSource    String @default("")
+  utmMedium    String @default("")
+  utmCampaign  String @default("")
+  utmTerm      String @default("")
+  utmContent   String @default("")
+  gclid        String @default("")
+  landingPath  String @default("")
+  referrerHost String @default("")
+  sessionId    String @default("")
+
   customer Customer    @relation(fields: [customerId], references: [id])
   items    OrderItem[]
   payments Payment[]
@@ -1006,6 +1091,7 @@ model Order {
 
   @@index([customerId])
   @@index([status, placedAt])
+  @@index([utmCampaign])
 }
 
 /// One row per Monobank invoice attempt against an order. An order can have
@@ -1166,8 +1252,26 @@ model Lead {
   name    String
   phone   String
   message String?
-  /// Звідки прийшла: сторінка, кампанія, UTM.
+  /// Звідки прийшла: сторінка, з якої надіслали форму.
   source  String?
+
+  /// Атрибуція: звідки людина взагалі прийшла на сайт.
+  ///
+  /// Колонками, а не одним JSON, бо головне питання до цих даних —
+  /// «скільки заявок дала кампанія X», а це `group by`. JSON довелося б
+  /// розбирати в кожному запиті.
+  utmSource    String @default("")
+  utmMedium    String @default("")
+  utmCampaign  String @default("")
+  utmTerm      String @default("")
+  utmContent   String @default("")
+  /// Ідентифікатор кліку Google Ads. Без нього офлайн-конверсію не
+  /// привʼязати до оголошення.
+  gclid        String @default("")
+  landingPath  String @default("")
+  referrerHost String @default("")
+  /// Той самий випадковий ідентифікатор візиту, що й у подіях.
+  sessionId    String @default("")
 
   /// Чи долетіло в Telegram. Null означає «не долетіло» — видно в адмінці,
   /// а не тільки в логах.
@@ -1184,4 +1288,5 @@ model Lead {
   @@index([phone])
   @@index([status, createdAt])
   @@index([telegramSentAt])
+  @@index([utmCampaign])
 }

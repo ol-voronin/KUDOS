@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { OrderStatus, PaymentStatus } from '@dt/contracts';
 import { minor } from '@dt/contracts';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../common/prisma.service';
 import { sendToTelegram } from '../common/telegram';
 import { formatOrderPaid } from './format-order-notification';
@@ -67,7 +68,10 @@ const ORDER_STATUS_FOR: Partial<Record<PaymentStatus, OrderStatus>> = {
 export class PaymentsWebhookService {
   private readonly logger = new Logger(PaymentsWebhookService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly analytics: AnalyticsService,
+  ) {}
 
   async handle(body: MonobankWebhookBody): Promise<void> {
     const payment = await this.findPayment(body);
@@ -126,6 +130,7 @@ export class PaymentsWebhookService {
     // саме в цьому запиті, бо `count === 1`.
     if (nextStatus === 'SUCCESS') {
       await this.notifyPaid(payment.orderId);
+      await this.recordPurchase(payment.orderId);
     }
   }
 
@@ -160,6 +165,26 @@ export class PaymentsWebhookService {
       `webhook.recovered_by_reference invoiceId=${body.invoiceId} orderId=${body.reference}`,
     );
     return byReference;
+  }
+
+  /**
+   * Оплата у власній статистиці.
+   *
+   * Пишеться тут, а не тільки тегом на сторінці «дякуємо». Тег не спрацює,
+   * якщо людина закрила вкладку одразу після оплати, а таких помітна частка —
+   * і саме через це власні цифри доходу зазвичай нижчі за правду. Тут вони
+   * будуть правильні.
+   */
+  private async recordPurchase(orderId: string): Promise<void> {
+    const order = await this.prisma.db.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true, totalMinor: true, sessionId: true,
+        utmSource: true, utmMedium: true, utmCampaign: true, gclid: true,
+      },
+    });
+    if (!order) return;
+    await this.analytics.trackPurchase(order);
   }
 
   private async notifyPaid(orderId: string): Promise<void> {

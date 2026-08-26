@@ -14,6 +14,7 @@ const SETTINGS_SELECT = {
   city: true, cityIn: true, workingHours: true,
   freeShippingFromMinor: true, returnDays: true,
   defaultOgImage: true, googleSiteVerification: true, allowIndexing: true,
+  ga4MeasurementId: true, googleAdsId: true,
 } as const;
 
 /**

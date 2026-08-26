@@ -32,6 +32,8 @@ export const FALLBACK_SETTINGS: SiteSettingsDto = {
   returnDays: site.returnDays,
   defaultOgImage: '',
   googleSiteVerification: '',
+  ga4MeasurementId: '',
+  googleAdsId: '',
   // У запасному варіанті індексація вимкнена свідомо: якщо API мовчить, ми
   // не знаємо, чи можна індексувати цей сайт, і мовчазне «можна» — гірша з
   // двох помилок.

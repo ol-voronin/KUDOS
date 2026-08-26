@@ -2,9 +2,10 @@ import { BadGatewayException, Injectable, Logger, NotFoundException } from '@nes
 import { Prisma } from '@prisma/client';
 import type {
   AdminLeadDetailDto, AdminLeadDto, AdminLeadExportQueryDto, AdminLeadListDto,
-  AdminLeadListQueryDto, LeadStatus,
+  AdminLeadListQueryDto, AttributionDto, LeadStatus,
 } from '@dt/contracts';
 import { ErrorCode } from '@dt/contracts';
+import { attributionOf } from '../analytics/analytics.service';
 import { PrismaService } from '../common/prisma.service';
 import { sendToTelegram } from '../common/telegram';
 import { rowsToCsv } from './csv';
@@ -30,7 +31,7 @@ export class LeadsService {
    * Якщо робити навпаки, падіння Telegram = падіння заявки.
    */
   async capture(
-    input: Lead & { marketingConsent?: boolean },
+    input: Lead & { marketingConsent?: boolean; attribution?: Partial<AttributionDto> },
     correlationId: string,
   ): Promise<{ id: string; number: number }> {
     const customer = await this.prisma.db.customer.upsert({
@@ -56,6 +57,10 @@ export class LeadsService {
         phone: input.phone,
         ...(input.message ? { message: input.message } : {}),
         ...(input.source ? { source: input.source } : {}),
+        // Атрибуція їде окремими полями, а не в `source`: `source` — це
+        // сторінка, з якої надіслали форму, і змішувати її з кампанією
+        // означало б втратити обидві відповіді.
+        ...attributionOf(input.attribution),
         customerId: customer.id,
         correlationId,
       },

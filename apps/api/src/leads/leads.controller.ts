@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/commo
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { z } from 'zod';
-import { PhoneSchema } from '@dt/contracts';
+import { AttributionDto, PhoneSchema } from '@dt/contracts';
 import { LeadsService } from './leads.service';
 
 const LeadDto = z.object({
@@ -14,6 +14,8 @@ const LeadDto = z.object({
   source: z.string().max(120).optional(),
   /// Окрема галочка. Заявка — це згода на відповідь щодо неї, не на розсилку.
   marketingConsent: z.boolean().optional(),
+  /// Звідки людина прийшла на сайт. Необовʼязкова — заявка без неї нормальна.
+  attribution: AttributionDto.optional(),
 });
 
 @Controller({ path: 'leads', version: '1' })

@@ -26,7 +26,7 @@ import { requireSiteId } from './site-context';
 /** Таблиці, які належать конкретному сайту. */
 export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'Page', 'PageVersion', 'MediaAsset', 'Redirect', 'PageBreed', 'PageCollection',
-  'SiteSettings', 'MenuItem',
+  'SiteSettings', 'MenuItem', 'AnalyticsEvent', 'ConversionAction',
 ]);
 
 /**

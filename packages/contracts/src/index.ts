@@ -14,6 +14,7 @@ export * from './admin-print.dto';
 export * from './admin-garment.dto';
 export * from './pricing.dto';
 export * from './settings.dto';
+export * from './analytics.dto';
 export * from './lead.dto';
 export * from './checkout.dto';
 export * from './payment.dto';

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MenuArea, MenuItemDto, SiteChromeDto, SiteSettingsDto } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { createMenuItem, deleteMenuItem, getSettings, updateMenuItem, updateSettings } from './api';
+import { ConversionsPanel } from './conversions-panel';
 import { SeoPanel } from './seo-panel';
 
 const KEY = ['admin-settings'];
@@ -63,6 +64,14 @@ const GROUPS: ReadonlyArray<{
     ],
   },
   {
+    title: 'Реклама й аналітика',
+    hint: 'Порожні поля — і жоден сторонній скрипт не вантажиться взагалі.',
+    fields: [
+      { name: 'ga4MeasurementId', label: 'GA4', hint: 'Виглядає як G-XXXXXXX. Ставить cookie — саме через нього показується банер згоди.' },
+      { name: 'googleAdsId', label: 'Google Ads', hint: 'Виглядає як AW-123456789. Самого ідентифікатора мало — потрібні ще конверсії, нижче.' },
+    ],
+  },
+  {
     title: 'Умови',
     fields: [
       { name: 'freeShippingFromMinor', label: 'Безкоштовна доставка від, ₴', numeric: true, hint: 'Підставляється як {{freeShippingFrom}}.' },
@@ -82,6 +91,7 @@ export function SettingsScreen() {
       <SettingsForm data={data} />
       <MenuEditor data={data} />
       <SeoPanel />
+      <ConversionsPanel />
     </div>
   );
 }

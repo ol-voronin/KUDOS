@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { ReadyPrintCheckoutRequestDto } from '@dt/contracts';
 import { ErrorCode, minor, mulMinor } from '@dt/contracts';
+import { attributionOf } from '../analytics/analytics.service';
 import { PrismaService } from '../common/prisma.service';
 import { PriceBookService } from '../pricing/price-book.service';
 import { bestDiscount } from '../pricing/price-rules';
@@ -180,6 +181,7 @@ export class CheckoutService {
           stream: 'READY_PRINT',
           status: 'PENDING_PAYMENT',
           subtotalMinor: totals.subtotalMinor,
+          ...attributionOf(dto.attribution),
           discountMinor: discount?.amountMinor ?? 0,
           discountName: discount?.name ?? null,
           totalMinor,

@@ -72,6 +72,16 @@ export const SiteSettingsDto = z.object({
   ),
   /** Значення `content` для Search Console — без тега. */
   googleSiteVerification: ShortText,
+  /** Потік GA4: `G-XXXXXXX`. Порожньо — скрипт не вантажиться взагалі. */
+  ga4MeasurementId: z.string().max(40).refine(
+    (v) => v === '' || /^G-[A-Z0-9]{4,}$/.test(v),
+    { message: 'ідентифікатор GA4 виглядає як G-XXXXXXX' },
+  ),
+  /** Конверсії Google Ads: `AW-123456789`. */
+  googleAdsId: z.string().max(40).refine(
+    (v) => v === '' || /^AW-[0-9]{6,}$/.test(v),
+    { message: 'ідентифікатор Google Ads виглядає як AW-123456789' },
+  ),
   /**
    * Головний вимикач індексації.
    *

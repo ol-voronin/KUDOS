@@ -26,6 +26,7 @@ const MODULES: readonly NavModule[] = [
       { href: '/admin', label: 'Огляд' },
       { href: '/admin/leads', label: 'Заявки', badge: true },
       { href: '/admin/storinky', label: 'Сторінки' },
+      { href: '/admin/statystyka', label: 'Статистика' },
       { href: '/admin/nalashtuvannya', label: 'Налаштування' },
     ],
     soon: [],

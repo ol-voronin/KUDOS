@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AttributionDto } from './analytics.dto';
 import { OrderStatus, PaymentType, PrintMethod } from './enums';
 import { PhoneSchema } from './phone';
 
@@ -29,6 +30,11 @@ export const ReadyPrintCheckoutRequestDto = z.object({
   }),
   /** Optional note, e.g. a size adjustment request. Never priced from this. */
   note: z.string().max(500).optional(),
+  /**
+   * Звідки людина прийшла на сайт. Необовʼязкова: замовлення без атрибуції —
+   * це просто замовлення, а не помилка. Ціну з неї не рахують ніколи.
+   */
+  attribution: AttributionDto.optional(),
 });
 export type ReadyPrintCheckoutRequestDto = z.infer<typeof ReadyPrintCheckoutRequestDto>;
 
