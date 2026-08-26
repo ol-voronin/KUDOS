@@ -92,6 +92,12 @@ importers:
       '@dt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@fontsource-variable/onest':
+        specifier: '5'
+        version: 5.3.0
+      '@fontsource/oswald':
+        specifier: '5'
+        version: 5.3.0
       '@tanstack/react-query':
         specifier: ^5.59.16
         version: 5.101.4(react@18.3.1)
@@ -487,6 +493,12 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource-variable/onest@5.3.0':
+    resolution: {integrity: sha512-K4Es0F3M+iFnVY5mfunimhPSk1Uvl3eyovQVWjtf8oS00a7WSrSg2BD5Bh/pAcAZUe4ocV4M08dg5tvCULBJ7Q==}
+
+  '@fontsource/oswald@5.3.0':
+    resolution: {integrity: sha512-16r2aHActe0pH+9FLdk/74/YxXM7HpGak05kAzx3RvSToiJwGvyhv6GvckPz+YuZmvL1nxWbEop2jAXRcXYPRg==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -2995,6 +3007,10 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.2':
     optional: true
+
+  '@fontsource-variable/onest@5.3.0': {}
+
+  '@fontsource/oswald@5.3.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:

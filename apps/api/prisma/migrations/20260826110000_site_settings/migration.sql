@@ -70,7 +70,7 @@ INSERT INTO "SiteSettings" (
   "city", "cityIn", "workingHours", "freeShippingFromMinor", "returnDays", "updatedAt"
 )
 SELECT
-  "id", 'Kudos print',
+  "id", 'Хвісторія',
   'Фізична особа-підприємець Воронін Олексій Петрович',
   'ФОП Воронін О. П.',
   '3442812170',

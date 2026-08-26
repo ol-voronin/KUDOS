@@ -37,14 +37,15 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
             </p>
           )}
         {/*
-          Наявність — крапка з підписом, а не зелена плашка. Плашка кричала
-          на кожній картці однаково голосно, тобто не означала нічого; тут
-          вона помітна лише тоді, коли поруч є картка без неї.
+          Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
+          кожній картці однаково голосно, тобто не означала нічого. Але й одна
+          літера «є» біля крапки не читалася — потрібне слово, яке щось каже:
+          «є» відповідає на питання «коли», а не «скільки».
         */}
         {print.inStock && (
-          <span className="flex shrink-0 items-center gap-1.5 text-xs text-ink-muted">
+          <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-ok">
             <span aria-hidden className="h-1.5 w-1.5 rounded-pill bg-ok" />
-            є
+            в наявності
           </span>
         )}
       </div>

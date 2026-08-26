@@ -1,6 +1,27 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Onest, Oswald } from 'next/font/google';
+/*
+ * Шрифти лежать у репозиторії, а не тягнуться з Google під час збірки.
+ *
+ * `next/font/google` качає файли на етапі білду. За корпоративним проксі
+ * (або просто без інтернету) це падає — і падає тихо: змінна `--font-display`
+ * не зʼявляється, `font-family: var(--font-display), …` стає недійсною
+ * декларацією цілком, разом із запасними варіантами, і браузер малює все
+ * дефолтним засічковим. Сайт виглядає як газета, і за виглядом неможливо
+ * здогадатися, що причина в мережі.
+ *
+ * @fontsource ставиться як звичайна залежність із npm: збірка більше не
+ * залежить від доступу до fonts.googleapis.com узагалі.
+ */
+import '@fontsource/oswald/cyrillic-400.css';
+import '@fontsource/oswald/cyrillic-500.css';
+import '@fontsource/oswald/cyrillic-600.css';
+import '@fontsource/oswald/cyrillic-700.css';
+import '@fontsource/oswald/latin-400.css';
+import '@fontsource/oswald/latin-500.css';
+import '@fontsource/oswald/latin-600.css';
+import '@fontsource/oswald/latin-700.css';
+import '@fontsource-variable/onest';
 import '../styles/globals.css';
 import { Providers } from './providers';
 import { Analytics } from '@/features/analytics/analytics';
@@ -13,21 +34,6 @@ import { getTracking } from '@/lib/tracking';
  * пошуковики ігнорують — тобто його наче й немає.
  */
 const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
-
-const onest = Onest({ subsets: ['latin', 'cyrillic'], variable: '--font-sans', display: 'swap' });
-
-/**
- * Вузький важкий ґротеск у заголовках — головна впізнавана риса напрямку.
- * Oswald узятий тому, що це єдиний вузький капс на Google Fonts із повною
- * кирилицею; у референсі (vidro) стоїть ліцензійний шрифт типу Druk, і його
- * можна буде підмінити пізніше, змінивши тільки цей блок.
- */
-const oswald = Oswald({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-display',
-  display: 'swap',
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
@@ -54,7 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const [settings, tracking] = await Promise.all([getSettings(), getTracking()]);
   return (
-    <html lang="uk" className={`${onest.variable} ${oswald.variable}`}>
+    <html lang="uk">
       <body>
         <Providers settings={settings}>
           {children}

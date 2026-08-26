@@ -31,8 +31,15 @@ export default {
         /** raised === DEFAULT навмисно: картку тримає лінія, не заливка. */
         surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#f6f6f3' },
         line: { DEFAULT: '#e4e4df', strong: '#c9c9c2' },
-        /** Слово-привид: другий склад заголовка, який дочитує сенс. */
-        ghost: '#e9e9e4',
+        /*
+         * Слово-привид: другий склад заголовка, який дочитує сенс.
+         *
+         * Темніший, ніж хотілося б «на око» на білому — і це навмисно.
+         * Герой стоїть на кремовій підкладці (`surface.sunken`), і на ній
+         * блідіший відтінок зникав повністю: половина заголовка виглядала
+         * як помилка рендера, а не як прийом.
+         */
+        ghost: '#d6d6ce',
 
         accent: { DEFAULT: '#ff3b14', soft: '#ffeae4', strong: '#d92e0c', ink: '#7a1a05' },
 
@@ -52,9 +59,21 @@ export default {
        * натискний — кнопки й чіпи (`pill`).
        */
       borderRadius: { card: '2px', pill: '9999px' },
+      /*
+       * Прямі назви сімейств, без CSS-змінних.
+       *
+       * Змінна тут була пасткою: якщо `--font-display` не визначено (шрифт не
+       * завантажився), то `font-family: var(--font-display), Arial Narrow, …`
+       * стає недійсною декларацією ЦІЛКОМ — браузер відкидає її разом із
+       * запасними варіантами й малює засічковим. Запасний стек має сенс лише
+       * тоді, коли перший елемент — справжня назва, а не змінна.
+       *
+       * Запасні варіанти теж не випадкові: усі вузькі й усі без засічок, щоб
+       * навіть у найгіршому випадку сторінка лишалася гротеском.
+       */
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'Arial Narrow', 'var(--font-sans)', 'sans-serif'],
+        sans: ['Onest Variable', 'Onest', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Oswald', 'Arial Narrow', 'Helvetica Neue Condensed', 'Liberation Sans Narrow', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */

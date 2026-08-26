@@ -38,7 +38,7 @@ INSERT INTO "Site" ("id", "key", "name", "hosts", "modules", "updatedAt")
 VALUES (
   '00000000-0000-4000-8000-000000000001',
   'primary',
-  'Kudos print',
+  'Хвісторія',
   ARRAY[]::TEXT[],
   ARRAY['content', 'shop']::TEXT[],
   CURRENT_TIMESTAMP

@@ -10,33 +10,49 @@ import { PrintThumb } from '@/components/print-thumb';
  * з чим вона й прийшла. Остання плитка навмисно веде в бриф — саме там
  * закінчують ті, чиєї породи немає.
  */
+/*
+ * Плитка, а не рядок у списку.
+ *
+ * Спроба зробити «легше» перетворила смугу порід на текст із волосінню
+ * зверху — і вітрина стала схожа на таблицю даних. Волосінь працює там, де
+ * поруч є фотографія: вона розділяє товар. Там, де фотографії немає, її
+ * місце має тримати сама плитка, інакше на сторінці лишається порожнеча.
+ *
+ * Заливка світла, рамки немає — плитка помітна, але не сперечається з
+ * сусідніми секціями.
+ */
+const TILE =
+  'flex min-h-[4.5rem] flex-col justify-center rounded-card bg-surface-sunken px-4 py-3 ' +
+  'transition hover:bg-ghost focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
+
 export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
       {breeds.slice(0, 11).map((breed) => (
-        <Link
-          key={breed.id}
-          href={`/breeds/${breed.slug}`}
-          className="flex min-h-16 flex-col justify-center border-t border-line pt-2 transition hover:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-        >
-          <span className="font-medium text-ink">{breed.name}</span>
+        <Link key={breed.id} href={`/breeds/${breed.slug}`} className={TILE}>
+          <span className="font-display text-base font-semibold uppercase leading-tight text-ink">
+            {breed.name}
+          </span>
           {/*
             Нуль принтів — не «порожньо», а «малюємо на замовлення». Це правда
             й це пропозиція; «0 принтів» було б і правдою, і антирекламою.
           */}
-          <span className="text-sm text-ink-subtle">
+          <span className="mt-0.5 text-sm text-ink-muted">
             {breed.printCount > 0
               ? `${breed.printCount} ${plural(breed.printCount, 'принт', 'принти', 'принтів')}`
               : 'малюємо на замовлення'}
           </span>
         </Link>
       ))}
+      {/* Остання плитка — темна: вона єдина веде не в каталог, а в бриф. */}
       <Link
         href="/svoya-ideya"
-        className="flex min-h-16 flex-col justify-center border-t border-accent pt-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        className="flex min-h-[4.5rem] flex-col justify-center rounded-card bg-ink px-4 py-3 transition hover:bg-ink/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
       >
-        <span className="font-medium text-accent">Немає вашої?</span>
-        <span className="text-sm text-ink-muted">Намалюємо з фото →</span>
+        <span className="font-display text-base font-semibold uppercase leading-tight text-surface">
+          Немає вашої?
+        </span>
+        <span className="text-sm text-surface/70">Намалюємо з фото →</span>
       </Link>
     </div>
   );
@@ -49,7 +65,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
         <Link
           key={collection.id}
           href={`/collections/${collection.slug}`}
-          className="group flex flex-col border-t border-ink pt-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+          className="group flex flex-col rounded-card bg-surface-sunken p-3 transition hover:bg-ghost focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           <div className="flex gap-2">
             {(collection.previewUrls.length > 0 ? collection.previewUrls : [null, null, null])
@@ -60,7 +76,9 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
                 </div>
               ))}
           </div>
-          <p className="mt-3 font-display font-bold text-ink group-hover:underline">{collection.title}</p>
+          <p className="mt-3 font-display text-lg font-bold uppercase leading-tight text-ink group-hover:underline">
+            {collection.title}
+          </p>
           {collection.description && (
             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-muted">{collection.description}</p>
           )}
