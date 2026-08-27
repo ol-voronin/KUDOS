@@ -3,8 +3,12 @@ import type {
   CardsBlock, CtaBlock, FaqBlock, FeaturesBlock, GalleryBlock, HeroBlock,
   ImageTextBlock, LegalBlock, QuoteBlock, StepsBlock, TextBlock,
 } from '@dt/contracts';
+import type { BlockIcon } from '@dt/contracts';
 import { Inline, InlineParagraph } from '../inline';
-import { BlockHeading, BlockLinks } from './shared';
+import { BlockHeading, BlockLinks, palette } from './shared';
+
+/** Спільний проп усіх блоків: чи стоїть блок на чорній секції. */
+interface Dark { readonly onDark?: boolean }
 
 /**
  * Статичні блоки: усе, що малюється з власних полів і нікуди не ходить.
@@ -51,25 +55,26 @@ function HeroHeading({ text, onDark = false }: { text: string; onDark?: boolean 
   );
 }
 
-export function Hero({ block }: { block: HeroBlock }) {
-  return block.image.url === '' ? <HeroPlain block={block} /> : <HeroFull block={block} />;
+export function Hero({ block, onDark = false }: { block: HeroBlock } & Dark) {
+  return block.image.url === '' ? <HeroPlain block={block} onDark={onDark} /> : <HeroFull block={block} />;
 }
 
 /** Набірний варіант: сторінка статті, документа, розділу. */
-function HeroPlain({ block }: { block: HeroBlock }) {
+function HeroPlain({ block, onDark = false }: { block: HeroBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <>
       {block.eyebrow.trim() !== '' && (
-        <p className="label-eyebrow mb-3">{block.eyebrow}</p>
+        <p className={`label-eyebrow mb-3 ${onDark ? 'text-surface/60' : ''}`}>{block.eyebrow}</p>
       )}
-      <h1 className="max-w-4xl font-display text-hero font-extrabold uppercase text-ink">
-        <HeroHeading text={block.heading} />
+      <h1 className={`max-w-4xl font-display text-hero font-extrabold uppercase ${c.head}`}>
+        <HeroHeading text={block.heading} onDark={onDark} />
       </h1>
-      <InlineParagraph text={block.lead} className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted" />
+      <InlineParagraph text={block.lead} className={`mt-4 max-w-prose text-lg leading-relaxed ${c.body}`} />
       {block.footnote.trim() !== '' && (
-        <p className="mt-4 text-sm text-ink-subtle">{block.footnote}</p>
+        <p className={`mt-4 text-sm ${c.faint}`}>{block.footnote}</p>
       )}
-      <BlockLinks links={block.links} className="mt-8" />
+      <BlockLinks links={block.links} className="mt-8" onDark={onDark} />
     </>
   );
 }
@@ -134,15 +139,16 @@ function HeroFull({ block }: { block: HeroBlock }) {
   );
 }
 
-export function Text({ block }: { block: TextBlock }) {
+export function Text({ block, onDark = false }: { block: TextBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <div className="max-w-prose">
-      <BlockHeading text={block.heading} />
-      <div className="space-y-3 leading-relaxed text-ink-muted">
+      <BlockHeading text={block.heading} onDark={onDark} />
+      <div className={`space-y-3 leading-relaxed ${c.body}`}>
         {block.paragraphs.map((p, i) => <InlineParagraph key={i} text={p} />)}
       </div>
       {block.bullets.length > 0 && (
-        <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-ink-muted">
+        <ul className={`mt-4 list-disc space-y-2 pl-5 leading-relaxed ${c.body}`}>
           {block.bullets.map((b, i) => <li key={i}><Inline text={b} /></li>)}
         </ul>
       )}
@@ -157,17 +163,18 @@ export function Text({ block }: { block: TextBlock }) {
  * самому документі («див. розділ 7»), тому якір мусить лишатися стабільним
  * навіть коли розділ переїде вище чи нижче.
  */
-export function Legal({ block }: { block: LegalBlock }) {
+export function Legal({ block, onDark = false }: { block: LegalBlock } & Dark) {
   const id = `p${block.number}`;
+  const c = palette(onDark);
   return (
     <section id={id} className="max-w-3xl scroll-mt-24">
-      <h2 className="font-display text-xl font-bold text-ink">
-        <a href={`#${id}`} className="hover:text-ink-muted">{block.number}. {block.heading}</a>
+      <h2 className={`font-display text-xl font-bold ${c.head}`}>
+        <a href={`#${id}`} className="hover:opacity-70">{block.number}. {block.heading}</a>
       </h2>
-      <div className="mt-3 space-y-3 leading-relaxed text-ink-muted">
+      <div className={`mt-3 space-y-3 leading-relaxed ${c.body}`}>
         {block.items.map((item, i) => (
           <p key={i}>
-            {item.n.trim() !== '' && <span className="font-medium text-ink">{item.n} </span>}
+            {item.n.trim() !== '' && <span className={`font-medium ${c.head}`}>{item.n} </span>}
             <Inline text={item.text} />
           </p>
         ))}
@@ -176,46 +183,25 @@ export function Legal({ block }: { block: LegalBlock }) {
   );
 }
 
-export function Steps({ block }: { block: StepsBlock }) {
+export function Steps({ block, onDark = false }: { block: StepsBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <>
-      <BlockHeading text={block.heading} lead={block.lead} />
-      <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <BlockHeading text={block.heading} lead={block.lead} onDark={onDark} />
+      <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {block.items.map((item, i) => (
-          <li key={i} className="border-t border-ink pt-3">
+          <li key={i} className={`border-t pt-4 ${c.ruleStrong}`}>
             <span
               aria-hidden="true"
-              className="flex h-7 w-7 items-center justify-center rounded-pill border border-ink font-display text-xs font-bold text-ink"
+              className={`flex h-7 w-7 items-center justify-center rounded-pill border font-display text-xs font-bold ${c.ruleStrong} ${c.head}`}
             >
               {i + 1}
             </span>
-            <h3 className="mt-3 font-semibold text-ink">{item.title}</h3>
-            <InlineParagraph text={item.text} className="mt-1.5 text-sm leading-relaxed text-ink-muted" />
+            <h3 className={`mt-3 font-semibold ${c.head}`}>{item.title}</h3>
+            <InlineParagraph text={item.text} className={`mt-1.5 text-sm leading-relaxed ${c.body}`} />
           </li>
         ))}
       </ol>
-    </>
-  );
-}
-
-const COLUMNS: Record<2 | 3 | 4, string> = {
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-2 lg:grid-cols-3',
-  4: 'sm:grid-cols-2 lg:grid-cols-4',
-};
-
-export function Cards({ block }: { block: CardsBlock }) {
-  return (
-    <>
-      <BlockHeading text={block.heading} lead={block.lead} />
-      <div className={`grid gap-4 ${COLUMNS[block.columns]}`}>
-        {block.items.map((item, i) => (
-          <div key={i} className="border-t border-line pt-3">
-            <h3 className="font-semibold text-ink">{item.title}</h3>
-            <InlineParagraph text={item.text} className="mt-1.5 text-sm leading-relaxed text-ink-muted" />
-          </div>
-        ))}
-      </div>
     </>
   );
 }
@@ -226,33 +212,115 @@ export function Cards({ block }: { block: CardsBlock }) {
  * Поле в блоці — це ключ зі списку, не SVG і не адреса файлу. Інакше в
  * контент потрапляє довільна розмітка або чужий домен, і одне з двох
  * рано чи пізно стріляє.
+ *
+ * Малюнок один на всі блоки: іконка на картці й іконка в перевагах мають
+ * означати те саме й важити однаково. Стиль навмисно однаковий — тонка
+ * лінія, без заливки: заливка на 22 px перетворюється на пляму.
  */
-const ICONS: Record<FeaturesBlock['items'][number]['icon'], string> = {
+const ICONS: Record<Exclude<BlockIcon, 'none'>, string> = {
   scissors: 'M6 3v12M18 3v12M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM18 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 3l12 12M18 3 6 15',
   printer: 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z',
   truck: 'M1 3h13v13H1zM14 8h4l3 3v5h-7zM5.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
   shield: 'M12 2 4 5v7c0 4.5 3.4 8.7 8 10 4.6-1.3 8-5.5 8-10V5z',
   heart: 'M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 21.4l8.8-8.7a5 5 0 0 0 0-7.1Z',
   clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 6v6l4 2',
+  /** Коробка: готовий виріб, який лишилося відправити. */
+  box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9',
+  /** Олівець: той самий принт, але з правками. */
+  pencil: 'M4 20h4L20.5 7.5a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 6.5l3 3',
+  /** Палітра: малюнок із нуля. */
+  palette: 'M12 21a9 9 0 1 1 9-9c0 2-1.6 2.6-3 2.6h-1.6c-1.2 0-2.1 1-2.1 2.1 0 .5.2 1 .5 1.4.3.4.2 1-.3 1.3-.7.4-1.6.6-2.5.6ZM7.5 10.5h.01M11 7h.01M15.5 8.5h.01',
+  /** Лапа: усе, що про саму собаку. */
+  paw: 'M6.5 12.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17.5 12.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM10 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM14 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM12 13c-2.5 0-4.5 2-4.5 4a2.5 2.5 0 0 0 3.6 2.2c.6-.3 1.2-.3 1.8 0A2.5 2.5 0 0 0 16.5 17c0-2-2-4-4.5-4Z',
+  /** Іскра: те, чого не було, поки ми не намалювали. */
+  sparkle: 'M12 3v5M12 16v5M3 12h5M16 12h5M6.3 6.3l3.2 3.2M14.5 14.5l3.2 3.2M17.7 6.3l-3.2 3.2M9.5 14.5l-3.2 3.2',
+  /** Хмарка: розмова з людиною. */
+  chat: 'M21 12a8 8 0 0 1-8 8H4l2.2-2.9A8 8 0 1 1 21 12Z',
 };
 
-export function Features({ block }: { block: FeaturesBlock }) {
+/** Одна іконка. `none` не малює нічого — і не лишає місця. */
+function Glyph({ icon, className = '' }: { icon: BlockIcon; className?: string }) {
+  if (icon === 'none') return null;
+  return (
+    <svg
+      viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" className={`h-[22px] w-[22px] shrink-0 ${className}`}
+    >
+      <path d={ICONS[icon]} />
+    </svg>
+  );
+}
+
+const COLUMNS: Record<2 | 3 | 4, string> = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-2 lg:grid-cols-3',
+  4: 'sm:grid-cols-2 lg:grid-cols-4',
+};
+
+/**
+ * Картки: кілька рівноправних варіантів.
+ *
+ * Що тут змінилося й чому:
+ *
+ *   · **Іконка замість номера.** Спокуса пронумерувати «01 / 02 / 03» велика,
+ *     але номер означає послідовність — «спершу це, потім те». А тут три
+ *     СПОСОБИ, з яких обирають один. Нумерація читалася б як інструкція й
+ *     підказувала б, що перший спосіб «правильніший».
+ *   · **Повітря.** Було `gap-4` і `pt-3` — три щільні колонки тексту, які
+ *     зливалися в абзац із трьома жирними словами. Стало `gap-x-8 gap-y-10`
+ *     і `pt-5`: між колонками зʼявився проміжок, у якому око встигає
+ *     зупинитися, а волосінь зверху почала розділяти, а не просто бути.
+ */
+export function Cards({ block, onDark = false }: { block: CardsBlock } & Dark) {
+  const c = palette(onDark);
+  const withIcons = block.items.some((i) => i.icon !== 'none');
   return (
     <>
-      <BlockHeading text={block.heading} />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <BlockHeading text={block.heading} lead={block.lead} onDark={onDark} />
+      <div className={`grid gap-x-8 gap-y-10 ${COLUMNS[block.columns]}`}>
         {block.items.map((item, i) => (
-          <div key={i} className="flex gap-3">
-            <svg
-              width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
-              aria-hidden="true" className="mt-0.5 shrink-0 text-ink"
-            >
-              <path d={ICONS[item.icon]} />
-            </svg>
+          <div key={i} className={`border-t pt-5 ${c.rule}`}>
+            {/*
+              Місце під іконку тримається на всіх картках, щойно вона є хоч
+              на одній: інакше картка без іконки піднімає заголовок вище за
+              сусідів, і ряд перестає бути рядом.
+            */}
+            {withIcons && (
+              /*
+                Іконка без медальйона. Спершу тут була кругла підкладка —
+                спочатку заливкою, потім обведенням, — і обидва варіанти на
+                кремовій секції виявилися невидимими: різниця між `#f6f6f3` і
+                `#e4e4df` на колі в 44 px не читається. Лишилася сама іконка:
+                волосінь зверху вже розділяє картки, другий контур їй нічого
+                не додавав.
+              */
+              <div className={`mb-4 ${c.head}`}>
+                <Glyph icon={item.icon} className="h-7 w-7" />
+              </div>
+            )}
+            <h3 className={`font-display text-base font-bold uppercase leading-tight ${c.head}`}>{item.title}</h3>
+            <InlineParagraph text={item.text} className={`mt-2 text-sm leading-relaxed ${c.body}`} />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+
+export function Features({ block, onDark = false }: { block: FeaturesBlock } & Dark) {
+  const c = palette(onDark);
+  return (
+    <>
+      <BlockHeading text={block.heading} onDark={onDark} />
+      <div className="grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+        {block.items.map((item, i) => (
+          <div key={i} className="flex gap-4">
+            <Glyph icon={item.icon} className={`mt-0.5 ${c.head}`} />
             <div>
-              <h3 className="font-semibold text-ink">{item.title}</h3>
-              <InlineParagraph text={item.text} className="mt-1 text-sm leading-relaxed text-ink-muted" />
+              <h3 className={`font-semibold ${c.head}`}>{item.title}</h3>
+              <InlineParagraph text={item.text} className={`mt-1 text-sm leading-relaxed ${c.body}`} />
             </div>
           </div>
         ))}
@@ -261,17 +329,18 @@ export function Features({ block }: { block: FeaturesBlock }) {
   );
 }
 
-export function Faq({ block }: { block: FaqBlock }) {
+export function Faq({ block, onDark = false }: { block: FaqBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <>
-      <BlockHeading text={block.heading} />
-      <div className="max-w-3xl divide-y divide-line">
+      <BlockHeading text={block.heading} onDark={onDark} />
+      <div className={`max-w-3xl divide-y ${onDark ? 'divide-surface/20' : 'divide-line'}`}>
         {block.items.map((item, i) => (
           <details key={i} className="group py-4">
-            <summary className="cursor-pointer font-semibold text-ink marker:text-ink-subtle">
+            <summary className={`cursor-pointer font-semibold ${c.head}`}>
               {item.q}
             </summary>
-            <InlineParagraph text={item.a} className="mt-2 leading-relaxed text-ink-muted" />
+            <InlineParagraph text={item.a} className={`mt-2 leading-relaxed ${c.body}`} />
           </details>
         ))}
       </div>
@@ -279,17 +348,19 @@ export function Faq({ block }: { block: FaqBlock }) {
   );
 }
 
-export function Cta({ block }: { block: CtaBlock }) {
+export function Cta({ block, onDark = false }: { block: CtaBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <div className="max-w-prose">
-      <h2 className="text-section font-display font-bold uppercase text-ink">{block.heading}</h2>
-      <InlineParagraph text={block.text} className="mt-3 leading-relaxed text-ink-muted" />
-      <BlockLinks links={block.links} className="mt-6" />
+      <h2 className={`text-section font-display font-bold uppercase ${c.head}`}>{block.heading}</h2>
+      <InlineParagraph text={block.text} className={`mt-3 leading-relaxed ${c.body}`} />
+      <BlockLinks links={block.links} className="mt-6" onDark={onDark} />
     </div>
   );
 }
 
-export function ImageText({ block }: { block: ImageTextBlock }) {
+export function ImageText({ block, onDark = false }: { block: ImageTextBlock } & Dark) {
+  const c = palette(onDark);
   const media = (
     <figure className="m-0">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -299,17 +370,17 @@ export function ImageText({ block }: { block: ImageTextBlock }) {
         className="w-full object-cover"
       />
       {block.image.caption.trim() !== '' && (
-        <figcaption className="mt-2 text-sm text-ink-subtle">{block.image.caption}</figcaption>
+        <figcaption className={`mt-2 text-sm ${c.faint}`}>{block.image.caption}</figcaption>
       )}
     </figure>
   );
   const body = (
     <div>
       {block.heading.trim() !== '' && (
-        <h2 className="text-section font-display font-bold uppercase text-ink">{block.heading}</h2>
+        <h2 className={`text-section font-display font-bold uppercase ${c.head}`}>{block.heading}</h2>
       )}
-      <InlineParagraph text={block.text} className="mt-3 leading-relaxed text-ink-muted" />
-      <BlockLinks links={block.links} className="mt-6" />
+      <InlineParagraph text={block.text} className={`mt-3 leading-relaxed ${c.body}`} />
+      <BlockLinks links={block.links} className="mt-6" onDark={onDark} />
     </div>
   );
 
@@ -320,10 +391,11 @@ export function ImageText({ block }: { block: ImageTextBlock }) {
   );
 }
 
-export function Gallery({ block }: { block: GalleryBlock }) {
+export function Gallery({ block, onDark = false }: { block: GalleryBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <>
-      <BlockHeading text={block.heading} />
+      <BlockHeading text={block.heading} onDark={onDark} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {block.items.map((img, i) => (
           <figure key={i} className="m-0">
@@ -334,7 +406,7 @@ export function Gallery({ block }: { block: GalleryBlock }) {
               className="aspect-square w-full bg-surface-sunken object-cover"
             />
             {img.caption.trim() !== '' && (
-              <figcaption className="mt-2 text-sm text-ink-subtle">{img.caption}</figcaption>
+              <figcaption className={`mt-2 text-sm ${c.faint}`}>{img.caption}</figcaption>
             )}
           </figure>
         ))}
@@ -343,16 +415,17 @@ export function Gallery({ block }: { block: GalleryBlock }) {
   );
 }
 
-export function Quote({ block }: { block: QuoteBlock }) {
+export function Quote({ block, onDark = false }: { block: QuoteBlock } & Dark) {
+  const c = palette(onDark);
   return (
     <figure className="m-0 max-w-3xl">
-      <blockquote className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">
+      <blockquote className={`font-display text-2xl font-bold leading-tight sm:text-3xl ${c.head}`}>
         <Inline text={block.text} />
       </blockquote>
       {(block.author.trim() !== '' || block.role.trim() !== '') && (
-        <figcaption className="mt-3 text-sm text-ink-muted">
+        <figcaption className={`mt-3 text-sm ${c.body}`}>
           {block.author}
-          {block.role.trim() !== '' && <span className="text-ink-subtle"> · {block.role}</span>}
+          {block.role.trim() !== '' && <span className={c.faint}> · {block.role}</span>}
         </figcaption>
       )}
     </figure>

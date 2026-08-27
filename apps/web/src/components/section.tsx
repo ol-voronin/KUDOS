@@ -25,7 +25,17 @@ export function Section({
   children, tone = 'plain', id, className = '',
 }: { children: ReactNode; tone?: Tone; id?: string; className?: string }) {
   return (
-    <section id={id} className={`${TONES[tone]} ${className}`}>
+    <section
+      id={id}
+      className={`${TONES[tone]} ${className}`}
+      /*
+       * Курсор на чорній секції має бути світлим — так само, як на
+       * фотографії. Прапорець ставить сама секція, а не той, хто її
+       * викликає: тон і колір курсора — це одне рішення, і рознесені по
+       * двох місцях вони обовʼязково розійдуться.
+       */
+      {...(tone === 'ink' ? { 'data-cursor': 'light' } : {})}
+    >
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16">{children}</div>
     </section>
   );

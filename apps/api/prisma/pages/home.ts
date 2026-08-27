@@ -54,12 +54,12 @@ export const HOME_PAGE: PageSeed = {
       limit: 12,
     },
     {
-      id: 'ready', type: 'printGrid', tone: 'cream',
+      id: 'ready', type: 'printGrid', tone: 'plain',
       heading: 'Готові до відправки',
       source: 'ready', sourceSlug: '', limit: 8, moreHref: '',
     },
     {
-      id: 'collections', type: 'collectionStrip', tone: 'plum',
+      id: 'collections', type: 'collectionStrip', tone: 'plain',
       heading: 'Колекції',
       limit: 6,
     },
@@ -75,21 +75,24 @@ export const HOME_PAGE: PageSeed = {
       columns: 3,
       items: [
         {
+          icon: 'box',
           title: 'Готовий принт',
           text: '**від 1 190 ₴**, відправка за 1–2 дні, якщо є в наявності. Обираєте з каталогу виріб, колір і розмір — і оформлюєте одразу на сайті. [Дивитись каталог](#новинки)',
         },
         {
+          icon: 'pencil',
           title: 'Готовий принт + зміни',
           text: '**від 1 190 ₴ + доплата**, зазвичай 2–4 дні на правки. Той самий принт, але з вашим текстом, кличкою або в іншому кольорі. [Написати нам](/zayavka)',
         },
         {
+          icon: 'palette',
           title: 'Принт з нуля',
           text: '**Рахуємо після брифу**, від тижня — це проєкт, а не покупка. Малюємо саме вашого пса з фото: портрет, обкладинка, будь-яка ідея. Правки включені. [Заповнити бриф](/svoya-ideya)',
         },
       ],
     },
     {
-      id: 'custom', type: 'cta', tone: 'accent',
+      id: 'custom', type: 'cta', tone: 'ink',
       heading: 'Намалюємо саме вашого пса',
       text: 'З його вухами, шрамом і виразом морди, який знаєте тільки ви. Портрет, обкладинка журналу, будь-яка ідея. Ціну називаємо після того, як побачили — робота з нуля буває і на дві години, і на два дні.',
       links: [
@@ -98,7 +101,7 @@ export const HOME_PAGE: PageSeed = {
       ],
     },
     {
-      id: 'trust', type: 'features', tone: 'teal',
+      id: 'trust', type: 'features', tone: 'cream',
       heading: 'Що ви отримуєте',
       items: [
         {
@@ -124,7 +127,7 @@ export const HOME_PAGE: PageSeed = {
       ],
     },
     {
-      id: 'b2b', type: 'cta', tone: 'sun',
+      id: 'b2b', type: 'cta', tone: 'cream',
       heading: 'Зоомагазин, вет-клініка, грумінг?',
       text: 'Робимо мерч під вашим логотипом, партії від десяти штук, подарунки клієнтам і спільні лінійки з притулками. Ціна на опт інша — порахуємо під тираж.',
       links: [{ label: 'Умови співпраці', href: '/spivpratsia', secondary: false }],

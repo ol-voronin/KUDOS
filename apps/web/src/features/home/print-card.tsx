@@ -91,26 +91,30 @@ export function PrintGrid({ prints }: { prints: readonly PrintCardDto[] }) {
  * не перетворює сторінку на суцільний крик.
  */
 export function SectionHead({
-  title, ghost, eyebrow, subtitle, href, hrefLabel,
+  title, ghost, eyebrow, subtitle, href, hrefLabel, onDark = false,
 }: {
   title: string; ghost?: string; eyebrow?: string; subtitle?: string;
-  href?: string; hrefLabel?: string;
+  href?: string; hrefLabel?: string; onDark?: boolean;
 }) {
+  const head = onDark ? 'text-surface' : 'text-ink';
+  const body = onDark ? 'text-surface/75' : 'text-ink-muted';
+  const rule = onDark ? 'border-surface/45' : 'border-ink';
   return (
     <div className="reveal mb-6">
-      {eyebrow !== undefined && <p className="label-eyebrow mb-1">{eyebrow}</p>}
-      <h2 className="text-section font-display font-bold uppercase text-ink">
+      {eyebrow !== undefined && <p className={`label-eyebrow mb-1 ${onDark ? 'text-surface/60' : ''}`}>{eyebrow}</p>}
+      <h2 className={`text-section font-display font-bold uppercase ${head}`}>
         {title}
-        {ghost !== undefined && <> <span className="ghost-word">{ghost}</span></>}
+        {/* Привида на чорному немає: блідий тон там зчитується як брак контрасту. */}
+        {ghost !== undefined && <> <span className={onDark ? '' : 'ghost-word'}>{ghost}</span></>}
       </h2>
-      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-t border-ink pt-2">
+      <div className={`mt-3 flex flex-wrap items-baseline justify-between gap-3 border-t pt-2 ${rule}`}>
         {subtitle !== undefined
-          ? <p className="max-w-prose text-sm text-ink-muted">{subtitle}</p>
+          ? <p className={`max-w-prose text-sm ${body}`}>{subtitle}</p>
           : <span />}
         {href !== undefined && (
           <Link
             href={href}
-            className="label-eyebrow shrink-0 border-b border-ink pb-0.5 text-ink hover:text-ink-muted"
+            className={`label-eyebrow shrink-0 border-b pb-0.5 hover:opacity-70 ${rule} ${head}`}
           >
             {hrefLabel ?? 'Дивитись усі'} →
           </Link>

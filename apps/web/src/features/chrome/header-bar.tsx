@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { LiveSearch } from '@/features/search/live-search';
 
 /**
  * Шапка.
@@ -33,13 +33,10 @@ export function HeaderBar({
   phone: string;
   phoneDisplay: string;
 }) {
-  const router = useRouter();
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [query, setQuery] = useState('');
   const lastY = useRef(0);
-  const field = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onScroll(): void {
@@ -54,8 +51,6 @@ export function HeaderBar({
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => { if (open) field.current?.focus(); }, [open]);
-
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
       if (e.key === 'Escape') { setOpen(false); setMenu(false); }
@@ -63,14 +58,6 @@ export function HeaderBar({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  function submit(e: React.FormEvent): void {
-    e.preventDefault();
-    const q = query.trim();
-    if (q.length < 2) return;
-    setOpen(false);
-    router.push(`/search?q=${encodeURIComponent(q)}`);
-  }
 
   return (
     <header
@@ -120,28 +107,23 @@ export function HeaderBar({
         </div>
       </div>
 
-      {/* Рядок пошуку розгортається під шапкою, не зсуваючи вміст сторінки. */}
+      {/*
+        Рядок пошуку розгортається під шапкою, не зсуваючи вміст сторінки.
+
+        `overflow` перемикається разом зі станом: поки рядок згорнутий, він
+        мусить обрізати свій вміст, інакше поле стирчить із-під шапки. Але
+        щойно він розгорнувся, обрізання треба зняти — інакше воно обрізає й
+        випадайку з підказками, яка висить нижче межі рядка.
+      */}
       <div
         className={[
-          'overflow-hidden border-t border-line transition-[max-height] duration-300 ease-out motion-reduce:transition-none',
-          open ? 'max-h-24' : 'max-h-0 border-t-0',
+          'border-t border-line transition-[max-height] duration-300 ease-out motion-reduce:transition-none',
+          open ? 'max-h-24 overflow-visible' : 'max-h-0 overflow-hidden border-t-0',
         ].join(' ')}
       >
-        <form onSubmit={submit} role="search" action="/search" method="get" className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-          <SearchIcon />
-          <label htmlFor="header-search" className="sr-only">Пошук по сайту</label>
-          <input
-            ref={field}
-            id="header-search"
-            name="q"
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Порода, колекція, принт…"
-            className="h-11 w-full bg-transparent text-base text-ink placeholder:text-ink-subtle focus:outline-none"
-          />
-          <button type="submit" className="label-eyebrow tap-sm text-ink hover:opacity-60">Знайти</button>
-        </form>
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
+          <LiveSearch variant="header" autoFocus={open} onNavigate={() => setOpen(false)} />
+        </div>
       </div>
 
       {/* Мобільне меню. */}

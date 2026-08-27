@@ -47,8 +47,8 @@ export const FALLBACK_SETTINGS: SiteSettingsDto = {
  * трохи застаріле меню.
  */
 const FALLBACK_MENU: MenuItemDto[] = [
-  ['Каталог', '/prints'], ['Вироби', '/vyroby'], ['Колекції', '/collections'],
-  ['Свій принт', '/svoya-ideya'], ['Статті', '/statti'], ['Співпраця', '/spivpratsia'],
+  ['Породи', '/breeds'], ['Колекції', '/collections'],
+  ['Вироби', '/vyroby'], ['Свій принт', '/svoya-ideya'],
 ].map(([label, href], i) => ({
   id: `fallback-header-${i}`,
   area: 'HEADER' as const,

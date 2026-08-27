@@ -46,7 +46,10 @@ async function loadPrints(block: PrintGridBlock): Promise<readonly PrintCardDto[
   return data?.items ?? [];
 }
 
-export async function PrintGridBlockView({ block }: { block: PrintGridBlock }) {
+/** Спільний проп усіх блоків: чи стоїть блок на чорній секції. */
+interface Dark { readonly onDark?: boolean }
+
+export async function PrintGridBlockView({ block, onDark = false }: { block: PrintGridBlock } & Dark) {
   const prints = (await loadPrints(block)).slice(0, block.limit);
   if (prints.length === 0) return null;
   return (
@@ -54,6 +57,7 @@ export async function PrintGridBlockView({ block }: { block: PrintGridBlock }) {
       {(block.heading !== '' || block.moreHref !== '') && (
         <SectionHead
           title={block.heading}
+          onDark={onDark}
           {...(block.moreHref !== '' ? { href: block.moreHref } : {})}
         />
       )}
@@ -69,7 +73,7 @@ export async function PrintGridBlockView({ block }: { block: PrintGridBlock }) {
  * Порожня стрічка не малюється зовсім — заголовок «Статті» над порожнечею
  * читається як зламаний сайт.
  */
-export async function ArticleListBlockView({ block }: { block: ArticleListBlock }) {
+export async function ArticleListBlockView({ block, onDark = false }: { block: ArticleListBlock } & Dark) {
   const data = await serverFetchOrNull(`/content/pages?kind=ARTICLE&limit=${block.limit}`, PageListDto);
   const articles = (data?.items ?? []).slice(0, block.limit);
   if (articles.length === 0) return null;
@@ -79,46 +83,55 @@ export async function ArticleListBlockView({ block }: { block: ArticleListBlock 
       {(block.heading !== '' || block.moreHref !== '') && (
         <SectionHead
           title={block.heading}
+          onDark={onDark}
           {...(block.moreHref !== '' ? { href: block.moreHref } : {})}
         />
       )}
-      {block.lead !== '' && <InlineParagraph text={block.lead} className="mb-6 max-w-prose text-ink-muted" />}
+      {block.lead !== '' && (
+        <InlineParagraph
+          text={block.lead}
+          className={`mb-6 max-w-prose ${onDark ? 'text-surface/75' : 'text-ink-muted'}`}
+        />
+      )}
       <ArticleGrid articles={articles} />
     </>
   );
 }
 
-export async function BreedStripBlockView({ block }: { block: BreedStripBlock }) {
+export async function BreedStripBlockView({ block, onDark = false }: { block: BreedStripBlock } & Dark) {
   const data = await serverFetchOrNull('/catalog/breeds', BreedListDto);
   const breeds = (data?.items ?? []).slice(0, block.limit);
   if (breeds.length === 0) return null;
   return (
     <>
-      {block.heading !== '' && <SectionHead title={block.heading} href="/breeds" />}
+      {block.heading !== '' && <SectionHead title={block.heading} href="/breeds" onDark={onDark} />}
       <BreedStrip breeds={breeds} />
     </>
   );
 }
 
-export async function CollectionStripBlockView({ block }: { block: CollectionStripBlock }) {
+export async function CollectionStripBlockView({ block, onDark = false }: { block: CollectionStripBlock } & Dark) {
   const data = await serverFetchOrNull('/catalog/collections', CollectionListDto);
   const collections = (data?.items ?? []).slice(0, block.limit);
   if (collections.length === 0) return null;
   return (
     <>
-      {block.heading !== '' && <SectionHead title={block.heading} href="/collections" />}
+      {block.heading !== '' && <SectionHead title={block.heading} href="/collections" onDark={onDark} />}
       <CollectionStrip collections={collections} />
     </>
   );
 }
 
 /** Форма заявки. Клієнтський компонент усередині серверного — це нормально. */
-export function LeadFormBlockView({ block }: { block: LeadFormBlock }) {
+export function LeadFormBlockView({ block, onDark = false }: { block: LeadFormBlock } & Dark) {
   return (
-    <div className="grid gap-10 border-t border-ink pt-8 lg:grid-cols-[1fr_minmax(0,24rem)]">
+    <div className={`grid gap-10 border-t pt-8 lg:grid-cols-[1fr_minmax(0,24rem)] ${onDark ? 'border-surface/45' : 'border-ink'}`}>
       <div>
-        <h2 className="font-display text-2xl font-bold text-ink">{block.heading}</h2>
-        <InlineParagraph text={block.text} className="mt-3 max-w-prose leading-relaxed text-ink-muted" />
+        <h2 className={`font-display text-2xl font-bold ${onDark ? 'text-surface' : 'text-ink'}`}>{block.heading}</h2>
+        <InlineParagraph
+          text={block.text}
+          className={`mt-3 max-w-prose leading-relaxed ${onDark ? 'text-surface/75' : 'text-ink-muted'}`}
+        />
       </div>
       <PublicLeadForm source={block.source} compact />
     </div>

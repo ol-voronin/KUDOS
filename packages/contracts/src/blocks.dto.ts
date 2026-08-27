@@ -189,6 +189,23 @@ export const StepsBlock = z.object({
   items: z.array(z.object({ title: ShortText.min(1), text: InlineText.default('') })).max(12).default([]),
 });
 
+/**
+ * Перелік іконок, дозволених у блоках.
+ *
+ * Ключ, а не SVG і не адреса файлу: інакше в контент потрапляє довільна
+ * розмітка або чужий домен, і одне з двох рано чи пізно стріляє. Малюються
+ * ключі в одному місці — `static-blocks.tsx`.
+ *
+ * `none` існує заради карток: там іконка необовʼязкова, і «жодної» має бути
+ * значенням, яке можна вибрати, а не порожнім рядком повз перелік.
+ */
+export const BlockIcon = z.enum([
+  'none',
+  'shield', 'scissors', 'printer', 'truck', 'heart', 'clock',
+  'box', 'pencil', 'palette', 'paw', 'sparkle', 'chat',
+]);
+export type BlockIcon = z.infer<typeof BlockIcon>;
+
 /** Картки без нумерації: «З ким працюємо». Порядок тут нічого не означає. */
 export const CardsBlock = z.object({
   ...base,
@@ -196,7 +213,16 @@ export const CardsBlock = z.object({
   heading: ShortText.default(''),
   lead: InlineText.default(''),
   columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(2),
-  items: z.array(z.object({ title: ShortText.min(1), text: InlineText.default('') })).max(12).default([]),
+  items: z.array(z.object({
+    /*
+     * Іконка на картці необовʼязкова, і саме тому має значення за
+     * замовчуванням: блоки, збережені до появи поля, лишаються валідними й
+     * малюються рівно так, як малювалися.
+     */
+    icon: BlockIcon.default('none'),
+    title: ShortText.min(1),
+    text: InlineText.default(''),
+  })).max(12).default([]),
 });
 
 export const FeaturesBlock = z.object({
@@ -204,7 +230,7 @@ export const FeaturesBlock = z.object({
   type: z.literal('features'),
   heading: ShortText.default(''),
   items: z.array(z.object({
-    icon: z.enum(['scissors', 'printer', 'truck', 'shield', 'heart', 'clock']).default('shield'),
+    icon: BlockIcon.default('shield'),
     title: ShortText.min(1),
     text: InlineText.default(''),
   })).max(6).default([]),

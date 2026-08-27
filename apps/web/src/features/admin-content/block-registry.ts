@@ -22,9 +22,27 @@ export interface BlockSpec {
   summary(block: AnyBlock): string;
 }
 
+/*
+ * Порядок тут — це порада.
+ *
+ * Кольорові підкладки лишилися (сторінки, збережені з ними, мають працювати),
+ * але поїхали вниз списку й підписані тим, чим вони насправді є. Нагорі три
+ * тони, з яких складається вітрина: білий за замовчуванням, кремовий — щоб
+ * розділити зони, чорний — рівно один раз на сторінку, там, де треба
+ * зупинити прокрутку.
+ *
+ * Причина проста: колір на сторінці має приносити фотографія товару. Коли
+ * колір приносить ще й фон секції, вони починають сперечатися, і програє
+ * завжди товар.
+ */
 const TONE_LABELS: Record<string, string> = {
-  plain: 'Білий', cream: 'Кремовий', accent: 'Помаранчевий',
-  teal: 'Бірюзовий', sun: 'Жовтий', plum: 'Сливовий', ink: 'Темний',
+  plain: 'Білий — за замовчуванням',
+  cream: 'Кремовий — розділити зони',
+  ink: 'Чорний — акцент, один на сторінку',
+  accent: 'Персиковий — застаріле',
+  teal: 'Бірюзовий — застаріле',
+  sun: 'Пісочний — застаріле',
+  plum: 'Сливовий — застаріле',
 };
 
 export const TONE_OPTIONS = Object.entries(TONE_LABELS).map(([value, label]) => ({ value, label }));
@@ -88,6 +106,21 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
         { value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' },
       ] },
       { kind: 'list', name: 'items', label: 'Картки', itemLabel: 'Картка', max: 12, fields: [
+      { kind: 'select', name: 'icon', label: 'Іконка', options: [
+        { value: 'none', label: 'Без іконки' },
+        { value: 'box', label: 'Коробка — готове, відправляємо' },
+        { value: 'pencil', label: 'Олівець — правки' },
+        { value: 'palette', label: 'Палітра — малюємо з нуля' },
+        { value: 'paw', label: 'Лапа — про собаку' },
+        { value: 'sparkle', label: 'Іскра — новинка' },
+        { value: 'chat', label: 'Хмарка — розмова' },
+        { value: 'shield', label: 'Щит — гарантія' },
+        { value: 'scissors', label: 'Ножиці — пошиття' },
+        { value: 'printer', label: 'Принтер — друк' },
+        { value: 'truck', label: 'Авто — доставка' },
+        { value: 'heart', label: 'Серце — турбота' },
+        { value: 'clock', label: 'Годинник — строки' },
+      ] },
         { kind: 'text', name: 'title', label: 'Назва' },
         { kind: 'rich', name: 'text', label: 'Текст', rows: 3, help: RICH_HELP },
       ] },
@@ -123,6 +156,12 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
           { value: 'truck', label: 'Авто — доставка' },
           { value: 'heart', label: 'Серце — турбота' },
           { value: 'clock', label: 'Годинник — строки' },
+          { value: 'box', label: 'Коробка — готове, відправляємо' },
+          { value: 'pencil', label: 'Олівець — правки' },
+          { value: 'palette', label: 'Палітра — малюємо з нуля' },
+          { value: 'paw', label: 'Лапа — про собаку' },
+          { value: 'sparkle', label: 'Іскра — новинка' },
+          { value: 'chat', label: 'Хмарка — розмова' },
         ] },
         { kind: 'text', name: 'title', label: 'Назва' },
         { kind: 'rich', name: 'text', label: 'Текст', rows: 2, help: RICH_HELP },

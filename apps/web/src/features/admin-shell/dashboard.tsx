@@ -51,16 +51,37 @@ export function Dashboard() {
             href="/admin/leads"
             alarm={newLeads > 0}
           />
-          <Tile label="Візити за тиждень" value={t ? String(t.visits) : null} hint="унікальні сесії" href="/admin/statystyka" />
-          <Tile label="Замовлення" value={t ? String(t.orders) : null} hint="оплачені за тиждень" href="/admin/statystyka" />
+          <Tile label="Візити за тиждень" value={t ? String(t.visits) : null} hint="унікальні сесії" href="/admin/statystyka" delay={90} />
+          <Tile label="Замовлення" value={t ? String(t.orders) : null} hint="оплачені за тиждень" href="/admin/statystyka" delay={180} />
           <Tile
             label="Дохід"
             value={t ? formatUAH(minor(t.revenueMinor)) : null}
             hint={t ? `конверсія ${(t.conversionHundredths / 100).toFixed(1)} %` : undefined}
             href="/admin/statystyka"
+            delay={270}
           />
         </dl>
       </section>
+
+      {/*
+        Графік має місце ще до того, як приїхали дані. Раніше секція просто
+        не малювалась, і сторінка стрибала на висоту графіка рівно тоді,
+        коли на неї вже дивилися.
+      */}
+      {stats.isLoading && (
+        <section className="rounded-card border border-line p-4">
+          <Skeleton className="h-4 w-40" />
+          <div className="mt-4 flex h-32 items-end gap-1.5" aria-busy="true">
+            {Array.from({ length: DAYS }, (_, i) => (
+              <Skeleton
+                key={i}
+                className={`flex-1 ${['h-1/3', 'h-2/3', 'h-1/2', 'h-full', 'h-3/5', 'h-2/5', 'h-4/5'][i % 7] ?? 'h-1/2'}`}
+                delay={i * 90}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {stats.data && stats.data.daily.length > 0 && (
         <section className="rounded-card border border-line p-4">
@@ -116,8 +137,8 @@ const ENTRIES = [
  * інакше рядок плиток підстрибує, коли приходять дані.
  */
 function Tile({
-  label, value, hint, href, alarm = false,
-}: { label: string; value: string | null; hint?: string; href: string; alarm?: boolean }) {
+  label, value, hint, href, alarm = false, delay = 0,
+}: { label: string; value: string | null; hint?: string; href: string; alarm?: boolean; delay?: number }) {
   return (
     <Link
       href={href}
@@ -126,7 +147,7 @@ function Tile({
       <dt className="label-eyebrow">{label}</dt>
       <dd className="mt-2">
         {value === null
-          ? <Skeleton className="h-8 w-20" />
+          ? <Skeleton className="h-8 w-20" delay={delay} />
           : (
             <span className={`font-display text-3xl font-extrabold tabular-nums ${alarm ? 'text-accent' : 'text-ink'}`}>
               {value}

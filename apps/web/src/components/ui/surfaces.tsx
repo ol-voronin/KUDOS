@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * Коробки, з яких складається сторінка.
@@ -86,9 +86,49 @@ export function ErrorBanner({ children }: { children: ReactNode }) {
   );
 }
 
-/** Смуга-скелет. Ширина в частках, щоб ряд не виглядав як рівна цегла. */
-export function Skeleton({ className = 'h-4 w-full' }: { className?: string }) {
-  return <span aria-hidden className={`skeleton block ${className}`} />;
+/**
+ * Смуга-скелет. Ширина в частках, щоб ряд не виглядав як рівна цегла.
+ *
+ * `delay` зсуває проблиск: кілька скелетів із наростаючою затримкою
+ * читаються як одна хвиля згори вниз, а не як кілька елементів, що блимають
+ * кожен сам по собі.
+ */
+export function Skeleton({ className = 'h-4 w-full', delay = 0 }: { className?: string; delay?: number }) {
+  return (
+    <span
+      aria-hidden
+      className={`skeleton block ${className}`}
+      style={delay === 0 ? undefined : ({ '--skeleton-delay': `${delay}ms` } as CSSProperties)}
+    />
+  );
+}
+
+/**
+ * Заглушка картки: смуга заголовка, дві смуги тексту, підпис.
+ *
+ * Потрібна там, де на час запиту зникає не таблиця, а плитка — дашборд,
+ * перелік принтів, картки колекцій. Без неї екран стрибав: спершу порожньо,
+ * потім раптом сітка.
+ */
+export function CardSkeleton({ lines = 2, delay = 0 }: { lines?: number; delay?: number }) {
+  return (
+    <div className="flex flex-col gap-2.5 rounded-card border border-line p-4" aria-hidden>
+      <Skeleton className="h-5 w-2/3" delay={delay} />
+      {Array.from({ length: lines }, (_, i) => (
+        <Skeleton key={i} className={i % 2 === 0 ? 'h-3 w-full' : 'h-3 w-4/5'} delay={delay + (i + 1) * 70} />
+      ))}
+    </div>
+  );
+}
+
+/** Сітка заглушок-карток: дашборд і будь-який перелік плиток. */
+export function CardGridSkeleton({ count = 4, cols = 'sm:grid-cols-2 lg:grid-cols-4' }: { count?: number; cols?: string }) {
+  return (
+    <div className={`grid gap-4 ${cols}`} aria-busy="true" aria-live="polite">
+      <span className="sr-only">Завантаження…</span>
+      {Array.from({ length: count }, (_, i) => <CardSkeleton key={i} delay={i * 90} />)}
+    </div>
+  );
 }
 
 /**
@@ -106,7 +146,11 @@ export function TableSkeleton({ rows = 4, cols = 4 }: { rows?: number; cols?: nu
       {Array.from({ length: rows }, (_, r) => (
         <div key={r} className="flex gap-4 border-b border-line pb-3">
           {Array.from({ length: cols }, (_, c) => (
-            <Skeleton key={c} className={`h-4 flex-1 ${widths[(r + c) % widths.length] ?? 'w-1/2'}`} />
+            <Skeleton
+              key={c}
+              className={`h-4 flex-1 ${widths[(r + c) % widths.length] ?? 'w-1/2'}`}
+              delay={r * 80 + c * 25}
+            />
           ))}
         </div>
       ))}

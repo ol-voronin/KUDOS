@@ -1,13 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
   BreedListDto, BreedPageDto, CatalogQueryDto, CollectionListDto, CollectionPageDto,
-  HomeDto, PrintListDto, PrintOfferDto, RangeColourDto, RangeDto, SearchResultDto, SitemapDto,
+  HomeDto, PrintCardDto, PrintListDto, PrintOfferDto, RangeColourDto, RangeDto,
+  SearchQueryDto, SearchResultDto, SitemapDto,
 } from '@dt/contracts';
 import { ErrorCode, minor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { PriceBookService } from '../pricing/price-book.service';
 import { blockReasonFor, garmentPriceFor, printPriceFor, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
-import { garmentTypesFor, toPrintCard, type OfferContext, type OfferableGarment, type PrintRow } from './print-card';
+import {
+  garmentTypesFor, matchesGarmentFilters, toPrintCard,
+  type OfferContext, type OfferableGarment, type PrintRow,
+} from './print-card';
+
+/** Рядок принта в тому вигляді, у якому його вибирає `PRINT_ROW_SELECT`. */
+interface PrintSelectRow {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly sizeTier: string;
+  readonly previewUrl: string;
+  readonly collections: ReadonlyArray<{ collectionId: string }>;
+}
 
 /** Скільки карток показувати в блоці на головній. */
 const HOME_BLOCK_SIZE = 8;
@@ -26,11 +40,23 @@ export class CatalogService {
     private readonly priceBook: PriceBookService,
   ) {}
 
+  /**
+   * Скільки принтів каталог готовий тримати в памʼяті за один запит.
+   *
+   * Частина фільтрів (тип виробу, лінійка, наявність) не виражається в SQL:
+   * вона залежить від ланцюжка `принт → колекції → правила → вироби`, який
+   * рахується вже над завантаженим контекстом. Тому сторінка ріжеться після
+   * фільтрації, а не в базі. Стеля потрібна, щоб це рішення мало межу: коли
+   * принтів стане більше за неї, денормалізація перестане бути передчасною.
+   */
+  private static readonly FILTER_SCAN_LIMIT = 600;
+
   async listPrints(query: CatalogQueryDto): Promise<PrintListDto> {
     const where = {
       isPublished: true,
       ...(query.collection ? { collections: { some: { collection: { slug: query.collection } } } } : {}),
       ...(query.breed ? { breeds: { some: { breed: { slug: query.breed } } } } : {}),
+      ...(query.sizeTier ? { sizeTier: query.sizeTier } : {}),
     };
 
     const [offer, printPrices] = await Promise.all([
@@ -38,23 +64,61 @@ export class CatalogService {
       this.loadPrintPrices(),
     ]);
 
-    const [rows, total] = await this.prisma.db.$transaction([
-      this.prisma.db.print.findMany({
-        where,
-        select: CatalogService.PRINT_ROW_SELECT,
-        orderBy: { createdAt: 'desc' },
-        skip: (query.page - 1) * query.perPage,
-        take: query.perPage,
-      }),
-      this.prisma.db.print.count({ where }),
-    ]);
+    const rows = await this.prisma.db.print.findMany({
+      where,
+      select: CatalogService.PRINT_ROW_SELECT,
+      orderBy: { createdAt: 'desc' },
+      take: CatalogService.FILTER_SCAN_LIMIT,
+    });
+
+    const filtered = this.applyOfferFilters(rows, offer, printPrices, query);
+    const start = (query.page - 1) * query.perPage;
 
     return {
-      items: rows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices)),
-      total,
+      items: filtered.slice(start, start + query.perPage),
+      total: filtered.length,
       page: query.page,
       perPage: query.perPage,
     };
+  }
+
+  /**
+   * Фільтри, які стосуються виробів, і сортування — над уже зібраними
+   * плитками.
+   *
+   * Один метод на каталог і на пошук навмисно: два списки з однаковими
+   * фільтрами, які по-різному розуміють «є в наявності», — це та розбіжність,
+   * яку помічає покупець і не помічає розробник.
+   */
+  private applyOfferFilters(
+    rows: readonly PrintSelectRow[],
+    offer: OfferContext,
+    printPrices: PrintPriceTable,
+    query: Pick<CatalogQueryDto, 'garmentType' | 'line' | 'inStock' | 'sort'>,
+  ): PrintCardDto[] {
+    const cards = rows
+      .map((p) => ({ row: CatalogService.toRow(p), card: toPrintCard(CatalogService.toRow(p), offer, printPrices) }))
+      .filter(({ row }) => matchesGarmentFilters(row, offer, {
+        ...(query.garmentType === undefined ? {} : { garmentType: query.garmentType }),
+        ...(query.line === undefined ? {} : { line: query.line }),
+      }))
+      .filter(({ card }) => query.inStock !== true || card.inStock)
+      .map(({ card }) => card);
+
+    /*
+     * Принт без ціни («немає на чому друкувати») при сортуванні за ціною
+     * їде в кінець в обидва боки. Ставити його першим у «спершу дешеві»
+     * означало б показати як найдешевше те, що взагалі не купується.
+     */
+    const price = (c: PrintCardDto): number => c.fromPriceMinor ?? Number.MAX_SAFE_INTEGER;
+    switch (query.sort) {
+      case 'cheap': cards.sort((a, b) => price(a) - price(b)); break;
+      case 'expensive': cards.sort((a, b) => (b.fromPriceMinor ?? -1) - (a.fromPriceMinor ?? -1)); break;
+      case 'name': cards.sort((a, b) => a.title.localeCompare(b.title, 'uk')); break;
+      case 'new': break; // порядок із бази вже такий
+      default: break;
+    }
+    return cards;
   }
 
   async getPrintOffer(slug: string): Promise<PrintOfferDto> {
@@ -310,7 +374,7 @@ export class CatalogService {
       this.prisma.db.garment.findMany({
         where: { isPublished: true },
         select: {
-          id: true, basePriceMinor: true, type: true,
+          id: true, basePriceMinor: true, type: true, line: true,
           rules: { select: { collectionId: true } },
           // Один рядок достатньо, щоб відповісти «чи є склад» — повний список
           // варіантів тут не потрібен і коштував би дорого.
@@ -325,12 +389,13 @@ export class CatalogService {
     ]);
 
     const garments: OfferableGarment[] = rows.map((g: {
-      id: string; basePriceMinor: number; type: string;
+      id: string; basePriceMinor: number; type: string; line: string;
       rules: Array<{ collectionId: string }>; variants: Array<{ id: string }>;
     }) => ({
       id: g.id,
       basePriceMinor: g.basePriceMinor,
       type: g.type,
+      line: g.line,
       collectionIds: g.rules.map((r) => r.collectionId),
       hasStock: g.variants.length > 0,
     }));
@@ -357,6 +422,27 @@ export class CatalogService {
    * (`filteredRelationCount`), а вмикати preview-фічі в проєкті, що приймає
    * гроші, заради одного лічильника не варто.
    */
+  /**
+   * Обкладинка для плитки породи — превʼю найновішого її принта.
+   *
+   * Свідомо НЕ окреме поле «фото породи» в базі. Фотографію породи довелося б
+   * знайти, купити й вивантажити на кожну з них, вона показувала б чужу
+   * собаку й не мала б стосунку до того, що ми продаємо. Превʼю принта
+   * показує наш малюнок, береться з даних, які вже є, і оновлюється саме.
+   */
+  private async breedPreviews(): Promise<Map<string, string>> {
+    const rows = await this.prisma.db.printBreed.findMany({
+      where: { print: { isPublished: true, previewUrl: { not: '' } } },
+      select: { breedId: true, print: { select: { previewUrl: true } } },
+      orderBy: { print: { createdAt: 'desc' } },
+    });
+    const map = new Map<string, string>();
+    for (const r of rows as Array<{ breedId: string; print: { previewUrl: string } }>) {
+      if (!map.has(r.breedId)) map.set(r.breedId, r.print.previewUrl);
+    }
+    return map;
+  }
+
   private async breedPrintCounts(): Promise<Map<string, number>> {
     const rows = await this.prisma.db.printBreed.groupBy({
       by: ['breedId'],
@@ -387,10 +473,7 @@ export class CatalogService {
     collections: { select: { collectionId: true } },
   } as const;
 
-  private static toRow(p: {
-    id: string; slug: string; title: string; sizeTier: string; previewUrl: string;
-    collections: Array<{ collectionId: string }>;
-  }): PrintRow {
+  private static toRow(p: PrintSelectRow): PrintRow {
     return {
       id: p.id, slug: p.slug, title: p.title,
       sizeTier: p.sizeTier as PrintRow['sizeTier'],
@@ -406,11 +489,12 @@ export class CatalogService {
    * сторінці: склад головної живе на сервері, а не збирається на клієнті.
    */
   async getHome(): Promise<HomeDto> {
-    const [offer, printPrices, breedCounts, collectionCounts] = await Promise.all([
+    const [offer, printPrices, breedCounts, collectionCounts, breedPreviews] = await Promise.all([
       this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
       this.collectionPrintCounts(),
+      this.breedPreviews(),
     ]);
 
     const [breedRows, collectionRows, newRows, totalPrints] = await this.prisma.db.$transaction([
@@ -469,7 +553,11 @@ export class CatalogService {
        * Порядок: спершу ті, де є що показати, далі за абеткою.
        */
       breeds: breedRows
-        .map((b) => ({ id: b.id, slug: b.slug, name: b.name, printCount: breedCounts.get(b.id) ?? 0 }))
+        .map((b) => ({
+          id: b.id, slug: b.slug, name: b.name,
+          printCount: breedCounts.get(b.id) ?? 0,
+          previewUrl: breedPreviews.get(b.id) ?? '',
+        }))
         .sort((a, b) => b.printCount - a.printCount || a.name.localeCompare(b.name, 'uk')),
       collections: collectionRows.map((c) => ({
         id: c.id, slug: c.slug, title: c.title, description: c.description,
@@ -483,14 +571,26 @@ export class CatalogService {
   }
 
   async listBreeds(): Promise<BreedListDto> {
-    const [rows, counts] = await Promise.all([
+    const [rows, counts, previews] = await Promise.all([
       this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
       this.breedPrintCounts(),
+      this.breedPreviews(),
     ]);
-    // Тут, на відміну від головної, віддаємо всі — включно з порожніми:
-    // сторінка породи без принтів усе одно працює й пропонує намалювати.
+    /*
+     * Порядок: спершу породи, у яких є що показати, далі за абеткою.
+     *
+     * Раніше тут була чиста абетка, і смуга порід починалася з трьох плиток
+     * без картинки просто тому, що назви на «А». Виглядало це як порожній
+     * каталог, хоча принти є — просто в інших порід.
+     */
     return {
-      items: rows.map((b) => ({ id: b.id, slug: b.slug, name: b.name, printCount: counts.get(b.id) ?? 0 })),
+      items: rows
+        .map((b) => ({
+          id: b.id, slug: b.slug, name: b.name,
+          printCount: counts.get(b.id) ?? 0,
+          previewUrl: previews.get(b.id) ?? '',
+        }))
+        .sort((a, b) => b.printCount - a.printCount || a.name.localeCompare(b.name, 'uk')),
     };
   }
 
@@ -526,10 +626,11 @@ export class CatalogService {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Породу не знайдено' });
     }
 
-    const [offer, printPrices, breedCounts, rows, related] = await Promise.all([
+    const [offer, printPrices, breedCounts, breedPreviews, rows, related] = await Promise.all([
       this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
+      this.breedPreviews(),
       this.prisma.db.print.findMany({
         where: { isPublished: true, breeds: { some: { breedId: breed.id } } },
         select: CatalogService.PRINT_ROW_SELECT,
@@ -547,7 +648,11 @@ export class CatalogService {
       prints: printRows.map((p) => toPrintCard(p, offer, printPrices)),
       garmentTypes: garmentTypesFor(printRows, offer) as BreedPageDto['garmentTypes'],
       relatedBreeds: related
-        .map((b) => ({ id: b.id, slug: b.slug, name: b.name, printCount: breedCounts.get(b.id) ?? 0 }))
+        .map((b) => ({
+          id: b.id, slug: b.slug, name: b.name,
+          printCount: breedCounts.get(b.id) ?? 0,
+          previewUrl: breedPreviews.get(b.id) ?? '',
+        }))
         .filter((b) => b.printCount > 0)
         .sort((a, b) => b.printCount - a.printCount)
         .slice(0, 8),
@@ -593,18 +698,19 @@ export class CatalogService {
    * `has` по масиву: точний збіг елемента, а не підрядок, бо синоніми і так
    * записані у формі, у якій їх набирають.
    */
-  async search(rawQuery: string): Promise<SearchResultDto> {
-    const query = rawQuery.trim();
+  async search(input: SearchQueryDto): Promise<SearchResultDto> {
+    const query = input.q.trim();
     if (query.length < 2) {
       return { query, breeds: [], collections: [], prints: [], total: 0 };
     }
     const lower = query.toLowerCase();
 
-    const [offer, printPrices, breedCounts, collectionCounts] = await Promise.all([
+    const [offer, printPrices, breedCounts, collectionCounts, breedPreviews] = await Promise.all([
       this.loadOfferContext(),
       this.loadPrintPrices(),
       this.breedPrintCounts(),
       this.collectionPrintCounts(),
+      this.breedPreviews(),
     ]);
 
     const [breedRows, collectionRows, printRows] = await this.prisma.db.$transaction([
@@ -641,6 +747,9 @@ export class CatalogService {
       this.prisma.db.print.findMany({
         where: {
           isPublished: true,
+          ...(input.sizeTier ? { sizeTier: input.sizeTier } : {}),
+          ...(input.collection ? { collections: { some: { collection: { slug: input.collection } } } } : {}),
+          ...(input.breed ? { breeds: { some: { breed: { slug: input.breed } } } } : {}),
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { slug: { contains: lower } },
@@ -653,19 +762,33 @@ export class CatalogService {
         },
         select: CatalogService.PRINT_ROW_SELECT,
         orderBy: { createdAt: 'desc' },
-        take: 24,
+        /*
+         * Беремо із запасом, а не рівно стільки, скільки покажемо: фільтри за
+         * типом виробу й наявністю відсіюють уже після вибірки, і `take: 24`
+         * означав би «двадцять чотири до фільтра, шість після».
+         */
+        take: 120,
       }),
     ]);
 
     const breeds = breedRows.map((b) => ({
-      id: b.id, slug: b.slug, name: b.name, printCount: breedCounts.get(b.id) ?? 0,
+      id: b.id, slug: b.slug, name: b.name,
+      printCount: breedCounts.get(b.id) ?? 0,
+      previewUrl: breedPreviews.get(b.id) ?? '',
     }));
     const collections = collectionRows.map((c) => ({
       id: c.id, slug: c.slug, title: c.title, description: c.description,
       printCount: collectionCounts.get(c.id) ?? 0,
       previewUrls: c.prints.map((p) => p.print.previewUrl),
     }));
-    const prints = printRows.map((p) => toPrintCard(CatalogService.toRow(p), offer, printPrices));
+    /*
+     * Фільтри застосовуються тільки до принтів.
+     *
+     * Порода й колекція — це не товар, а вхід у каталог. Сховати сторінку
+     * породи «Коргі» тому, що ввімкнено фільтр «худі», означало б не
+     * відповісти на питання, з яким людина прийшла.
+     */
+    const prints = this.applyOfferFilters(printRows, offer, printPrices, input).slice(0, 24);
 
     return { query, breeds, collections, prints, total: breeds.length + collections.length + prints.length };
   }

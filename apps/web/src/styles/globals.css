@@ -43,9 +43,17 @@
   /* Цифри в колонках мають бути однакової ширини — інакше ціни «стрибають». */
   table, .tabular { font-variant-numeric: tabular-nums; }
 
+  /*
+   * Те саме, що в публічній оболонці, і з тієї ж причини: `sr-only` ховає
+   * надійно, а `focus-visible` показує тільки при клавіатурній навігації.
+   * Зсув (`-translate-y-20`) не годився: він рахується від елемента в потоці,
+   * і на прокрученій сторінці пігулка виїжджала на видноту.
+   */
   .skip-link {
-    @apply absolute left-4 top-4 z-50 -translate-y-20 rounded-pill bg-ink px-4 py-2 text-sm font-medium text-surface transition-transform;
-    @apply focus:translate-y-0;
+    @apply sr-only;
+    @apply focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50;
+    @apply focus-visible:rounded-pill focus-visible:bg-ink focus-visible:px-5 focus-visible:py-3;
+    @apply focus-visible:text-sm focus-visible:font-semibold focus-visible:text-surface;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -77,10 +85,48 @@
   .block-stack > :empty { display: none; }
   .block-section:not(:has(.block-stack > :not(:empty))) { display: none; }
 
-  /* Скелет замість «Завантаження…»: сторінка не перестрибує. */
-  .skeleton { @apply animate-pulse rounded-card bg-surface-sunken; }
+  /* ── скелет ───────────────────────────────────────────────────────
+     Заглушка замість «Завантаження…»: сторінка не перестрибує, фільтри й
+     фокус лишаються на місці.
+
+     Пульсація (`animate-pulse`) читалася як несправність: блок то є, то
+     немає, і на екрані з пʼятьма таблицями пʼять прямокутників блимали
+     врозбій. Проблиск іде в один бік, з однаковою швидкістю на всіх блоках,
+     і саме тому кілька скелетів поруч виглядають як одна поверхня, що
+     вантажиться, а не як пʼять зламаних елементів.
+
+     `--skeleton-delay` дозволяє зсунути хвилю по рядках: затримка в 60–80 мс
+     на рядок перетворює таблицю з мигтіння на прокатування зверху вниз.  */
+  /*
+   * Тло — `line`, а не `surface.sunken`.
+   *
+   * Кремовий скелет на білій картці адмінки майже не видно: різниця між
+   * `#ffffff` і `#f6f6f3` — три пункти яскравості, а поверх неї ще й іде
+   * білий проблиск, який цю різницю доїдає. Заглушка, якої не видно, не
+   * заглушка: сторінка виглядає порожньою, а не «вантажиться».
+   */
+  .skeleton {
+    @apply relative overflow-hidden rounded-card;
+    background: theme('colors.line.DEFAULT');
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 255 255 / 0.75) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: skeleton-sweep 1.5s cubic-bezier(.4,0,.6,1) infinite;
+    animation-delay: var(--skeleton-delay, 0ms);
+  }
+  @keyframes skeleton-sweep {
+    100% { transform: translateX(100%); }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .skeleton { @apply animate-none; }
+    .skeleton::after { animation: none; content: none; }
   }
 
   /* ── рух ──────────────────────────────────────────────────────────

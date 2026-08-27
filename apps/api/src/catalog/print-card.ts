@@ -16,6 +16,8 @@ export interface OfferableGarment {
   readonly id: string;
   readonly basePriceMinor: number;
   readonly type: string;
+  /** Лінійка: власне виробництво чи Native Spirit. Потрібна фільтру каталогу. */
+  readonly line: string;
   /** Колекції, на яких цей виріб дозволений правилом. */
   readonly collectionIds: readonly string[];
   /** Чи є хоч один варіант цього виробу в наявності. */
@@ -90,6 +92,30 @@ export function toPrintCard(
     fromPriceMinor: cheapest === null || printPrice === undefined ? null : cheapest + printPrice,
     inStock: offerable.some((g) => g.hasStock),
   };
+}
+
+/**
+ * Чи підходить принт під фільтри, які стосуються не його самого, а виробів.
+ *
+ * «Тип виробу» й «лінійка» — властивості не принта, а того, на чому його
+ * можна надрукувати, і зʼясувати це можна лише пройшовши ланцюжок
+ * `принт → колекції → правила → вироби`. У SQL цього не запитати одним
+ * `where`, тому фільтр застосовується тут, уже над порахованим контекстом.
+ *
+ * Ціна цього рішення чесна: сторінка каталогу вантажить усі опубліковані
+ * принти й ріже їх у памʼяті. Для магазину на сотні принтів це дешевше за
+ * денормалізацію, яку довелося б підтримувати в актуальному стані.
+ */
+export function matchesGarmentFilters(
+  print: PrintRow,
+  ctx: OfferContext,
+  filters: { readonly garmentType?: string; readonly line?: string },
+): boolean {
+  if (filters.garmentType === undefined && filters.line === undefined) return true;
+  return garmentsFor(print, ctx).some(
+    (g) => (filters.garmentType === undefined || g.type === filters.garmentType)
+      && (filters.line === undefined || g.line === filters.line),
+  );
 }
 
 /** Типи виробів, доступних для набору принтів — для фільтра на породній сторінці. */

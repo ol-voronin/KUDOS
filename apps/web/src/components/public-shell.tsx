@@ -119,16 +119,24 @@ export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <>
       {/*
-        Посилання «до змісту» видно тільки з клавіатури. Раніше воно висіло
-        чорною пігулкою в лівому верхньому куті на кожній сторінці: клас
-        ховав його зсувом, але зсув застосовувався до `position: absolute`
-        всередині потоку — і елемент лишався у видимій частині екрана.
-        `sr-only` прибирає його з малюнка надійно, `focus:not-sr-only`
-        повертає рівно тоді, коли на нього стає фокус.
+        Посилання «до змісту» — і чому воно тут утретє переписане.
+
+        Перша версія ховала його зсувом (`-translate-y-20`) — зсув
+        застосовувався до елемента в потоці, і на прокрученій сторінці
+        пігулка лишалася на видноті. Друга ховала `sr-only` і показувала на
+        `focus:` — надійніше, але `:focus` спрацьовує не лише від Tab: його
+        дає і клік мишею, і програмний `element.focus()`, який роутер робить
+        після переходу між сторінками. Саме звідси бралося «зʼявляється час
+        від часу»: людина клікала посилання в меню, сторінка мінялася, фокус
+        сідав на перший інтерактивний елемент — а перший елемент тут це воно.
+
+        `focus-visible` — це рівно та умова, заради якої посилання існує:
+        браузер вмикає його тільки тоді, коли навігація справді клавіатурна.
+        Мишка й програмний фокус його більше не показують.
       */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-ink focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-surface"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-pill focus-visible:bg-ink focus-visible:px-5 focus-visible:py-3 focus-visible:text-sm focus-visible:font-semibold focus-visible:text-surface"
       >
         До змісту
       </a>

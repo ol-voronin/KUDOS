@@ -32,24 +32,32 @@ const IMPLEMENTED: Renderers = {
   articleList: true, printGrid: true, breedStrip: true, collectionStrip: true,
 };
 
-function renderBlock(block: AnyBlock): ReactNode {
+/**
+ * Тон секції їде до блока.
+ *
+ * Чорна секція (`tone: 'ink'`) була в переліку тонів і в адмінці ще до того,
+ * як хоч один блок навчився про неї знати: усі малювали `text-ink` на чорному
+ * тлі. Тобто вибір, який редактор бачить у списку, гарантовано ламав сторінку.
+ * Тепер тон доходить до блока й перемикає палітру.
+ */
+function renderBlock(block: AnyBlock, onDark = false): ReactNode {
   switch (block.type) {
-    case 'hero': return <Hero block={block} />;
-    case 'text': return <Text block={block} />;
-    case 'legal': return <Legal block={block} />;
-    case 'steps': return <Steps block={block} />;
-    case 'cards': return <Cards block={block} />;
-    case 'features': return <Features block={block} />;
-    case 'faq': return <Faq block={block} />;
-    case 'cta': return <Cta block={block} />;
-    case 'imageText': return <ImageText block={block} />;
-    case 'gallery': return <Gallery block={block} />;
-    case 'quote': return <Quote block={block} />;
-    case 'leadForm': return <LeadFormBlockView block={block} />;
-    case 'articleList': return <ArticleListBlockView block={block} />;
-    case 'printGrid': return <PrintGridBlockView block={block} />;
-    case 'breedStrip': return <BreedStripBlockView block={block} />;
-    case 'collectionStrip': return <CollectionStripBlockView block={block} />;
+    case 'hero': return <Hero block={block} onDark={onDark} />;
+    case 'text': return <Text block={block} onDark={onDark} />;
+    case 'legal': return <Legal block={block} onDark={onDark} />;
+    case 'steps': return <Steps block={block} onDark={onDark} />;
+    case 'cards': return <Cards block={block} onDark={onDark} />;
+    case 'features': return <Features block={block} onDark={onDark} />;
+    case 'faq': return <Faq block={block} onDark={onDark} />;
+    case 'cta': return <Cta block={block} onDark={onDark} />;
+    case 'imageText': return <ImageText block={block} onDark={onDark} />;
+    case 'gallery': return <Gallery block={block} onDark={onDark} />;
+    case 'quote': return <Quote block={block} onDark={onDark} />;
+    case 'leadForm': return <LeadFormBlockView block={block} onDark={onDark} />;
+    case 'articleList': return <ArticleListBlockView block={block} onDark={onDark} />;
+    case 'printGrid': return <PrintGridBlockView block={block} onDark={onDark} />;
+    case 'breedStrip': return <BreedStripBlockView block={block} onDark={onDark} />;
+    case 'collectionStrip': return <CollectionStripBlockView block={block} onDark={onDark} />;
     default: {
       // Недосяжно, доки кожен варіант union має гілку вище. Якщо зʼявиться
       // новий тип без гілки — тут буде помилка типів, а не тиха порожнеча.
@@ -105,10 +113,14 @@ export function BlockRenderer({ blocks }: { blocks: readonly AnyBlock[] }) {
         if (solo !== undefined && solo.type === 'hero' && solo.image.url !== '') {
           return <div key={solo.id} data-cursor="light">{renderBlock(solo)}</div>;
         }
+        const tone = group[0]?.tone ?? 'plain';
+        const onDark = tone === 'ink';
         return (
-          <Section key={group[0]?.id ?? i} tone={group[0]?.tone ?? 'plain'} className="block-section">
+          <Section key={group[0]?.id ?? i} tone={tone} className="block-section">
             <div className="block-stack flex flex-col gap-12">
-              {group.map((block) => <div key={block.id} className="reveal">{renderBlock(block)}</div>)}
+              {group.map((block) => (
+                <div key={block.id} className="reveal">{renderBlock(block, onDark)}</div>
+              ))}
             </div>
           </Section>
         );

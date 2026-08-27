@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fromUAH } from '@dt/contracts';
 import {
-  garmentsFor, garmentTypesFor, toPrintCard,
+  garmentsFor, garmentTypesFor, matchesGarmentFilters, toPrintCard,
   type OfferContext, type OfferableGarment, type PrintRow,
 } from './print-card';
 import type { PrintPriceTable } from '../pricing/pricing.domain';
@@ -9,11 +9,11 @@ import type { PrintPriceTable } from '../pricing/pricing.domain';
 const PRICES: PrintPriceTable = { MINI: fromUAH(500), MEDIUM: fromUAH(600), MAXI: fromUAH(700) };
 
 const tee: OfferableGarment = {
-  id: 'g-tee', basePriceMinor: fromUAH(590), type: 'TSHIRT',
+  id: 'g-tee', basePriceMinor: fromUAH(590), type: 'TSHIRT', line: 'OWN_PRODUCTION',
   collectionIds: ['c-portraits'], hasStock: true,
 };
 const hoodie: OfferableGarment = {
-  id: 'g-hoodie', basePriceMinor: fromUAH(1600), type: 'HOODIE',
+  id: 'g-hoodie', basePriceMinor: fromUAH(1600), type: 'HOODIE', line: 'NATIVE_SPIRIT',
   collectionIds: ['c-portraits', 'c-bar'], hasStock: false,
 };
 
@@ -117,5 +117,46 @@ describe('garmentTypesFor', () => {
   it('збирає типи виробів по всіх принтах, без повторів', () => {
     expect(garmentTypesFor([print(), print({ id: 'p2', collectionIds: ['c-bar'] })], ctx()))
       .toEqual(['HOODIE', 'TSHIRT']);
+  });
+});
+
+
+/**
+ * Фільтр за типом виробу й лінійкою.
+ *
+ * Перевіряємо саме те, через що цей код узагалі існує: тип виробу — не поле
+ * принта, а властивість того, на чому його дозволено друкувати. Тому фільтр
+ * мусить читати ланцюжок колекцій і заборон, а не колонку в таблиці.
+ */
+describe('matchesGarmentFilters', () => {
+  it('без фільтрів пропускає все — включно з принтом, якому нема на чому друкуватись', () => {
+    expect(matchesGarmentFilters(print(), ctx(), {})).toBe(true);
+    expect(matchesGarmentFilters(print(), ctx({ garments: [] }), {})).toBe(true);
+  });
+
+  it('тип виробу: принт колекції, де дозволене лише худі, не проходить фільтр «футболка»', () => {
+    const barOnly = print({ collectionIds: ['c-bar'] });
+    expect(matchesGarmentFilters(barOnly, ctx(), { garmentType: 'HOODIE' })).toBe(true);
+    expect(matchesGarmentFilters(barOnly, ctx(), { garmentType: 'TSHIRT' })).toBe(false);
+  });
+
+  it('лінійка працює так само: вона теж властивість виробу, а не принта', () => {
+    expect(matchesGarmentFilters(print(), ctx(), { line: 'NATIVE_SPIRIT' })).toBe(true);
+    expect(matchesGarmentFilters(print({ collectionIds: ['c-bar'] }), ctx(), { line: 'OWN_PRODUCTION' }))
+      .toBe(false);
+  });
+
+  it('два фільтри разом — це «І», а не «АБО»', () => {
+    // Футболка є, Native Spirit є — але Native-Spirit-футболки немає жодної.
+    expect(matchesGarmentFilters(print(), ctx(), { garmentType: 'TSHIRT', line: 'NATIVE_SPIRIT' }))
+      .toBe(false);
+    expect(matchesGarmentFilters(print(), ctx(), { garmentType: 'TSHIRT', line: 'OWN_PRODUCTION' }))
+      .toBe(true);
+  });
+
+  it('точкова заборона виробу прибирає принт із фільтра за цим типом', () => {
+    const banned = ctx({ exclusionsByPrint: new Map([['p1', new Set(['g-tee'])]]) });
+    expect(matchesGarmentFilters(print(), banned, { garmentType: 'TSHIRT' })).toBe(false);
+    expect(matchesGarmentFilters(print(), banned, { garmentType: 'HOODIE' })).toBe(true);
   });
 });

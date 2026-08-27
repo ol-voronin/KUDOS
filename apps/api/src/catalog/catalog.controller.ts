@@ -1,9 +1,9 @@
 import { Controller, Get, Param, Query, UsePipes } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
-  CatalogQueryDto, type BreedListDto, type BreedPageDto, type CollectionListDto,
-  type CollectionPageDto, type HomeDto, type PrintListDto, type PrintOfferDto,
-  type RangeDto, type SearchResultDto, type SitemapDto,
+  CatalogQueryDto, SearchQueryDto, type BreedListDto, type BreedPageDto,
+  type CollectionListDto, type CollectionPageDto, type HomeDto, type PrintListDto,
+  type PrintOfferDto, type RangeDto, type SearchResultDto, type SitemapDto,
 } from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CatalogService } from './catalog.service';
@@ -49,10 +49,17 @@ export class CatalogController {
     return this.catalog.listCollections();
   }
 
-  /** Пошук: породи, колекції й принти окремо — це різні наміри. */
+  /**
+   * Пошук: породи, колекції й принти окремо — це різні наміри.
+   *
+   * Фільтри ті самі, що й у каталозі, і приймає їх той самий тип: список
+   * результатів і список каталогу мають однаково розуміти «худі» та «є в
+   * наявності», інакше розбіжність помітить покупець, а не розробник.
+   */
   @Get('search')
-  search(@Query('q') q?: string): Promise<SearchResultDto> {
-    return this.catalog.search(q ?? '');
+  @UsePipes(new ZodValidationPipe(SearchQueryDto))
+  search(@Query() query: SearchQueryDto): Promise<SearchResultDto> {
+    return this.catalog.search(query);
   }
 
   /** Плоскі списки slug-ів для sitemap.xml. */

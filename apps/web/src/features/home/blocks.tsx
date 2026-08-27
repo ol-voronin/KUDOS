@@ -11,50 +11,101 @@ import { PrintThumb } from '@/components/print-thumb';
  * закінчують ті, чиєї породи немає.
  */
 /*
- * Плитка, а не рядок у списку.
+ * Плитка породи: медальйон + назва.
  *
- * Спроба зробити «легше» перетворила смугу порід на текст із волосінню
- * зверху — і вітрина стала схожа на таблицю даних. Волосінь працює там, де
- * поруч є фотографія: вона розділяє товар. Там, де фотографії немає, її
- * місце має тримати сама плитка, інакше на сторінці лишається порожнеча.
+ * Замовник просив «фото породи якось на фон». Спробувати варто було, і саме
+ * тому цього тут немає — ось що з цим не так:
  *
- * Заливка світла, рамки немає — плитка помітна, але не сперечається з
- * сусідніми секціями.
+ *   1. Фотографію породи довелося б взяти стоковою. Це чужа собака, знята
+ *      кимось іншим у чужому стилі, і поруч із власними малюнками вона
+ *      читається як реклама з іншого сайту. Плюс ліцензія на кожну.
+ *   2. Текст поверх фотографії вимагає затемнення. Двадцять плиток із
+ *      затемненням — це двадцять сірих прямокутників, тобто рівно та сама
+ *      відсутність розрізнення, з якої ми почали, лише темніша.
+ *
+ * Тому на плитці стоїть превʼю ОДНОГО з принтів цієї породи. Це наш малюнок,
+ * він у нас уже є, він оновлюється сам — і, головне, він показує те, що
+ * людина насправді купить. Медальйон збоку, а не тло: малюнки на світлому
+ * тлі, і білий напис поверх них не читався б.
+ *
+ * Порода без принтів лишається з лапою замість превʼю. Це не «порожньо», а
+ * «намалюємо з фото» — і саме так підписано.
  */
 const TILE =
-  'reveal flex min-h-[4.5rem] flex-col justify-center rounded-card bg-surface-sunken px-4 py-3 ' +
+  'group reveal flex items-center gap-3.5 rounded-card bg-surface-sunken p-3 ' +
   'transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ghost ' +
   'motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
 
-export function BreedStrip({ breeds }: { breeds: readonly BreedCardDto[] }) {
+/** Медальйон: превʼю принта або лапа, якщо принтів ще немає. */
+function BreedMedallion({ src }: { src: string }) {
+  if (src === '') {
+    return (
+      <span
+        aria-hidden
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-card border border-dashed border-line-strong bg-surface text-ink-subtle"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6.5 12.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17.5 12.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM10 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM14 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM12 13c-2.5 0-4.5 2-4.5 4a2.5 2.5 0 0 0 3.6 2.2c.6-.3 1.2-.3 1.8 0A2.5 2.5 0 0 0 16.5 17c0-2-2-4-4.5-4Z" />
+        </svg>
+      </span>
+    );
+  }
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-      {breeds.slice(0, 11).map((breed) => (
+    <span className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-surface">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transform-none"
+      />
+    </span>
+  );
+}
+
+export function BreedStrip({
+  breeds, limit = 11, cta = true,
+}: { breeds: readonly BreedCardDto[]; limit?: number; cta?: boolean }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {breeds.slice(0, limit).map((breed) => (
         <Link key={breed.id} href={`/breeds/${breed.slug}`} className={TILE}>
-          <span className="font-display text-base font-semibold uppercase leading-tight text-ink">
-            {breed.name}
-          </span>
-          {/*
-            Нуль принтів — не «порожньо», а «малюємо на замовлення». Це правда
-            й це пропозиція; «0 принтів» було б і правдою, і антирекламою.
-          */}
-          <span className="mt-0.5 text-sm text-ink-muted">
-            {breed.printCount > 0
-              ? `${breed.printCount} ${plural(breed.printCount, 'принт', 'принти', 'принтів')}`
-              : 'малюємо на замовлення'}
+          <BreedMedallion src={breed.previewUrl} />
+          <span className="min-w-0">
+            <span className="block truncate font-display text-base font-semibold uppercase leading-tight text-ink">
+              {breed.name}
+            </span>
+            {/*
+              Нуль принтів — не «порожньо», а «малюємо на замовлення». Це правда
+              й це пропозиція; «0 принтів» було б і правдою, і антирекламою.
+            */}
+            <span className="mt-0.5 block text-sm text-ink-muted">
+              {breed.printCount > 0
+                ? `${breed.printCount} ${plural(breed.printCount, 'принт', 'принти', 'принтів')}`
+                : 'малюємо на замовлення'}
+            </span>
           </span>
         </Link>
       ))}
       {/* Остання плитка — темна: вона єдина веде не в каталог, а в бриф. */}
+      {cta && (
       <Link
         href="/svoya-ideya"
-        className="reveal flex min-h-[4.5rem] flex-col justify-center rounded-card bg-ink px-4 py-3 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/85 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        className="reveal flex min-h-[5rem] items-center gap-3.5 rounded-card bg-ink p-3 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/85 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
       >
-        <span className="font-display text-base font-semibold uppercase leading-tight text-surface">
-          Немає вашої?
+        <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-card border border-surface/30 text-surface">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 20h4L20.5 7.5a2.1 2.1 0 0 0-3-3L5 17v3zM14.5 6.5l3 3" />
+          </svg>
         </span>
-        <span className="text-sm text-surface/70">Намалюємо з фото →</span>
+        <span className="min-w-0">
+          <span className="block font-display text-base font-semibold uppercase leading-tight text-surface">
+            Немає вашої?
+          </span>
+          <span className="mt-0.5 block text-sm text-surface/70">Намалюємо з фото →</span>
+        </span>
       </Link>
+      )}
     </div>
   );
 }

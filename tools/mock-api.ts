@@ -31,15 +31,21 @@ const SETTINGS = {
   taxNumber: '3442812170', city: 'Харків', cityIn: 'у Харкові',
   phone: '+380508646355', phoneDisplay: '+380 50 864 63 55',
   telegram: 'kudos_print', telegramUrl: 'https://t.me/kudos_print',
-  email: 'kudos.print.ua@gmail.com', instagram: '', returnDays: 14,
-  freeShippingFrom: 150000, ga4MeasurementId: '', googleAdsId: '',
+  email: 'kudos.print.ua@gmail.com', returnDays: 14,
+  // Саме `freeShippingFromMinor` і `legalEntityShort` — так називає ці поля
+  // контракт. Поки тут стояли `freeShippingFrom` та порожнеча, `/content/site`
+  // не проходив схему, сайт тихо падав на запасне меню, і локальна перевірка
+  // показувала не те меню, яке ми щойно змінили.
+  legalEntityShort: 'ФОП Воронін О. П.',
+  workingHours: 'Пн–Пт, 10:00–19:00',
+  freeShippingFromMinor: 150000,
+  ga4MeasurementId: '', googleAdsId: '',
   allowIndexing: false, defaultOgImage: '', googleSiteVerification: '',
 };
 
 const MENU = [
-  ['Каталог','/prints','HEADER',''],['Вироби','/vyroby','HEADER',''],
-  ['Колекції','/collections','HEADER',''],['Свій принт','/svoya-ideya','HEADER',''],
-  ['Статті','/statti','HEADER',''],
+  ['Породи','/breeds','HEADER',''],['Колекції','/collections','HEADER',''],
+  ['Вироби','/vyroby','HEADER',''],['Свій принт','/svoya-ideya','HEADER',''],
   ['Магазин','/prints','FOOTER','Магазин'],['За породами','/#породи','FOOTER','Магазин'],
   ['Свій принт','/svoya-ideya','FOOTER','Магазин'],
   ['Розміри','/vyroby','FOOTER','Допомога'],['Оплата й доставка','/dostavka','FOOTER','Допомога'],
@@ -48,7 +54,13 @@ const MENU = [
 
 const BREEDS = ['Бігль','Вест-хайленд-терʼєр','Джек-рассел терʼєр','Доберман','Золотистий ретривер',
   'Йоркширський терʼєр','Коргі','Лабрадор','Мальтіпу','Метис','Мопс','Німецька вівчарка']
-  .map((name,i)=>({ id: uuid(100+i), slug: `breed-${i}`, name, printCount: 1 + (i%4) }));
+  .map((name,i)=>({
+    id: uuid(100+i), slug: `breed-${i}`, name,
+    printCount: i % 5 === 4 ? 0 : 1 + (i%4),
+    // Кожна пʼята порода навмисно без превʼю: плитка з лапою має бути видна
+    // на екрані, а не тільки в коді.
+    previewUrl: i % 5 === 4 ? '' : P(PHOTOS[i % 12]),
+  }));
 
 const PRINT_TITLES = [
   ['Мистецтво бути шедевром · чорна', 'art-black', 129000, true],
@@ -78,8 +90,23 @@ const COLLECTIONS = [
   printCount: 4, previewUrls: ph.map(P),
 }));
 
+/*
+ * Ті самі підстановки, що й у справжньому API (`tokenValues`), а не просто
+ * ключі налаштувань: частина токенів має інші назви (`freeShippingFrom` —
+ * гривні, а не копійки; `phone` — той, що для показу). Поки мок брав ключі
+ * навпростець, на сторінці лишався напис «від {{freeShippingFrom}} ₴», і
+ * незрозуміло було, це помилка сайту чи мока.
+ */
+const TOKENS = {
+  ...SETTINGS,
+  phone: SETTINGS.phoneDisplay,
+  legalEntity: SETTINGS.legalEntityName,
+  returnDays: String(SETTINGS.returnDays),
+  freeShippingFrom: String(Math.round(SETTINGS.freeShippingFromMinor / 100)),
+};
+
 function subst(v) {
-  if (typeof v === 'string') return v.replace(/\{\{(\w+)\}\}/g, (m,k)=> String(SETTINGS[k] ?? m));
+  if (typeof v === 'string') return v.replace(/\{\{(\w+)\}\}/g, (m,k)=> String(TOKENS[k] ?? m));
   if (Array.isArray(v)) return v.map(subst);
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,subst(x)]));
   return v;
@@ -102,9 +129,29 @@ const ROUTES = {
   '/catalog/breeds': () => ({ items: BREEDS }),
   '/catalog/collections': () => ({ items: COLLECTIONS }),
   '/analytics/config': () => ({ googleAdsId: '', ga4MeasurementId: '', conversions: [] }),
+  '/catalog/range': () => ({
+    garments: [], printPrices: [{ tier: 'MEDIUM', priceMinor: 30000 }],
+  }),
 };
 
+const CORS = (origin) => ({
+  // `apiFetch` ходить із `credentials: 'include'` і заголовком `content-type`,
+  // тож браузер спершу питає дозволу (preflight). Поки мок на нього не
+  // відповідав, живий пошук у локальній перевірці мовчки не працював — і ми
+  // вкотре дивилися б не на те, що змінили.
+  'access-control-allow-origin': origin ?? '*',
+  'access-control-allow-credentials': 'true',
+  'access-control-allow-headers': 'content-type',
+  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'vary': 'Origin',
+});
+
 http.createServer((req,res)=>{
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, CORS(req.headers.origin));
+    res.end();
+    return;
+  }
   const url = new URL((req.url ?? '/').replace(/^\/api\/v1/, ''), 'http://x');
   let body = null;
   if (ROUTES[url.pathname]) body = ROUTES[url.pathname]();
@@ -112,6 +159,22 @@ http.createServer((req,res)=>{
     const perPage = Number(url.searchParams.get('perPage') ?? 12);
     body = { items: PRINTS.slice(0, perPage), total: PRINTS.length, page: 1, perPage };
   } else if (url.pathname === '/content/pages') body = { items: [] };
-  res.writeHead(body ? 200 : 404, {'content-type':'application/json'});
+  else if (url.pathname === '/analytics/events') body = { ok: true };
+  else if (url.pathname === '/catalog/search') {
+    const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+    const hit = (t) => t.toLowerCase().includes(q);
+    const breeds = q.length < 2 ? [] : BREEDS.filter((b) => hit(b.name));
+    const collections = q.length < 2 ? [] : COLLECTIONS.filter((c) => hit(c.title));
+    const prints = q.length < 2 ? [] : PRINTS.filter((p) => hit(p.title));
+    body = { query: q, breeds, collections, prints,
+      total: breeds.length + collections.length + prints.length };
+  }
+  // Браузер ходить сюди з іншого порту — без цих заголовків живий пошук у
+  // локальній перевірці мовчки падає на CORS, і ми знову дивимося не на те.
+  // `apiFetch` ходить із `credentials: 'include'`, а на такий запит браузер
+  // не приймає відповідь із `origin: *` — тільки з конкретним джерелом і
+  // дозволом на облікові дані. Без цих двох рядків живий пошук у локальній
+  // перевірці мовчки не працює, і ми знову дивимося не на те.
+  res.writeHead(body ? 200 : 404, { 'content-type': 'application/json', ...CORS(req.headers.origin) });
   res.end(JSON.stringify(body ?? { error: 'no mock for ' + url.pathname }));
 }).listen(3001, ()=>console.log('mock api :3001'));

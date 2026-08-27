@@ -145,15 +145,63 @@ export const PricedOfferDto = z.object({
 });
 export type PricedOfferDto = z.infer<typeof PricedOfferDto>;
 
+/**
+ * Порядок у каталозі.
+ *
+ * `new` перший і за замовчуванням: сітка без явного сортування має показувати
+ * те, що додали останнім, інакше нові принти назавжди осідають на третій
+ * сторінці. `cheap` існує тому, що це найчастіше питання після «а моя
+ * порода є» — «а скільки».
+ */
+export const CatalogSort = z.enum(['new', 'cheap', 'expensive', 'name']);
+export type CatalogSort = z.infer<typeof CatalogSort>;
+
+/**
+ * Фільтри каталогу.
+ *
+ * Свідомо НЕ фільтруємо за розміром одягу (S/M/L). Розмір — це властивість
+ * останнього кроку покупки, а не спосіб звузити перелік малюнків: принт
+ * друкується на будь-якому розмірі, тож такий фільтр нічого не відсіює й
+ * лише вдає роботу. Те, що людина насправді має на увазі під «є мій
+ * розмір», — це `inStock`: готовий виріб, який не треба чекати.
+ *
+ * `sizeTier` — це розмір ПРИНТА (міні / середній / максі), і він міняє
+ * ціну, тому фільтр за ним чесний.
+ */
 export const CatalogQueryDto = z.object({
   collection: Slug.optional(),
   breed: Slug.optional(),
   garmentType: GarmentType.optional(),
   line: ProductLine.optional(),
+  sizeTier: PrintSizeTier.optional(),
+  /*
+   * Тільки те, що фізично є на складі.
+   *
+   * НЕ `z.coerce.boolean()`: у JS `Boolean('false') === true`, тобто
+   * `?inStock=false` вмикав би фільтр замість вимикати. З адреси значення
+   * приходить рядком, тому рядок розбирається явно.
+   */
+  inStock: z.preprocess(
+    (v) => (typeof v === 'string' ? v === '1' || v === 'true' : v),
+    z.boolean(),
+  ).optional(),
+  sort: CatalogSort.default('new'),
   page: z.coerce.number().int().positive().default(1),
   perPage: z.coerce.number().int().positive().max(60).default(24),
 });
 export type CatalogQueryDto = z.infer<typeof CatalogQueryDto>;
+
+/**
+ * Пошук із фільтрами.
+ *
+ * Фільтри застосовуються ТІЛЬКИ до принтів. Породи й колекції — це не товар,
+ * а входи в каталог, і відсіювати їх за типом виробу означає ховати від
+ * людини сторінку, яка існує й відповідає на її запит.
+ */
+export const SearchQueryDto = CatalogQueryDto.omit({ page: true, perPage: true }).extend({
+  q: z.string().default(''),
+});
+export type SearchQueryDto = z.infer<typeof SearchQueryDto>;
 
 /**
  * Плитка принта в будь-якій сітці — головна, породна, колекція, каталог.
