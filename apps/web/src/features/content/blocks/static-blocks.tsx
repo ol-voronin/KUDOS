@@ -238,14 +238,22 @@ const ICONS: Record<Exclude<BlockIcon, 'none'>, string> = {
   chat: 'M21 12a8 8 0 0 1-8 8H4l2.2-2.9A8 8 0 1 1 21 12Z',
 };
 
-/** Одна іконка. `none` не малює нічого — і не лишає місця. */
-function Glyph({ icon, className = '' }: { icon: BlockIcon; className?: string }) {
+/**
+ * Одна іконка. `none` не малює нічого — і не лишає місця.
+ *
+ * Розмір задає той, хто малює, і власного розміру тут НЕМАЄ навмисно.
+ * Спершу було `h-[22px] w-[22px]` за замовчуванням плюс `h-7 w-7` від
+ * картки — і в розмітку йшли обидва класи одночасно. Який із них виграє,
+ * вирішує порядок правил у зібраному CSS, а не порядок слів у рядку; ми на
+ * цьому вже обпеклися на полях вводу. Один клас — одне джерело правди.
+ */
+function Glyph({ icon, className = 'h-[22px] w-[22px]' }: { icon: BlockIcon; className?: string }) {
   if (icon === 'none') return null;
   return (
     <svg
       viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true" className={`h-[22px] w-[22px] shrink-0 ${className}`}
+      aria-hidden="true" className={`shrink-0 ${className}`}
     >
       <path d={ICONS[icon]} />
     </svg>
@@ -317,7 +325,7 @@ export function Features({ block, onDark = false }: { block: FeaturesBlock } & D
       <div className="grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         {block.items.map((item, i) => (
           <div key={i} className="flex gap-4">
-            <Glyph icon={item.icon} className={`mt-0.5 ${c.head}`} />
+            <Glyph icon={item.icon} className={`mt-0.5 h-[22px] w-[22px] ${c.head}`} />
             <div>
               <h3 className={`font-semibold ${c.head}`}>{item.title}</h3>
               <InlineParagraph text={item.text} className={`mt-1 text-sm leading-relaxed ${c.body}`} />
