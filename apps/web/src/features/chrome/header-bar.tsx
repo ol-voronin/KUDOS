@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { LiveSearch } from '@/features/search/live-search';
+import { useCart } from '@/features/cart/cart-store';
 
 /**
  * Шапка.
@@ -33,6 +34,7 @@ export function HeaderBar({
   phone: string;
   phoneDisplay: string;
 }) {
+  const { count, ready } = useCart();
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -101,9 +103,27 @@ export function HeaderBar({
             <span className="hidden sm:inline">Пошук</span>
           </button>
           <Link href="/zayavka" className="nav-link hidden lg:inline">Замовити дзвінок</Link>
-          <a href={`tel:${phone}`} className="whitespace-nowrap text-sm font-semibold text-ink transition-opacity hover:opacity-60">
+          <a href={`tel:${phone}`} className="hidden whitespace-nowrap text-sm font-semibold text-ink transition-opacity hover:opacity-60 sm:inline">
             {phoneDisplay}
           </a>
+          {/*
+            Кошик. Число в дужках зʼявляється тільки коли воно є: «Кошик (0)»
+            на порожньому магазині — це підпис до кнопки, яка нічого не
+            робить, і він однаково гучний і тоді, коли там щось лежить.
+
+            `ready` тут не для краси: до першого ефекту кошик ще не прочитано
+            зі сховища, і без цієї перевірки лічильник блимнув би нулем на
+            кожному завантаженні сторінки.
+          */}
+          <Link href="/koshyk" className="nav-link tap-sm inline-flex items-center gap-2 whitespace-nowrap">
+            <CartIcon />
+            <span className="hidden sm:inline">Кошик</span>
+            {ready && count > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-ink px-1.5 text-[0.7rem] font-bold tabular-nums text-surface">
+                {count}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
 
@@ -143,6 +163,18 @@ export function HeaderBar({
         </nav>
       </div>
     </header>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg
+      width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0"
+    >
+      <path d="M6 7h13l-1.4 8.4a2 2 0 0 1-2 1.6H9a2 2 0 0 1-2-1.6L5.2 4H3" />
+      <circle cx="9.5" cy="20" r="1.2" /><circle cx="16.5" cy="20" r="1.2" />
+    </svg>
   );
 }
 

@@ -146,13 +146,22 @@ const CORS = (origin) => ({
   'vary': 'Origin',
 });
 
-http.createServer((req,res)=>{
+http.createServer(async (req,res)=>{
   if (req.method === 'OPTIONS') {
     res.writeHead(204, CORS(req.headers.origin));
     res.end();
     return;
   }
   const url = new URL((req.url ?? '/').replace(/^\/api\/v1/, ''), 'http://x');
+
+  // POST-и кошика й каси приходять із тілом — читаємо його один раз тут.
+  let json = null;
+  if (req.method === 'POST') {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    try { json = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { json = {}; }
+  }
+
   let body = null;
   if (ROUTES[url.pathname]) body = ROUTES[url.pathname]();
   else if (url.pathname === '/catalog/prints') {
@@ -160,6 +169,38 @@ http.createServer((req,res)=>{
     body = { items: PRINTS.slice(0, perPage), total: PRINTS.length, page: 1, perPage };
   } else if (url.pathname === '/content/pages') body = { items: [] };
   else if (url.pathname === '/analytics/events') body = { ok: true };
+  else if (url.pathname === '/cart/quote') {
+    // Мок рахує кошик грубо — по 1290 ₴ за позицію: перевіряємо верстку
+    // сторінки, а не ціноутворення (воно перевіряється тестами в apps/api).
+    const items = (json?.items ?? []);
+    const lines = items.map((it, i) => {
+      const p = PRINTS.find((x) => x.slug === it.printSlug) ?? PRINTS[i % PRINTS.length];
+      const unit = p.fromPriceMinor;
+      const qty = it.quantity ?? 1;
+      const discount = qty >= 2 ? Math.round(unit * qty * 0.1) : 0;
+      return {
+        printSlug: it.printSlug, variantId: it.variantId, quantity: qty,
+        title: p.title, garmentName: 'Класична футболка', colourName: 'Чорний',
+        sizeLabel: 'M', previewUrl: p.previewUrl,
+        unitMinor: unit, lineTotalMinor: unit * qty - discount,
+        discountName: discount > 0 ? 'Друга річ −10 %' : null, discountMinor: discount,
+        blockedReason: i === 99 ? 'Знято з продажу' : null,
+        leadTimeDays: p.inStock ? null : 7,
+      };
+    });
+    const subtotal = lines.reduce((s2, l) => s2 + l.unitMinor * l.quantity, 0);
+    const discountMinor = lines.reduce((s2, l) => s2 + l.discountMinor, 0);
+    body = {
+      lines, subtotalMinor: subtotal, discountMinor, shippingMinor: 0,
+      freeShippingFromMinor: SETTINGS.freeShippingFromMinor,
+      totalMinor: subtotal - discountMinor,
+      maxLeadTimeDays: 7, purchasable: lines.length > 0,
+    };
+  } else if (url.pathname === '/checkout/order') {
+    body = { orderId: uuid(700), orderNumber: 42, totalMinor: 258000 };
+  } else if (url.pathname.startsWith('/orders/') && url.pathname.endsWith('/status')) {
+    body = { orderNumber: 42, status: 'NEW', totalMinor: 258000 };
+  }
   else if (url.pathname === '/catalog/search') {
     const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
     const hit = (t) => t.toLowerCase().includes(q);

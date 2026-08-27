@@ -39,6 +39,21 @@ export const VariantAvailability = z.enum([
 ]);
 export type VariantAvailability = z.infer<typeof VariantAvailability>;
 
+/**
+ * Куди їде замовлення.
+ *
+ * Тільки Нова Пошта: інших перевізників ми не використовуємо, а перелік із
+ * порожніми пунктами читається як обіцянка, якої немає. Зʼявиться Укрпошта —
+ * зʼявиться значення.
+ */
+export const DeliveryMethod = z.enum([
+  'NP_BRANCH',    // відділення Нової Пошти
+  'NP_POSTOMAT',  // поштомат Нової Пошти
+  'NP_COURIER',   // курʼєр Нової Пошти на адресу
+  'PICKUP',       // самовивіз у Харкові
+]);
+export type DeliveryMethod = z.infer<typeof DeliveryMethod>;
+
 /** Print price depends on the print size tier, not on the print method. */
 export const PrintSizeTier = z.enum(['MINI', 'MEDIUM', 'MAXI']);
 export type PrintSizeTier = z.infer<typeof PrintSizeTier>;
@@ -55,8 +70,26 @@ export const OrderStream = z.enum([
 ]);
 export type OrderStream = z.infer<typeof OrderStream>;
 
+/**
+ * Життя замовлення.
+ *
+ * `NEW` зʼявився разом із кошиком і змінює зміст усього переліку. Раніше
+ * замовлення народжувалося вже з виставленим рахунком: людина тиснула
+ * «Оплатити» і одразу їхала на сторінку Monobank, тож перший стан і був
+ * `PENDING_PAYMENT`.
+ *
+ * Тепер між «замовив» і «платить» стоїть людина: ми звіряємо наявність,
+ * пишемо покупцеві й лише потім виставляємо рахунок. Тобто:
+ *
+ *   NEW              — замовлення прийняте, ніхто ще нічого не винен
+ *   PENDING_PAYMENT  — рахунок виставлено, чекаємо оплату
+ *   PAID             — гроші отримані (або заблоковані під HOLD)
+ *
+ * Порядок значень тут — це порядок у житті, і саме в такому вигляді він
+ * малюється в адмінці.
+ */
 export const OrderStatus = z.enum([
-  'PENDING_PAYMENT', 'PAID', 'IN_PRODUCTION', 'SHIPPED', 'COMPLETED', 'CANCELLED',
+  'NEW', 'PENDING_PAYMENT', 'PAID', 'IN_PRODUCTION', 'SHIPPED', 'COMPLETED', 'CANCELLED',
 ]);
 export type OrderStatus = z.infer<typeof OrderStatus>;
 

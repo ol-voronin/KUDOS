@@ -7,6 +7,7 @@ import { useOrderStatus } from '../hooks/useOrderStatus';
 import { Skeleton } from '@/components/ui';
 
 const STATUS_LABELS: Record<string, string> = {
+  NEW: 'Прийнято, перевіряємо наявність',
   PENDING_PAYMENT: 'Очікуємо оплату',
   PAID: 'Оплачено',
   IN_PRODUCTION: 'У виробництві',
@@ -16,6 +17,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_TONE: Record<string, string> = {
+  NEW: 'bg-surface-sunken text-ink',
   PENDING_PAYMENT: 'bg-accent-soft text-accent-strong',
   PAID: 'bg-info-soft text-info',
   IN_PRODUCTION: 'bg-info-soft text-info',
@@ -52,7 +54,7 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
 
   return (
     <div aria-live="polite">
-      <h1 className="text-2xl text-ink">Замовлення №{data.orderNumber}</h1>
+      <h1 className="font-display text-2xl font-bold uppercase text-ink">Замовлення №{data.orderNumber}</h1>
       <span
         className={[
           'mt-3 inline-flex rounded-pill px-3 py-1 text-sm font-semibold',
@@ -62,6 +64,22 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
         {STATUS_LABELS[data.status] ?? data.status}
       </span>
       <p className="mt-3 text-lg font-semibold text-ink">{formatUAH(minor(data.totalMinor))}</p>
+      {/*
+        Найважливіший текст на цій сторінці — той, що для стану `NEW`.
+        Людина щойно натиснула «Замовити» й не побачила платіжної форми;
+        якщо їй не сказати чому, вона вирішить, що замовлення не пройшло, і
+        оформить його вдруге.
+      */}
+      {data.status === 'NEW' && (
+        <div className="mt-4 max-w-prose text-sm leading-relaxed text-ink-muted">
+          <p>
+            Дякуємо! Замовлення прийняте, зараз нічого платити не треба.
+            Ми звіряємо наявність і найближчим часом напишемо вам — після
+            підтвердження надішлемо рахунок на оплату.
+          </p>
+          <p className="mt-2">Номер замовлення варто зберегти — за ним нас швидше знайти.</p>
+        </div>
+      )}
       {data.status === 'PENDING_PAYMENT' && (
         <p className="mt-4 text-sm text-ink-muted">
           Сторінка оновиться автоматично, щойно ми отримаємо підтвердження оплати.

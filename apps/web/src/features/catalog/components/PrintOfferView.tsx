@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
-import { ApiError } from '@/lib/api-client';
 import { PrintThumb } from '@/components/print-thumb';
-import { Button, Skeleton, ErrorBanner, inputClass, FieldShell } from '@/components/ui';
+import { Button, ButtonLink, ErrorBanner, Skeleton } from '@/components/ui';
+import { useCart } from '@/features/cart/cart-store';
 import { readRememberedSize, rememberSize } from '../remembered-size';
-import { useCheckoutReadyPrint } from '../hooks/useCheckoutReadyPrint';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
 import { AvailabilityBadge } from './AvailabilityBadge';
@@ -15,11 +14,9 @@ import { GarmentPreview } from './GarmentPreview';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
-const PHONE_PATTERN = /^\+380\d{9}$/;
-
 export function PrintOfferView({ slug, initialData }: { slug: string; initialData?: PrintOfferDto }) {
   const { data, isLoading, isError } = usePrintOffer(slug, initialData);
-  const checkout = useCheckoutReadyPrint();
+  const { add } = useCart();
 
   const [garmentId, setGarmentId] = useState<string | null>(null);
   const [fabricId, setFabricId] = useState<string | null>(null);
@@ -34,10 +31,16 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   const [rememberedLabel, setRememberedLabel] = useState<string | null>(null);
   useEffect(() => { setRememberedLabel(readRememberedSize()); }, []);
 
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  /*
+   * «У кошику ✓» тримається, доки людина не змінила вибір.
+   *
+   * Скидається на будь-якій зміні виробу, кольору чи розміру: інакше
+   * галочка стоїть біля кнопки, яка тепер додасть інший товар, і читається
+   * як «цей варіант уже в кошику», хоча в кошику попередній.
+   */
+  const [added, setAdded] = useState(false);
+
+  useEffect(() => { setAdded(false); }, [garmentId, fabricId, colourId, sizeId]);
 
   // Re-anchor the selection on the first garment/fabric whenever fresh data
   // arrives — a stale id from a previous slug must never leak into this one.
@@ -153,27 +156,30 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   const garmentPriceMinor = variant?.priceMinor ?? garment?.basePriceMinor ?? 0;
   const totalMinor = garmentPriceMinor + data.printPriceMinor;
 
-  async function handleCheckoutSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  /*
+   * Назву й обкладинку кладемо в кошик знімком.
+   *
+   * Не заради економії запиту: сторінка кошика має щось показати ще до
+   * того, як приїде перерахунок із сервера, інакше вона блимає порожніми
+   * рядками. Ціни в цьому знімку немає й бути не може — її рахує сервер.
+   *
+   * Значення витягуються тут, поза функцією: усередині вкладеної функції
+   * TypeScript уже не памʼятає, що `data` перевірено вище.
+   */
+  const printTitle = data.print.title;
+  const printPreviewUrl = data.print.previewUrl;
+
+  function handleAddToCart(): void {
     if (!variant) return;
-    setCheckoutError(null);
-    if (!PHONE_PATTERN.test(customerPhone)) {
-      setCheckoutError('Введіть телефон у форматі +380XXXXXXXXX');
-      return;
-    }
-    try {
-      const result = await checkout.mutateAsync({
-        printSlug: slug,
-        variantId: variant.id,
-        printMethod: 'DTF',
-        quantity: 1,
-        paymentType: 'HOLD',
-        customer: { name: customerName, phone: customerPhone, marketingConsent: false },
-      });
-      window.location.href = result.pageUrl;
-    } catch (err) {
-      setCheckoutError(err instanceof ApiError ? err.message : 'Не вдалося оформити замовлення');
-    }
+    add({
+      printSlug: slug,
+      variantId: variant.id,
+      printMethod: 'DTF',
+      quantity: 1,
+      title: printTitle,
+      previewUrl: printPreviewUrl,
+    });
+    setAdded(true);
   }
 
   return (
@@ -304,53 +310,34 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           екрані вона нікуди не липне — там усе видно й так.
         */}
         <div className="sticky bottom-0 z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-          {!checkoutOpen && (
-            <>
-              <Button
-                size="lg"
-                full
-                disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
-                onClick={() => setCheckoutOpen(true)}
-              >
-                Оплатити {formatUAH(minor(totalMinor))}
-              </Button>
-              <p className="mt-2 text-center text-xs text-ink-subtle md:text-left">
-                Гроші списуються після того, як ми підтвердили замовлення.
-              </p>
-            </>
-          )}
+          {/*
+            Кнопка кладе товар у кошик, а не веде на оплату.
 
-          {checkoutOpen && (
-            <form className="flex flex-col gap-3" onSubmit={handleCheckoutSubmit}>
-              <FieldShell label="Імʼя" htmlFor="checkout-name">
-                <input
-                  id="checkout-name"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className={`${inputClass()} w-full`}
-                />
-              </FieldShell>
-              <FieldShell label="Телефон" htmlFor="checkout-phone" hint="У форматі +380XXXXXXXXX">
-                <input
-                  id="checkout-phone"
-                  type="tel"
-                  required
-                  autoComplete="tel"
-                  inputMode="tel"
-                  placeholder="+380XXXXXXXXX"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className={`${inputClass(checkoutError !== null)} w-full`}
-                />
-              </FieldShell>
-              {checkoutError !== null && <ErrorBanner>{checkoutError}</ErrorBanner>}
-              <Button type="submit" size="lg" full disabled={checkout.isPending}>
-                {checkout.isPending ? 'Оформлюємо…' : `Оплатити ${formatUAH(minor(totalMinor))}`}
-              </Button>
-            </form>
+            Раніше тут була форма з іменем і телефоном просто в картці
+            товару: людина тиснула «Оплатити», вводила контакти й одразу
+            їхала в Monobank. Це чесно працює рівно для одного товару — а
+            той, хто хоче худі собі й футболку сестрі, мусив проходити цей
+            шлях двічі й отримував два замовлення й дві доставки.
+
+            Тепер контакти й доставка питаються один раз на касі, а тут
+            лишається один рух.
+          */}
+          <Button
+            size="lg"
+            full
+            disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
+            onClick={handleAddToCart}
+          >
+            {added ? 'У кошику ✓' : `Додати в кошик · ${formatUAH(minor(totalMinor))}`}
+          </Button>
+          {added ? (
+            <ButtonLink href="/koshyk" variant="quiet" size="md" full className="mt-2">
+              Перейти в кошик →
+            </ButtonLink>
+          ) : (
+            <p className="mt-2 text-center text-xs text-ink-subtle md:text-left">
+              Оплата — після того, як ми підтвердили наявність.
+            </p>
           )}
         </div>
       </div>

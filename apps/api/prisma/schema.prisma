@@ -71,6 +71,15 @@ enum PrintMethod {
   DTG
 }
 
+/// Куди їде замовлення. Тільки Нова Пошта плюс самовивіз: інших перевізників
+/// ми не використовуємо, а порожній пункт у переліку читається як обіцянка.
+enum DeliveryMethod {
+  NP_BRANCH
+  NP_POSTOMAT
+  NP_COURIER
+  PICKUP
+}
+
 enum OrderStream {
   READY_PRINT
   CUSTOMISATION
@@ -78,6 +87,9 @@ enum OrderStream {
 }
 
 enum OrderStatus {
+  /// Замовлення прийняте, рахунок ще не виставлений. Між ним і оплатою
+  /// стоїть людина: звіряємо наявність, пишемо покупцеві, потім рахунок.
+  NEW
   PENDING_PAYMENT
   PAID
   IN_PRODUCTION
@@ -1069,6 +1081,17 @@ model Order {
 
   /// Free-text note the customer left at checkout (e.g. "довжину коротше").
   note String?
+
+  /// Куди везти. Вільний текст, а не довідник Нової Пошти: інтеграція з їхнім
+  /// API — окрема робота, а приймати замовлення треба вже зараз. Коли вона
+  /// зʼявиться, ці ж колонки почнуть заповнюватися вибором зі списку.
+  deliveryMethod DeliveryMethod @default(NP_BRANCH)
+  deliveryCity   String         @default("")
+  deliveryBranch String         @default("")
+  /// Одержувач, якщо він не той, хто замовляє: подарунок іншій людині —
+  /// звичайна річ, а Нова Пошта видає посилку за іменем.
+  recipientName  String         @default("")
+  recipientPhone String         @default("")
 
   /// Атрибуція — та сама, що й у заявки. Без неї неможливо сказати, яка
   /// реклама принесла гроші, а не просто кліки.

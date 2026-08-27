@@ -3,8 +3,11 @@ import { PrismaService } from '../common/prisma.service';
 import { AuthModule } from '../auth/auth.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { PricingModule } from '../pricing/pricing.module';
-import { CheckoutController } from './checkout.controller';
-import { CheckoutService } from './checkout.service';
+import { CartPricingService } from './cart-pricing.service';
+import { OrdersAdminController } from './orders-admin.controller';
+import { OrdersAdminService } from './orders-admin.service';
+import { OrdersController } from './orders.controller';
+import { OrdersService } from './orders.service';
 import { MonobankService } from './monobank.service';
 import { PaymentsAdminController } from './payments-admin.controller';
 import { PaymentsAdminService } from './payments-admin.service';
@@ -13,7 +16,14 @@ import { PaymentsWebhookService } from './payments-webhook.service';
 
 @Module({
   imports: [AuthModule, PricingModule, AnalyticsModule],
-  controllers: [CheckoutController, PaymentsWebhookController, PaymentsAdminController],
-  providers: [PrismaService, MonobankService, CheckoutService, PaymentsWebhookService, PaymentsAdminService],
+  controllers: [
+    OrdersController,
+    PaymentsWebhookController, PaymentsAdminController, OrdersAdminController,
+  ],
+  providers: [
+    PrismaService, MonobankService,
+    CartPricingService, OrdersService, OrdersAdminService,
+    PaymentsWebhookService, PaymentsAdminService,
+  ],
 })
 export class PaymentsModule {}

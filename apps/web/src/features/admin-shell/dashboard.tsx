@@ -122,6 +122,7 @@ export function Dashboard() {
 }
 
 const ENTRIES = [
+  { href: '/admin/zamovlennya', title: 'Замовлення', text: 'Нові приходять неоплаченими. Підтвердьте — і виставте рахунок.' },
   { href: '/admin/leads', title: 'Заявки', text: 'Хто написав і що просив. Статус і експорт.' },
   { href: '/admin/prints', title: 'Принти', text: 'Каталог: фото, породи, публікація.' },
   { href: '/admin/tsiny', title: 'Ціни', text: 'База, надбавки, акції з датами.' },

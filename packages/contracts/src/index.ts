@@ -19,3 +19,4 @@ export * from './lead.dto';
 export * from './checkout.dto';
 export * from './payment.dto';
 export * from './errors';
+export * from './cart.dto';

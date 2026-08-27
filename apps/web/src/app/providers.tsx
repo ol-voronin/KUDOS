@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/ui';
+import { CartProvider } from '@/features/cart/cart-store';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { SiteSettingsDto } from '@dt/contracts';
 
@@ -31,7 +32,13 @@ export function Providers({ settings, children }: { settings: SiteSettingsDto; c
   return (
     <SettingsContext.Provider value={settings}>
       <QueryClientProvider client={client}>
-        <ToastProvider>{children}</ToastProvider>
+        {/*
+          Кошик обгортає все: лічильник у шапці й сторінка кошика — це різні
+          гілки дерева, і спільний стан у них може бути тільки тут.
+        */}
+        <CartProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </CartProvider>
       </QueryClientProvider>
     </SettingsContext.Provider>
   );
