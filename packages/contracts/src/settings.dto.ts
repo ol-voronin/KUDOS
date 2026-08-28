@@ -70,6 +70,19 @@ export const SiteSettingsDto = z.object({
     (v) => v === '' || /^(\/|https?:\/\/)/.test(v),
     { message: 'адреса картинки має починатися з / або https://' },
   ),
+  /*
+   * Скільки днів від замовлення до відправки.
+   *
+   * Це обіцянка, а не константа: вона стоїть на головній, у картці товару, в
+   * листі покупцеві й у розмові. Зашита в JSX, вона розійшлася б із тим, що
+   * кажуть у Telegram, — і саме на цьому будуються скарги «мені обіцяли інше».
+   *
+   * Дні РОБОЧІ. «5 днів» у суботу й «5 днів» у понеділок — це різні дати, і
+   * покупець рахує саме дати.
+   */
+  productionDaysMin: z.number().int().min(0).max(120),
+  productionDaysMax: z.number().int().min(0).max(120),
+
   /** Значення `content` для Search Console — без тега. */
   googleSiteVerification: ShortText,
   /** Потік GA4: `G-XXXXXXX`. Порожньо — скрипт не вантажиться взагалі. */
@@ -148,6 +161,9 @@ export function tokenValues(s: SiteSettingsDto): Readonly<Record<string, string>
     taxNumber: s.taxNumber,
     returnDays: String(s.returnDays),
     freeShippingFrom: String(Math.round(s.freeShippingFromMinor / 100)),
+    productionDays: s.productionDaysMin === s.productionDaysMax
+      ? String(s.productionDaysMax)
+      : `${s.productionDaysMin}–${s.productionDaysMax}`,
   };
 }
 

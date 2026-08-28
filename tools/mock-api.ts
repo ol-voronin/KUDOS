@@ -39,6 +39,7 @@ const SETTINGS = {
   legalEntityShort: 'ФОП Воронін О. П.',
   workingHours: 'Пн–Пт, 10:00–19:00',
   freeShippingFromMinor: 150000,
+  productionDaysMin: 4, productionDaysMax: 7,
   ga4MeasurementId: '', googleAdsId: '',
   allowIndexing: false, defaultOgImage: '', googleSiteVerification: '',
 };
@@ -103,6 +104,7 @@ const TOKENS = {
   legalEntity: SETTINGS.legalEntityName,
   returnDays: String(SETTINGS.returnDays),
   freeShippingFrom: String(Math.round(SETTINGS.freeShippingFromMinor / 100)),
+  productionDays: `${SETTINGS.productionDaysMin}–${SETTINGS.productionDaysMax}`,
 };
 
 function subst(v) {
@@ -169,6 +171,65 @@ http.createServer(async (req,res)=>{
     body = { items: PRINTS.slice(0, perPage), total: PRINTS.length, page: 1, perPage };
   } else if (url.pathname === '/content/pages') body = { items: [] };
   else if (url.pathname === '/analytics/events') body = { ok: true };
+  else if (url.pathname.startsWith('/catalog/prints/')) {
+    // Один принт на трьох виробах, у двох кольорах і чотирьох розмірах —
+    // рівно стільки, щоб побачити всі стани картки товару: вибір виробу,
+    // кольору, розміру, «під замовлення» й «немає».
+    const slug = url.pathname.split('/').pop();
+    const p = PRINTS.find((x) => x.slug === slug) ?? PRINTS[0];
+    const G = (n) => uuid(400 + n);
+    const C = (n) => uuid(500 + n);
+    const S = (n) => uuid(600 + n);
+    const F = (n) => uuid(650 + n);
+    const sizes = ['S', 'M', 'L', 'XL'].map((label, i) => ({
+      id: S(i), label, position: i,
+      measurements: [
+        { key: 'LENGTH', value: String(68 + i * 2) },
+        { key: 'WIDTH', value: String(48 + i * 3) },
+        { key: 'SLEEVE', value: String(20 + i) },
+      ],
+    }));
+    const fabric = (n, name, gsm, comp) => ({ id: F(n), name, weightGsm: gsm, composition: comp, origin: null });
+    const garments = [
+      { id: G(0), slug: 'klasychna-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'CLASSIC',
+        name: 'Класична футболка', lengthAdjustable: true, basePriceMinor: 89000,
+        description: 'Прямий крій, щільний трикотаж, не просвічує. Пасує всім, з ким ми досі мали справу.',
+        fabrics: [fabric(0, 'Кулір 190', 190, '100 % бавовна')], sizes },
+      { id: G(1), slug: 'oversayz-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'OVERSIZE',
+        name: 'Оверсайз футболка', lengthAdjustable: true, basePriceMinor: 99000,
+        description: 'Справжній оверсайз: спущене плече, вільний корпус. Бери свій розмір, не менший.',
+        fabrics: [fabric(1, 'Кулір 220', 220, '100 % бавовна')], sizes },
+      { id: G(2), slug: 'khudi', line: 'NATIVE_SPIRIT', type: 'HOODIE', fit: 'CLASSIC',
+        name: 'Худі', lengthAdjustable: false, basePriceMinor: 179000,
+        description: 'Native Spirit, органічна бавовна з начосом. Сертифікати — на сторінці «Вироби».',
+        fabrics: [fabric(2, 'Трьохнитка з начосом', 300, '85 % органічна бавовна, 15 % поліестер')], sizes },
+    ];
+    const colours = [
+      { id: C(0), name: 'Чорний', supplierCode: '01', hex: '#111111', imageUrl: null },
+      { id: C(1), name: 'Молочний', supplierCode: '02', hex: '#f2efe8', imageUrl: null },
+    ];
+    const variants = [];
+    garments.forEach((g, gi) => colours.forEach((c, ci) => sizes.forEach((sz, si) => {
+      const unavailable = gi === 2 && si === 3;         // худі XL — немає
+      const madeToOrder = ci === 1 && si >= 2;          // молочний від L — під замовлення
+      variants.push({
+        id: uuid(1000 + gi * 100 + ci * 10 + si),
+        sku: `${g.slug}-${c.supplierCode}-${sz.label}`,
+        garmentId: g.id, fabricId: g.fabrics[0].id, colourId: c.id, sizeId: sz.id,
+        availability: unavailable ? 'UNAVAILABLE' : madeToOrder ? 'MADE_TO_ORDER' : 'IN_STOCK',
+        leadTimeDays: madeToOrder ? 5 : null,
+        priceOverrideMinor: null,
+        priceMinor: g.basePriceMinor + si * 3000,
+      });
+    })));
+    body = {
+      print: { id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
+        collectionSlugs: ['collection-0'], breedSlugs: ['breed-6'],
+        previewUrl: p.previewUrl, isPublished: true },
+      images: PHOTOS.slice(0, 4).map((n) => ({ url: P(n), alt: p.title })),
+      garments, variants, colours, printPriceMinor: 40000,
+    };
+  }
   else if (url.pathname === '/cart/quote') {
     // Мок рахує кошик грубо — по 1290 ₴ за позицію: перевіряємо верстку
     // сторінки, а не ціноутворення (воно перевіряється тестами в apps/api).

@@ -61,7 +61,13 @@ const BREEDS: Array<{ slug: string; name: string; synonyms: string[] }> = [
    * прямо: намалюємо саме вашого, порода не потрібна. Тут майже немає
    * конкуренції в пошуку, і найвища емоційна віддача.
    */
-  { slug: 'metys', name: 'Метис', synonyms: ['дворняга', 'безпородний', 'песик з притулку', 'двортер’єр', 'дворняжка'] },
+  { slug: 'tsvergshnautser', name: 'Цвергшнауцер', synonyms: ['цверг', 'міттельшнауцер', 'schnauzer', 'шнауцер'] },
+  { slug: 'koker-spaniel', name: 'Кокер-спанієль', synonyms: ['кокер', 'спанієль', 'cocker spaniel'] },
+  { slug: 'kavaler-charlz', name: 'Кавалер кінг чарльз спанієль', synonyms: ['чарльз', 'кавалер', 'cavalier king charles'] },
+  { slug: 'bulteryer', name: 'Бультерʼєр', synonyms: ['буль', 'міні-буль', 'bull terrier', 'мініатюрний бультерʼєр'] },
+  { slug: 'samoyid', name: 'Самоїд', synonyms: ['самоїдська лайка', 'samoyed', 'самоєд'] },
+  { slug: 'siba-inu', name: 'Сіба-іну', synonyms: ['шиба', 'shiba inu', 'сиба'] },
+  { slug: 'akita-inu', name: 'Акіта-іну', synonyms: ['акіта', 'akita inu', 'акита'] },
 ];
 
 /**
@@ -81,11 +87,13 @@ const COLLECTIONS: Array<{ slug: string; title: string; description: string; pub
   { slug: 'mystetstvo', title: 'Мистецтво бути шедевром', published: true, description: 'Шість полотен, які знає кожен. І шість морд, які знаєте тільки ви.' },
   { slug: 'bos-dzvonyt', title: 'Бос дзвонить', published: true, description: 'Екран вхідного дзвінка, а в колі — ваш пес. Той самий макет можна зробити з вашого фото.' },
   { slug: 'call-of-woof', title: 'Call of Woof', published: true, description: 'Welcome to blackout, soldier. Колекція, яку зрозуміють без пояснень усі, хто пережив зиму без світла.' },
-  { slug: 'modni-zhurnaly', title: 'Модні журнали', published: false, description: 'Ваш пес на обкладинці Vogue, Elle чи GQ. Найпопулярніший жанр — і найкращий подарунок.' },
-  { slug: 'sobaky-v-bari', title: 'Собаки в барі', published: false, description: 'Компанія псів за барною стійкою. Той випадок, коли принт помічають раніше, ніж вас.' },
-  { slug: 'portrety', title: 'Портрети', published: false, description: 'Класичний портрет у стилі старих майстрів. Ренесанс, бароко, олія — з вашого фото.' },
+  { slug: 'dogue', title: 'DOGUE', published: false, description: 'Твій пес на обкладинці глянцю. Найпопулярніший жанр — і найкращий подарунок.' },
+  { slug: 'pes-pub', title: 'Пес Pub', published: false, description: 'Компанія псів за барною стійкою. Той випадок, коли принт помічають раніше, ніж тебе.' },
+  { slug: 'vintage', title: 'Vintage', published: false, description: 'Класичний портрет у стилі старих майстрів. Ренесанс, бароко, олія — з твого фото.' },
+  { slug: 'polo-style', title: 'Polo style', published: false, description: 'Стримана лінія: поло, мінімальний принт, спокійні кольори. Для тих, кому на роботу.' },
+  { slug: 'ua-diiachi', title: 'UA діячі', published: false, description: 'Українські постаті — і песики в їхніх образах. Обережно з цим жанром: тут легко перейти межу.' },
   { slug: 'kino', title: 'Кіно', published: false, description: 'Улюблені кадри й постери, у яких головну роль грає ваша собака.' },
-  { slug: 'znamenytosti', title: 'Знаменитості', published: false, description: 'Пес у образі того, кого впізнають без пояснень.' },
+  { slug: 'pesy-zirky', title: 'Песи і зірки', published: false, description: 'Пес у образі того, кого впізнають без пояснень.' },
   { slug: 'den-narodzhennia', title: 'День народження', published: false, description: 'Принт із датою, кличкою і віком. Найчастіше замовляють у подарунок — і саме тому строк тут важливіший за ціну.' },
   { slug: 'muzyka', title: 'Музика', published: false, description: 'Обкладинки альбомів і сценічні образи. Від вінілу до стадіону.' },
 ];

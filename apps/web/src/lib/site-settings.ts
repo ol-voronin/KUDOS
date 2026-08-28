@@ -30,6 +30,8 @@ export const FALLBACK_SETTINGS: SiteSettingsDto = {
   workingHours: site.workingHours,
   freeShippingFromMinor: site.freeShippingFromMinor,
   returnDays: site.returnDays,
+  productionDaysMin: site.productionDaysMin,
+  productionDaysMax: site.productionDaysMax,
   defaultOgImage: '',
   googleSiteVerification: '',
   ga4MeasurementId: '',

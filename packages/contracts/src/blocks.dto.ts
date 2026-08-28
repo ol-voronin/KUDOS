@@ -27,6 +27,12 @@ export const CONTENT_TOKENS = [
   'brand', 'email', 'phone', 'telegram', 'telegramUrl',
   'city', 'cityIn', 'legalEntity', 'legalEntityShort', 'taxNumber',
   'returnDays', 'freeShippingFrom',
+  /*
+   * Строк виготовлення. Стоїть у трьох блоках головної, у картці товару й у
+   * відповідях на питання — тобто рівно там, де розбіжність помічає покупець.
+   * Підстановкою, бо цю обіцянку міняють, а не переписують сайт.
+   */
+  'productionDays',
 ] as const;
 export type ContentToken = (typeof CONTENT_TOKENS)[number];
 

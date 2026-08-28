@@ -87,11 +87,18 @@ export function BreedStrip({
           </span>
         </Link>
       ))}
-      {/* Остання плитка — темна: вона єдина веде не в каталог, а в бриф. */}
+      {/*
+        Остання плитка — темна й на всю ширину рядка.
+
+        Вона єдина веде не в каталог, а в бриф, і замовник просив зробити її
+        помітнішою. Ширина тут працює краще за колір: серед однакових плиток
+        помітна та, що іншого РОЗМІРУ, а не та, що іншого відтінку — темних
+        плиток на сторінці й так вистачає.
+      */}
       {cta && (
       <Link
         href="/svoya-ideya"
-        className="reveal flex min-h-[5rem] items-center gap-3.5 rounded-card bg-ink p-3 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/85 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        className="reveal flex min-h-[5rem] items-center gap-3.5 rounded-card bg-ink p-4 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ink/85 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:col-span-2 lg:col-span-3"
       >
         <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-card border border-surface/30 text-surface">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -100,9 +107,11 @@ export function BreedStrip({
         </span>
         <span className="min-w-0">
           <span className="block font-display text-base font-semibold uppercase leading-tight text-surface">
-            Немає вашої?
+            Не знайшов те саме?
           </span>
-          <span className="mt-0.5 block text-sm text-surface/70">Намалюємо з фото →</span>
+          <span className="mt-0.5 block text-sm text-surface/70">
+            Замов адаптацію готового принту або власну ідею →
+          </span>
         </span>
       </Link>
       )}

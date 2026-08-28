@@ -74,6 +74,8 @@ const GROUPS: ReadonlyArray<{
     fields: [
       { name: 'freeShippingFromMinor', label: 'Безкоштовна доставка від, ₴', numeric: true, hint: 'Підставляється як {{freeShippingFrom}}.' },
       { name: 'returnDays', label: 'Днів на повернення', numeric: true, hint: 'Підставляється як {{returnDays}}.' },
+      { name: 'productionDaysMin', label: 'Виготовлення від, робочих днів', numeric: true, hint: 'Разом із наступним полем підставляється як {{productionDays}}.' },
+      { name: 'productionDaysMax', label: 'Виготовлення до, робочих днів', numeric: true, hint: 'Стоїть на головній, у картці товару й у відповідях на питання.' },
     ],
   },
 ];

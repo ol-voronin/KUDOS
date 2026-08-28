@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { PrintThumb } from '@/components/print-thumb';
-import { Button, ButtonLink, ErrorBanner, Skeleton } from '@/components/ui';
+import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
+import { useSiteSettings } from '@/app/providers';
+import { shipWindow } from '../delivery-estimate';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
@@ -17,6 +19,8 @@ import { SizeChart } from './SizeChart';
 export function PrintOfferView({ slug, initialData }: { slug: string; initialData?: PrintOfferDto }) {
   const { data, isLoading, isError } = usePrintOffer(slug, initialData);
   const { add } = useCart();
+  const site = useSiteSettings();
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
 
   const [garmentId, setGarmentId] = useState<string | null>(null);
   const [fabricId, setFabricId] = useState<string | null>(null);
@@ -183,8 +187,19 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   }
 
   return (
-    <div className="grid gap-10 md:grid-cols-2">
-      <Gallery images={data.images} fallback={data.print.previewUrl} title={data.print.title} />
+    <div className="grid items-start gap-10 md:grid-cols-2">
+      {/*
+        Галерея липне до верху на широкому екрані.
+
+        Права колонка з описом і акордеоном удвічі довша за фото, і без
+        цього під галереєю лишалася порожня половина екрана — а товар,
+        заради якого сторінку відкрили, їхав угору саме тоді, коли людина
+        читає, з чого він і коли приїде. Baymard називає це прямо: фото має
+        лишатися в полі зору весь час, поки триває вибір.
+      */}
+      <div className="md:sticky md:top-24">
+        <Gallery images={data.images} fallback={data.print.previewUrl} title={data.print.title} />
+      </div>
 
       <div>
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
@@ -274,7 +289,25 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
         {sizes.length > 0 && (
           <fieldset className="mt-6">
-            <legend id="size-label" className="label-eyebrow mb-2">Розмір</legend>
+            {/*
+              Таблиця розмірів відкривається ЗВІДСИ, а не з окремого блока
+              внизу картки. Baymard знаходить це в кожному тесті одягу:
+              питання «який мій розмір» виникає рівно в мить вибору розміру,
+              і відповідь має бути на відстані одного погляду, а не
+              прокрутки.
+            */}
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <legend id="size-label" className="label-eyebrow">Розмір</legend>
+              {garment && garment.sizes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSizeChartOpen(true)}
+                  className="tap-sm text-sm text-ink underline underline-offset-4 hover:opacity-60"
+                >
+                  Таблиця розмірів
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="size-label">
               {sizes.map((s) => (
                 <SizeButton
@@ -294,11 +327,31 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </fieldset>
         )}
 
-        {garment && <SizeChart sizes={garment.sizes} highlight={sizeId} />}
+        {garment && (
+          <Drawer open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} title={`Розміри · ${garment.name}`}>
+            <SizeChart sizes={garment.sizes} highlight={sizeId} />
+          </Drawer>
+        )}
 
         {selectedSize && (
-          <div className="mt-6" aria-live="polite">
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2" aria-live="polite">
             <AvailabilityBadge state={selectedSize.state} leadTimeDays={selectedSize.leadTimeDays} />
+            {/*
+              Дата, а не «4–7 днів».
+
+              Строк, названий днями, покупець однаково перекладає в дату —
+              просто робить це сам, у голові й з помилкою. Названий датою,
+              він читається як зобовʼязання; це найдешевший спосіб зняти
+              питання «а коли вже».
+            */}
+            {selectedSize.state !== 'UNAVAILABLE' && (
+              <span className="text-sm text-ink-muted">
+                Відправимо{' '}
+                <b className="font-medium text-ink">
+                  {shipWindow(site.productionDaysMin, site.productionDaysMax, selectedSize.leadTimeDays).label}
+                </b>
+              </span>
+            )}
           </div>
         )}
 
@@ -335,13 +388,117 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
               Перейти в кошик →
             </ButtonLink>
           ) : (
-            <p className="mt-2 text-center text-xs text-ink-subtle md:text-left">
-              Оплата — після того, як ми підтвердили наявність.
-            </p>
+            /*
+              Три рядки під кнопкою — не прикраса, а зняття трьох конкретних
+              сумнівів, які Baymard бачить у кожному тесті чекауту:
+              «коли з мене візьмуть гроші», «а якщо не підійде» і «скільки
+              коштує доставка». Кожен із них поодинці зупиняє покупку, і
+              жоден не потребує більше рядка.
+            */
+            <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
+              <li>· Оплата не зараз — спершу підтвердимо наявність і напишемо</li>
+              <li>· Обмін і повернення {site.returnDays} днів, якщо річ не носили</li>
+              <li>
+                · Доставка від {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ — за наш рахунок
+              </li>
+            </ul>
           )}
+        </div>
+
+        {/*
+          Другий шлях, про який просив замовник: людині сподобався принт,
+          але пес не той. Без цієї кнопки вона або купує «схоже», або йде.
+          Вторинна дія й нижче основної — вона потрібна меншості, але саме
+          тій меншості, яка інакше не купить нічого.
+        */}
+        <div className="mt-6 rounded-card border border-line p-4">
+          <p className="text-sm font-medium text-ink">Подобається принт, але пес не той?</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+            Надішли 2–3 фото свого хвостика — зробимо цей самий принт із його мордочкою.
+            Доплата 200 ₴, строк той самий.
+          </p>
+          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-3">
+            Хочу такий, але зі своїм песом
+          </ButtonLink>
+        </div>
+
+        {/*
+          Опис розбито на розділи, а не викладено абзацом.
+
+          Baymard: на сторінці товару читають не підряд, а шукають свою
+          відповідь — «з чого це», «як прати», «коли приїде», «що як не
+          підійде». Суцільний текст змушує вичитувати чуже, щоб знайти своє.
+          Перший розділ відкритий: якщо всі згорнуті, більшість не відкриє
+          жодного.
+        */}
+        <div className="mt-8 divide-y divide-line border-y border-line">
+          <Section title="Виріб і друк" open>
+            <p>
+              {garment?.description !== undefined && garment.description !== ''
+                ? garment.description
+                : 'Друкуємо на власних виробах і на готових від еко-бренду Native Spirit (Франція).'}
+            </p>
+            <p>
+              Друк DTF або DTG на промисловому обладнанні. Принт не тріскається й не злазить
+              після прання; трісне з нашої вини — переробимо або повернемо гроші.
+            </p>
+          </Section>
+
+          <Section title="Догляд">
+            <p>
+              Прати при 30 °C навиворіт, без відбілювача. Не сушити в машині.
+              Прасувати з вивороту або через тканину, не по принту.
+            </p>
+          </Section>
+
+          <Section title="Строки й доставка">
+            <p>
+              Виготовлення та відправка: {site.productionDaysMin}–{site.productionDaysMax} робочих
+              днів{selectedSize?.leadTimeDays != null ? `, плюс ${selectedSize.leadTimeDays} днів на пошиття цього розміру` : ''}.
+            </p>
+            <p>
+              Нова Пошта — на відділення, в поштомат або курʼєром. Від{' '}
+              {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ доставка за наш рахунок,
+              менші замовлення — за тарифами перевізника.
+            </p>
+          </Section>
+
+          <Section title="Оплата, обмін і повернення">
+            <p>
+              Після оформлення ми звіряємо наявність і надсилаємо рахунок. Картку вводиш на
+              стороні Monobank, не в нас; гроші блокуються й списуються після підтвердження.
+            </p>
+            <p>
+              Обмін і повернення — {site.returnDays} днів, якщо річ не носили й збережено вигляд.
+              Принт, намальований із твого фото, поверненню не підлягає: він зроблений
+              персонально. Помилились ми — переробимо або повернемо гроші, зворотна пересилка наша.
+            </p>
+          </Section>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Один розділ опису. `<details>`, а не свій акордеон: пошук у браузері
+ * знаходить текст усередині згорнутого `<details>` і сам його розкриває —
+ * своя реалізація на `useState` цього не вміє й ховає відповідь від того,
+ * хто шукає її через Ctrl+F.
+ */
+function Section({ title, children, open = false }: { title: string; children: ReactNode; open?: boolean }) {
+  return (
+    <details className="group py-4" {...(open ? { open: true } : {})}>
+      <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium text-ink">
+        {title}
+        <span aria-hidden className="text-ink-subtle transition-transform group-open:rotate-180">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </summary>
+      <div className="mt-3 flex flex-col gap-2 text-sm leading-relaxed text-ink-muted">{children}</div>
+    </details>
   );
 }
 

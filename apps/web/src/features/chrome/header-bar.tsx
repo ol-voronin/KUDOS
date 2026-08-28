@@ -102,10 +102,19 @@ export function HeaderBar({
             <SearchIcon />
             <span className="hidden sm:inline">Пошук</span>
           </button>
-          <Link href="/zayavka" className="nav-link hidden lg:inline">Замовити дзвінок</Link>
-          <a href={`tel:${phone}`} className="hidden whitespace-nowrap text-sm font-semibold text-ink transition-opacity hover:opacity-60 sm:inline">
-            {phoneDisplay}
-          </a>
+          {/*
+            «Часті запитання» замість «Замовити дзвінок».
+
+            Кнопка дзвінка в шапці обіцяє те, чого магазин на двох людей не
+            може гарантувати щохвилини, і водночас забирає місце в того, що
+            справді знімає сумнів перед покупкою: строки, розміри,
+            повернення. Це відповіді, а не дія — тому посилання, а не кнопка.
+
+            Телефон із шапки прибрано на прохання замовника. Він лишився у
+            футері й на сторінці контактів: там його шукають свідомо, а в
+            шапці він конкурував із кошиком.
+          */}
+          <Link href="/#faq" className="nav-link hidden whitespace-nowrap lg:inline">Часті запитання</Link>
           {/*
             Кошик. Число в дужках зʼявляється тільки коли воно є: «Кошик (0)»
             на порожньому магазині — це підпис до кнопки, яка нічого не
@@ -159,7 +168,9 @@ export function HeaderBar({
               {item.label}
             </Link>
           ))}
-          <Link href="/zayavka" onClick={() => setMenu(false)} className="nav-link py-3">Замовити дзвінок</Link>
+          <Link href="/#faq" onClick={() => setMenu(false)} className="nav-link py-3">Часті запитання</Link>
+          {/* На телефоні номер лишається: там натиснути на нього — це подзвонити. */}
+          <a href={`tel:${phone}`} className="nav-link py-3 font-semibold">{phoneDisplay}</a>
         </nav>
       </div>
     </header>

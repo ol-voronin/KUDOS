@@ -13,6 +13,7 @@ const SETTINGS_SELECT = {
   phone: true, phoneDisplay: true, telegram: true, telegramUrl: true, email: true,
   city: true, cityIn: true, workingHours: true,
   freeShippingFromMinor: true, returnDays: true,
+  productionDaysMin: true, productionDaysMax: true,
   defaultOgImage: true, googleSiteVerification: true, allowIndexing: true,
   ga4MeasurementId: true, googleAdsId: true,
 } as const;

@@ -4,3 +4,4 @@ export { TableWrap, Thead, Th, Tr, Td, TdEmpty } from './table';
 export { AdminField, AdminTextArea, AdminSelect, FieldShell, inputClass } from './field';
 export { ToastProvider, useToast } from './toast';
 export { ConfirmButton } from './confirm-button';
+export { Drawer } from './drawer';

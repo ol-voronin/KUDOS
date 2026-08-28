@@ -72,13 +72,27 @@ export function clampToZero(amount: Minor): Minor {
   return minor(Math.max(0, amount));
 }
 
-const uahFormatter = new Intl.NumberFormat('uk-UA', {
-  style: 'currency',
-  currency: 'UAH',
+/*
+ * Форматуємо самі, а не через `style: 'currency'`.
+ *
+ * `Intl.NumberFormat('uk-UA', { currency: 'UAH' })` дає різний результат у
+ * різних середовищах: Node з повними даними ICU пише «1 290 ₴», а браузер
+ * (залежно від версії й локалі системи) — «1 290 грн». На сервері й на
+ * клієнті виходили різні рядки, React ловив розбіжність гідрації й
+ * ПЕРЕМАЛЬОВУВАВ усю сторінку з нуля — тобто серверний HTML на картці
+ * товару викидався щоразу.
+ *
+ * Групування розрядів лишаємо за Intl: нерозривний пробіл між тисячами —
+ * це те, що не варто писати вручну. А символ валюти дописуємо самі, і він
+ * однаковий скрізь.
+ */
+const uahNumber = new Intl.NumberFormat('uk-UA', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
 
 export function formatUAH(amount: Minor): string {
-  return uahFormatter.format(amount / KOPIYKAS_IN_UAH);
+  // Нерозривний вузький пробіл перед знаком: сума не має розриватися на
+  // два рядки посеред ціни.
+  return `${uahNumber.format(amount / KOPIYKAS_IN_UAH)}\u202f₴`;
 }
