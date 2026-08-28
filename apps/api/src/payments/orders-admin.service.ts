@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type {
   AdminOrderDto, AdminOrderInvoiceResponseDto, AdminOrderListDto, OrderStatus,
@@ -43,7 +44,7 @@ const ORDER_SELECT = {
     orderBy: { createdAt: 'desc' as const },
     take: 1,
   },
-} as const;
+} as const satisfies Prisma.OrderSelect;
 
 /**
  * Замовлення в адмінці.

@@ -6,8 +6,18 @@ import {
 } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { requireSiteId } from '../common/site-context';
+import { Prisma } from '@prisma/client';
 import { RevalidateService } from './revalidate.service';
 
+/*
+ * `satisfies`, а не голий `as const` — і це не стилістика.
+ *
+ * Select, оголошений окремою змінною, TypeScript не звіряє з моделлю:
+ * перевірка зайвих полів працює лише на літералах у місці виклику. Саме так
+ * на прод поїхав select із полем, якого не було в схемі, — typecheck мовчав,
+ * а клієнт Prisma валив кожен запит налаштувань 500-ю. `satisfies` повертає
+ * цю перевірку: невідомий ключ тут — помилка компіляції.
+ */
 const SETTINGS_SELECT = {
   brand: true, legalEntityName: true, legalEntityShort: true, taxNumber: true,
   phone: true, phoneDisplay: true, telegram: true, telegramUrl: true, email: true,
@@ -16,7 +26,7 @@ const SETTINGS_SELECT = {
   productionDaysMin: true, productionDaysMax: true,
   defaultOgImage: true, googleSiteVerification: true, allowIndexing: true,
   ga4MeasurementId: true, googleAdsId: true,
-} as const;
+} as const satisfies Prisma.SiteSettingsSelect;
 
 /**
  * Налаштування сайту й меню.

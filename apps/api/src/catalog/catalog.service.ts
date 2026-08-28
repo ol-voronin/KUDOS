@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type {
   BreedListDto, BreedPageDto, CatalogQueryDto, CollectionListDto, CollectionPageDto,
   HomeDto, PrintCardDto, PrintListDto, PrintOfferDto, RangeColourDto, RangeDto,
@@ -471,7 +472,7 @@ export class CatalogService {
   private static readonly PRINT_ROW_SELECT = {
     id: true, slug: true, title: true, sizeTier: true, previewUrl: true,
     collections: { select: { collectionId: true } },
-  } as const;
+  } as const satisfies Prisma.PrintSelect;
 
   private static toRow(p: PrintSelectRow): PrintRow {
     return {
