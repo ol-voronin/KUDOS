@@ -75,8 +75,17 @@ export default async function PrintPage({ params }: Params) {
         { name: offer.print.title, url: `${BASE}/prints/${params.slug}` },
       ])} />
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
+        {/*
+          Середній рівень у крихтах обовʼязковий: без «Каталогу» з картки
+          товару немає шляху на щабель угору — тільки на головну або назад
+          кнопкою браузера. Людина, що прийшла з пошуку чи реклами, іншого
+          входу в каталог на цій сторінці не має. JSON-LD цей рівень уже
+          оголошував — видима навігація просто розходилася з ним.
+        */}
         <nav aria-label="Хлібні крихти" className="mb-6 text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
+          <span className="px-1.5">·</span>
+          <Link href="/prints" className="hover:underline">Каталог</Link>
           <span className="px-1.5">·</span>
           <span className="text-ink">{offer.print.title}</span>
         </nav>

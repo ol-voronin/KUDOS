@@ -58,7 +58,7 @@ export default async function RangePage() {
 
       <Section>
         {garments.length === 0 ? (
-          <p className="text-ink-muted">Асортимент тимчасово недоступний. Спробуйте оновити сторінку.</p>
+          <p className="text-ink-muted">Асортимент тимчасово недоступний. Спробуй оновити сторінку.</p>
         ) : (
           <div className="flex flex-col gap-6">
             {garments.map((g) => (
@@ -71,7 +71,7 @@ export default async function RangePage() {
       <Section tone="teal">
         <h2 className="font-display text-2xl font-bold text-ink">Не знайшли свій розмір або колір?</h2>
         <p className="mt-3 max-w-2xl text-ink-muted">
-          Шиємо самі, тому багато що можемо зробити під вас. Напишіть — порахуємо.
+          Шиємо самі, тому багато що можемо зробити під тебе. Напиши — порахуємо.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <ButtonLink href="/prints" size="lg">Обрати принт</ButtonLink>

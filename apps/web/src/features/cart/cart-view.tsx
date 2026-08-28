@@ -26,7 +26,7 @@ export function CartView() {
     return (
       <EmptyState
         title="Кошик порожній"
-        hint="Оберіть принт і виріб — і він зʼявиться тут."
+        hint="Обери принт і виріб — і він зʼявиться тут."
         action={<ButtonLink href="/prints">Дивитись каталог</ButtonLink>}
       />
     );
@@ -103,7 +103,7 @@ export function CartView() {
         <div className="rounded-card bg-surface-sunken p-5">
           <h2 className="label-eyebrow">Разом</h2>
 
-          {isError && <div className="mt-3"><ErrorBanner>Не вдалося порахувати кошик. Оновіть сторінку.</ErrorBanner></div>}
+          {isError && <div className="mt-3"><ErrorBanner>Не вдалося порахувати кошик. Онови сторінку.</ErrorBanner></div>}
 
           <dl className="mt-4 flex flex-col gap-2 text-sm">
             <Row label="Товари" value={data && formatUAH(minor(data.subtotalMinor))} loading={isLoading} />
@@ -153,12 +153,12 @@ export function CartView() {
 
           {data?.purchasable === false && lines.length > 0 && (
             <p className="mt-2 text-center text-xs text-ink-muted">
-              Приберіть недоступні позиції, щоб продовжити.
+              Прибери недоступні позиції, щоб продовжити.
             </p>
           )}
 
           <p className="mt-3 text-center text-xs leading-relaxed text-ink-subtle">
-            Оплата не зараз: ми звіримо наявність, напишемо вам і надішлемо рахунок.
+            Оплата не зараз: ми звіримо наявність, напишемо тобі й надішлемо рахунок.
           </p>
         </div>
       </aside>

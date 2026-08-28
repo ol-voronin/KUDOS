@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // Простий рядок, а не `{ default, template }`: кожна сторінка вже додає
     // назву бренду сама, і шаблон приклеював другу — вийшло
     // «Футболки з принтом Коргі — Kudos print — Doggie Tale».
-    title: `${settings.brand} — одяг з принтом вашої собаки`,
+    title: `${settings.brand} — одяг з принтом твоєї собаки`,
     description: 'Одяг для тих, у кого є собака.',
   };
 }

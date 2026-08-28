@@ -62,7 +62,7 @@ export const DeliveryDto = z.object({
   recipientPhone: z.union([PhoneSchema, z.literal('')]).default(''),
 }).refine(
   (d) => d.method === 'PICKUP' || (d.city.trim() !== '' && d.branch.trim() !== ''),
-  { message: 'Вкажіть місто й відділення', path: ['branch'] },
+  { message: 'Вкажи місто й відділення', path: ['branch'] },
 );
 export type DeliveryDto = z.infer<typeof DeliveryDto>;
 

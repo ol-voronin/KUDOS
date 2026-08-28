@@ -277,7 +277,7 @@ export function LiveSearch({
                 onClick={() => { setOpen(false); onNavigate?.(); }}
                 className="link-sweep mt-1 inline-block text-ink-muted"
               >
-                Намалювати принт із вашого фото →
+                Намалювати принт із твого фото →
               </Link>
             </div>
           )}

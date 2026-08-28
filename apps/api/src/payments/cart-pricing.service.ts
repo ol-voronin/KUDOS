@@ -311,7 +311,7 @@ function missingLine(item: CartItemDto): PricedCartLine {
     quantity: item.quantity, printMethod: item.printMethod,
     garmentPriceMinor: 0, printPriceMinor: 0, unitMinor: 0, lineSubtotalMinor: 0,
     discountName: null, discountMinor: 0, lineTotalMinor: 0, leadTimeDays: null,
-    blockedReason: 'Цю позицію зняли з продажу — приберіть її з кошика',
+    blockedReason: 'Цю позицію зняли з продажу — прибери її з кошика',
   };
 }
 

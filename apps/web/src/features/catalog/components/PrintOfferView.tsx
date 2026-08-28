@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { PrintThumb } from '@/components/print-thumb';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
@@ -90,10 +91,19 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     if (sizes.length === 0) return;
     setSizeId((current) => {
       if (current !== null && sizes.some((s) => s.id === current)) return current;
+      /*
+       * Преселект — ТІЛЬКИ запамʼятований розмір із минулого візиту.
+       *
+       * Раніше тут стояло `?? sizes[0]?.id`: першому відвідувачу мовчки
+       * обирався S, і кнопка купівлі працювала одразу. Виглядало як
+       * зручність, а було головним джерелом замовлень «не той розмір» —
+       * людина не помічає вибору, якого не робила. Запамʼятований розмір
+       * інша справа: його вона колись обрала сама.
+       */
       const remembered = rememberedLabel === null
         ? undefined
         : sizes.find((s) => s.label === rememberedLabel && s.state !== 'UNAVAILABLE');
-      return remembered?.id ?? sizes[0]?.id ?? null;
+      return remembered?.id ?? null;
     });
   }, [sizes, rememberedLabel]);
 
@@ -148,7 +158,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
         <p className="mt-4 text-ink-muted">
           Поки що немає жодного виробу у вітрині, тож замовити цей принт нема на чому.
-          Напишіть нам — зробимо вручну.
+          Напиши нам — зробимо вручну.
         </p>
       </div>
     );
@@ -157,8 +167,14 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   // Ціну варіанта рахує сервер: у ній уже враховані надбавки за розмір,
   // тканину й колір. Складати її тут із бази означало б тримати в браузері
   // другу реалізацію ціноутворення — і колись розійтися з касою.
-  const garmentPriceMinor = variant?.priceMinor ?? garment?.basePriceMinor ?? 0;
+  //
+  // Поки розмір не обрано, варіанта немає — і точної ціни теж: надбавка за
+  // розмір може її змінити. Тому до вибору показуємо «від найдешевшого
+  // варіанта цього виробу», а не базу, якої може не існувати в природі.
+  const cheapestForGarment = garment ? cheapestByGarment.get(garment.id) : undefined;
+  const garmentPriceMinor = variant?.priceMinor ?? cheapestForGarment ?? garment?.basePriceMinor ?? 0;
   const totalMinor = garmentPriceMinor + data.printPriceMinor;
+  const priceIsExact = variant !== null && variant !== undefined;
 
   /*
    * Назву й обкладинку кладемо в кошик знімком.
@@ -204,7 +220,9 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       <div>
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
         <div className="mt-3 border-t border-ink pt-3" aria-live="polite">
-          <p className="font-display text-3xl font-bold text-ink">{formatUAH(minor(totalMinor))}</p>
+          <p className="font-display text-3xl font-bold text-ink">
+            {priceIsExact ? '' : 'від '}{formatUAH(minor(totalMinor))}
+          </p>
           {garment && (
             <p className="mt-1 text-sm text-ink-subtle">
               {formatUAH(minor(garmentPriceMinor))} виріб + {formatUAH(minor(data.printPriceMinor))} друк
@@ -321,7 +339,12 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
             </div>
             {rememberedLabel !== null && (
               <p className="mt-2 text-xs text-ink-subtle">
-                Минулого разу ви брали {rememberedLabel} — позначено крапкою.
+                {/*
+                  Без дієслова навмисно: «ти брав» і «ти брала» — різні
+                  форми, а статі покупця ми не знаємо. Речення без роду
+                  краще за вгадування навпіл.
+                */}
+                Минулого разу тут був розмір {rememberedLabel} — позначено крапкою.
               </p>
             )}
           </fieldset>
@@ -381,7 +404,14 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
             disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
             onClick={handleAddToCart}
           >
-            {added ? 'У кошику ✓' : `Додати в кошик · ${formatUAH(minor(totalMinor))}`}
+            {/*
+              Вимкнена кнопка без пояснення — окремий гріх: людина тисне,
+              нічого не відбувається, і незрозуміло чому. Напис називає
+              причину прямо на кнопці.
+            */}
+            {sizeId === null
+              ? 'Спершу обери розмір'
+              : added ? 'У кошику ✓' : `Додати в кошик · ${formatUAH(minor(totalMinor))}`}
           </Button>
           {added ? (
             <ButtonLink href="/koshyk" variant="quiet" size="md" full className="mt-2">
@@ -516,18 +546,97 @@ function Gallery({
     ? images
     : (fallback ? [{ url: fallback, alt: title }] : []);
   const [active, setActive] = useState(0);
+  const [zoomed, setZoomed] = useState(false);
   const current = list[Math.min(active, list.length - 1)];
+
+  /*
+   * Стрілки гортають і Escape закриває, поки збільшене фото відкрите.
+   *
+   * Слухач висить лише в стані zoom — постійний перехоплював би стрілки
+   * в полях вводу решти сторінки.
+   */
+  useEffect(() => {
+    if (!zoomed) return;
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setZoomed(false);
+      if (e.key === 'ArrowRight') setActive((i) => (i + 1) % list.length);
+      if (e.key === 'ArrowLeft') setActive((i) => (i - 1 + list.length) % list.length);
+    }
+    window.addEventListener('keydown', onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [zoomed, list.length]);
 
   if (!current) return <PrintThumb src={null} alt={title} />;
 
   return (
     <div>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={current.url}
-        alt={current.alt}
-        className="aspect-square w-full bg-surface-sunken object-cover"
-      />
+      {/*
+        Фото збільшується кліком.
+
+        Для одягу це не прикраса: рішення про покупку ухвалюють, роздивившись
+        принт і фактуру, а квадрат у пів колонки цього не дає. Збільшення на
+        весь екран — найдешевша форма зуму, яка працює й на телефоні.
+      */}
+      <button
+        type="button"
+        onClick={() => setZoomed(true)}
+        className="block w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        aria-label="Збільшити фото"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={current.url}
+          alt={current.alt}
+          className="aspect-square w-full bg-surface-sunken object-cover"
+        />
+      </button>
+
+      {/*
+        Портал у body, а не рендер на місці.
+
+        Галерея живе всередині sticky-обгортки, і `fixed` елемент усередині
+        неї опиняється в чужому stacking context: підкладка не накривала
+        шапку, і крізь «затемнення» просвічували кнопки сторінки. Портал
+        виносить оверлей на верхній рівень документа, де z-index означає
+        те, що написано.
+      */}
+      {zoomed && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${title} — збільшене фото`}
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/90 animate-[fade-in_.15s_ease-out]"
+          onClick={() => setZoomed(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={current.url}
+            alt={current.alt}
+            className="max-h-[92vh] max-w-[92vw] cursor-zoom-out object-contain"
+          />
+          {list.length > 1 && (
+            <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm tabular-nums text-white/80">
+              {active + 1} / {list.length} · гортай стрілками
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setZoomed(false)}
+            aria-label="Закрити"
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center text-white hover:opacity-70"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>,
+        document.body,
+      )}
       {list.length > 1 && (
         <div className="mt-3 flex gap-2">
           {list.map((image, index) => (

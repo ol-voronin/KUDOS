@@ -102,7 +102,7 @@ export default async function PrintsPage({ searchParams }: Search) {
           ) : (
             <EmptyState
               title="Каталог ще наповнюється"
-              hint="Поки що працюємо під замовлення — намалюємо принт із фото вашої собаки."
+              hint="Поки що працюємо під замовлення — намалюємо принт із фото твоєї собаки."
               action={<ButtonLink href="/svoya-ideya">Замовити свій принт</ButtonLink>}
             />
           )}

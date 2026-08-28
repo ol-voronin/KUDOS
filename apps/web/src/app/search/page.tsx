@@ -93,7 +93,7 @@ export default async function SearchPage({ searchParams }: Search) {
         </div>
 
         {q.length > 0 && q.length < 2 && (
-          <p className="mt-8 text-ink-muted">Введіть хоча б дві літери.</p>
+          <p className="mt-8 text-ink-muted">Введи хоча б дві літери.</p>
         )}
 
         {data && (
@@ -146,7 +146,7 @@ export default async function SearchPage({ searchParams }: Search) {
         {data && narrowed && data.total > 0 && data.prints.length === 0 && (
           <p className="mt-10 rounded-card border border-dashed border-line-strong bg-surface-sunken p-6 text-center text-sm text-ink-muted">
             За цим запитом принти є, але жоден не підходить під вибрані фільтри.
-            Спробуйте зняти котрийсь із них.
+            Спробуй зняти котрийсь із них.
           </p>
         )}
       </div>
@@ -164,7 +164,7 @@ function NothingFound({ query }: { query: string }) {
     <div className="mt-10 rounded-card border border-dashed border-line-strong bg-surface-sunken p-8 text-center">
       <p className="font-medium text-ink">За запитом «{query}» нічого не знайшли</p>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-        Якщо це порода вашої собаки — просто напишіть нам. Готового принта може
+        Якщо це порода твоєї собаки — просто напиши нам. Готового принта може
         не бути, але намалювати з фото ми можемо будь-кого.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">

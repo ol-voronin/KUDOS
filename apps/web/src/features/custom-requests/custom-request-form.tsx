@@ -46,7 +46,7 @@ export function CustomRequestForm() {
     return (
       <SuccessPanel title={`Бриф №${sent} прийнято`}>
         <p>
-          Ми подивимось і напишемо вам у Telegram — там же попросимо фото
+          Ми подивимось і напишемо тобі в Telegram — там же попросимо фото
           {dogName ? ` ${dogName}` : ' собаки'} і назвемо ціну.
         </p>
         <p>
@@ -68,7 +68,7 @@ export function CustomRequestForm() {
     if (dogName.trim().length < 1) next['dogName'] = 'Як звати собаку?';
     if (dogBreed.trim().length < 1) next['dogBreed'] = 'Порода або «метис» — теж відповідь';
     if (mood.trim().length < 1) next['mood'] = 'Опишіть ідею хоча б одним реченням';
-    if (name.trim().length < 2) next['name'] = 'Вкажіть, як до вас звертатися';
+    if (name.trim().length < 2) next['name'] = 'Вкажи, як до тебе звертатися';
     if (phone.trim().length === 0) next['phone'] = 'Без телефону ми не зможемо відповісти';
     if (!consent) next['consent'] = 'Потрібна згода на обробку даних';
     setErrors(next);
@@ -95,7 +95,7 @@ export function CustomRequestForm() {
       });
       setSent(result.number);
     } catch (err) {
-      const text = err instanceof ApiError ? err.message : 'Не вдалося надіслати. Спробуйте ще раз або напишіть у Telegram.';
+      const text = err instanceof ApiError ? err.message : 'Не вдалося надіслати. Спробуй ще раз або напиши в Telegram.';
       setErrors({ phone: text });
     } finally {
       setPending(false);
@@ -144,7 +144,7 @@ export function CustomRequestForm() {
           />
           <Field
             id="size-label" label="Розмір" value={sizeLabel} onChange={setSizeLabel}
-            placeholder="M" hint="Якщо не знаєте — підберемо разом."
+            placeholder="M" hint="Якщо не знаєш — підберемо разом."
           />
         </div>
       </fieldset>
@@ -152,7 +152,7 @@ export function CustomRequestForm() {
       <fieldset className="space-y-5">
         <legend className="mb-1 font-display text-lg font-bold text-ink">Контакти</legend>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="brief-name" label="Як до вас звертатися" required value={name} onChange={setName} error={errors['name']} autoComplete="name" />
+          <Field id="brief-name" label="Як до тебе звертатися" required value={name} onChange={setName} error={errors['name']} autoComplete="name" />
           <Field
             id="brief-phone" label="Телефон" type="tel" required value={phone} onChange={setPhone}
             error={errors['phone']} placeholder="+380 67 123 45 67" autoComplete="tel"

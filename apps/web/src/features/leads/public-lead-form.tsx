@@ -45,7 +45,7 @@ export function PublicLeadForm({ source, compact = false }: { source: string; co
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next: Record<string, string> = {};
-    if (name.trim().length < 2) next['name'] = 'Вкажіть, як до вас звертатися';
+    if (name.trim().length < 2) next['name'] = 'Вкажи, як до тебе звертатися';
     if (phone.trim().length === 0) next['phone'] = 'Без телефону ми не зможемо відповісти';
     if (!consent) next['consent'] = 'Потрібна згода на обробку даних';
     setErrors(next);
@@ -64,7 +64,7 @@ export function PublicLeadForm({ source, compact = false }: { source: string; co
     } catch (err) {
       // Помилку валідації з сервера показуємо на полі телефону: це єдине поле,
       // яке сервер може відхилити після того, як форма його пропустила.
-      const text = err instanceof ApiError ? err.message : 'Не вдалося надіслати. Спробуйте ще раз або напишіть у Telegram.';
+      const text = err instanceof ApiError ? err.message : 'Не вдалося надіслати. Спробуй ще раз або напиши в Telegram.';
       setErrors({ phone: text });
     } finally {
       setPending(false);
@@ -74,7 +74,7 @@ export function PublicLeadForm({ source, compact = false }: { source: string; co
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <Field
-        id="lead-name" label="Як до вас звертатися" required
+        id="lead-name" label="Як до тебе звертатися" required
         value={name} onChange={setName} error={errors['name']} autoComplete="name"
       />
       <Field
@@ -85,7 +85,7 @@ export function PublicLeadForm({ source, compact = false }: { source: string; co
       />
       {!compact && (
         <TextArea
-          id="lead-message" label="Що вас цікавить" rows={3}
+          id="lead-message" label="Що тебе цікавить" rows={3}
           value={message} onChange={setMessage}
           placeholder="Худі з коргі, розмір M…"
           hint="Не обовʼязково — можна просто лишити телефон."

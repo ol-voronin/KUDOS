@@ -25,8 +25,8 @@ export function PhotoPlaceholder() {
         <div>
           <p className="text-sm font-medium text-ink">Фото собаки</p>
           <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-            Завантаження на сайті ще робимо. Надішліть фото у відповідь у Telegram —
-            ми напишемо вам одразу після брифу, і там же все обговоримо.
+            Завантаження на сайті ще робимо. Надішли фото у відповідь у Telegram —
+            ми напишемо тобі одразу після брифу, і там же все обговоримо.
           </p>
           <a
             href={site.telegramUrl}

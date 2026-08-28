@@ -112,7 +112,7 @@ export default async function CollectionPage({ params }: Params) {
                 <section>
                   <SectionHead
                     title="Або почніть з породи"
-                    subtitle="Ті самі принти, згруповані інакше — за тим, хто у вас удома."
+                    subtitle="Ті самі принти, згруповані інакше — за тим, хто в тебе вдома."
                   />
                   <BreedStrip breeds={breeds} />
                 </section>

@@ -91,8 +91,8 @@ const BLOCK_MESSAGES: Readonly<Record<BlockReason, string>> = {
   GARMENT_UNPUBLISHED: 'Цей виріб зараз недоступний.',
   PRINT_UNPUBLISHED: 'Цей принт зараз недоступний.',
   VARIANT_UNAVAILABLE: 'Цього кольору або розміру зараз немає.',
-  MISSING_LEAD_TIME: 'Цю позицію шиємо під замовлення — напишіть нам, і ми назвемо строк.',
-  LEAD_TIME_TOO_LONG: 'Цю позицію шиємо під замовлення — напишіть нам, і ми назвемо строк.',
+  MISSING_LEAD_TIME: 'Цю позицію шиємо під замовлення — напиши нам, і ми назвемо строк.',
+  LEAD_TIME_TOO_LONG: 'Цю позицію шиємо під замовлення — напиши нам, і ми назвемо строк.',
   PRINT_NOT_OFFERED_ON_GARMENT: 'Цей принт не друкується на цьому виробі.',
 };
 

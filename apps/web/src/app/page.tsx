@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const title = page && page.seo.title.trim() !== ''
     ? page.seo.title
-    : `${settings.brand} — одяг з принтом вашої собаки`;
+    : `${settings.brand} — одяг з принтом твоєї собаки`;
   const description = page?.seo.description.trim() !== ''
     ? page?.seo.description
     : `Готові принти за породами або власний портрет із фото. Шиємо й друкуємо ${settings.cityIn}.`;
@@ -75,7 +75,7 @@ export default async function HomePage() {
 function MissingHome() {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-      <h1 className="font-display text-3xl font-bold text-ink">Одяг з принтом вашої собаки</h1>
+      <h1 className="font-display text-3xl font-bold text-ink">Одяг з принтом твоєї собаки</h1>
       <p className="mt-4 text-ink-muted">
         Головна сторінка зараз оновлюється. Каталог працює як звичайно.
       </p>

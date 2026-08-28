@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const site = await getSettings();
   return {
     title: `Залишити заявку — ${site.brand}`,
-    description: 'Напишіть, що вас цікавить. Відповідаємо того ж дня.',
+    description: 'Напиши, що тебе цікавить. Відповідаємо того ж дня.',
   
   };
 }
@@ -17,9 +17,9 @@ export default function LeadPage() {
     <PublicShell>
       <div className="mx-auto grid max-w-6xl gap-12 px-6 py-14 lg:grid-cols-[1fr_minmax(0,26rem)]">
         <div>
-          <h1 className="font-display text-hero text-ink">Напишіть нам</h1>
+          <h1 className="font-display text-hero text-ink">Напиши нам</h1>
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
-            Не треба формулювати ідеально. Лишіть телефон — і ми напишемо самі,
+            Не треба формулювати ідеально. Лиши телефон — і ми напишемо самі,
             розберемось разом.
           </p>
 

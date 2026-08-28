@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const site = await getSettings();
   return {
     title: `Породи — ${site.brand}`,
-    description: 'Усі породи, для яких у нас є готові принти. Немає вашої — намалюємо з фото.',
+    description: 'Усі породи, для яких у нас є готові принти. Немає твоєї — намалюємо з фото.',
     alternates: { canonical: '/breeds' },
   };
 }
@@ -47,7 +47,7 @@ export default async function BreedsPage() {
         {breeds.length > 0 && (
           <p className="mt-3 max-w-prose text-lg text-ink-muted">
             {withPrints} {plural(withPrints, 'порода', 'породи', 'порід')} з готовими принтами.
-            Решту малюємо з вашого фото.
+            Решту малюємо з твого фото.
           </p>
         )}
 
@@ -57,7 +57,7 @@ export default async function BreedsPage() {
           ) : (
             <EmptyState
               title="Породи ще додаємо"
-              hint="Напишіть, кого малювати — почнемо з вашої."
+              hint="Напиши, кого малювати — почнемо з твоєї."
               action={<ButtonLink href="/svoya-ideya">Замовити свій принт</ButtonLink>}
             />
           )}

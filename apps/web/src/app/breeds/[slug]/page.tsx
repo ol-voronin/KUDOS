@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const title = `Футболки й худі з принтом ${name} — ${site.brand}`;
   const description = count > 0
     ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}, шиємо самі.`
-    : `Принта з ${name} ще немає в каталозі — намалюємо з вашого фото. Друкуємо ${site.cityIn}.`;
+    : `Принта з ${name} ще немає в каталозі — намалюємо з твого фото. Друкуємо ${site.cityIn}.`;
 
   return {
     title,
@@ -108,7 +108,7 @@ export default async function BreedPage({ params }: Params) {
         <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
           {prints.length > 0
             ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Друкуємо {site.cityIn} на власних виробах і на органічній бавовні Native Spirit.</>
-            : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме вашого пса з фото.</>}
+            : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
         </p>
 
         {/* Синоніми — те, за чим реально гуглять. Поле в схемі було завжди. */}
@@ -147,10 +147,10 @@ export default async function BreedPage({ params }: Params) {
         {prints.length > 0 && (
           <div className="mt-12 border-t border-ink pt-6">
             <h2 className="font-display text-xl font-bold text-ink">
-              Ваш {breed.name.toLowerCase()} не схожий на жодного тут?
+              Твій {breed.name.toLowerCase()} не схожий на жодного тут?
             </h2>
             <p className="mt-2 max-w-prose leading-relaxed text-ink-muted">
-              Намалюємо саме його — з вашого фото, з його вухами й характером.
+              Намалюємо саме його — з твого фото, з його вухами й характером.
             </p>
             <ButtonLink href="/svoya-ideya" className="mt-5" size="lg">
               Замовити свій принт
@@ -190,7 +190,7 @@ function EmptyBreed({
     <div className="space-y-10">
       <div className="grid gap-8 border-t border-ink pt-8 lg:grid-cols-[1fr_minmax(0,24rem)]">
         <div>
-          <h2 className="font-display text-xl font-bold text-ink">Намалюємо {name.toLowerCase()} з вашого фото</h2>
+          <h2 className="font-display text-xl font-bold text-ink">Намалюємо {name.toLowerCase()} з твого фото</h2>
           <p className="mt-3 max-w-prose leading-relaxed text-ink-muted">
             Готового принта ще немає, але саме з цього ми й починали: портрет із фото,
             у будь-якому стилі — від ренесансу до обкладинки журналу.
@@ -206,8 +206,8 @@ function EmptyBreed({
       {collections.length > 0 && (
         <section>
           <SectionHead
-            title={`У якому жанрі намалювати вашого ${name.toLowerCase()}`}
-            subtitle="Це напрями, у яких ми працюємо. Оберіть настрій — решту зробимо з вашого фото."
+            title={`У якому жанрі намалювати твого ${name.toLowerCase()}`}
+            subtitle="Це напрями, у яких ми працюємо. Обери настрій — решту зробимо з твого фото."
             href="/collections"
             hrefLabel="Усі колекції"
           />

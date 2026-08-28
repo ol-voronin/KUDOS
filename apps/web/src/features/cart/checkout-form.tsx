@@ -61,7 +61,7 @@ export function CheckoutForm() {
     setError(null);
 
     if (!PHONE_PATTERN.test(phone)) {
-      setError('Введіть телефон у форматі +380XXXXXXXXX');
+      setError('Введи телефон у форматі +380XXXXXXXXX');
       return;
     }
     if (otherRecipient && recipientPhone !== '' && !PHONE_PATTERN.test(recipientPhone)) {
@@ -69,7 +69,7 @@ export function CheckoutForm() {
       return;
     }
     if (needsAddress && (city.trim() === '' || branch.trim() === '')) {
-      setError('Вкажіть місто й відділення');
+      setError('Вкажи місто й відділення');
       return;
     }
 
@@ -264,8 +264,8 @@ export function CheckoutForm() {
             найдорожчий спосіб втратити замовлення.
           */}
           <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-            Зараз нічого не списується. Ми звіримо наявність, напишемо вам і
-            надішлемо рахунок — оплатите, коли підтвердимо.
+            Зараз нічого не списується. Ми звіримо наявність, напишемо тобі й
+            надішлемо рахунок — оплатиш, коли підтвердимо.
           </p>
         </div>
       </aside>

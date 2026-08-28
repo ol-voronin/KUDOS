@@ -44,7 +44,7 @@ export function SizeButton({
           className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-pill bg-accent"
         />
       )}
-      {remembered && <span className="sr-only"> — ваш минулий вибір</span>}
+      {remembered && <span className="sr-only"> — твій минулий вибір</span>}
     </button>
   );
 }
