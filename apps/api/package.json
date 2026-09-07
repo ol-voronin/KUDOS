@@ -19,7 +19,7 @@
     "db:seed:catalog": "tsx prisma/seed-catalog.ts",
     "db:seed:range": "tsx prisma/seed-range.ts",
     "db:seed:pages": "tsx prisma/seed-pages.ts",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "node scripts/db-target.mjs && prisma migrate deploy",
     "check:imports": "node scripts/check-imports.mjs",
     "check:prisma": "node scripts/check-prisma-usage.mjs"
   },

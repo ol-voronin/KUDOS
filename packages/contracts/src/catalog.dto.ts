@@ -131,6 +131,20 @@ export const PrintOfferDto = z.object({
 });
 export type PrintOfferDto = z.infer<typeof PrintOfferDto>;
 
+/**
+ * Сторінка базового одягу: той самий виріб із варіантами, але без принта.
+ *
+ * Той самий `VariantDto` з порахованою `priceMinor`, що й у пропозиції
+ * принта, — свідомо: ціна виробу і там, і тут рахується одним ціновим
+ * доменом, і розійтися їм нема де.
+ */
+export const GarmentOfferDto = z.object({
+  garment: GarmentDto,
+  variants: z.array(VariantDto),
+  colours: z.array(ColourDto),
+});
+export type GarmentOfferDto = z.infer<typeof GarmentOfferDto>;
+
 /** A resolved, purchasable line: garment + print + computed total. */
 export const PricedOfferDto = z.object({
   variantId: z.string().uuid(),

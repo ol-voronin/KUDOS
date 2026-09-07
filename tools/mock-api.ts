@@ -19,6 +19,7 @@
  */
 import http from 'node:http';
 import { HOME_PAGE } from '../apps/api/prisma/pages/home';
+import { OWN_IDEA } from '../apps/api/prisma/pages/marketing';
 
 const P = (n) => `/mock/${n}.jpg`;
 const PHOTOS = ['art-black','art-white','art-pair','boss-w','boss-chi','boss-pit',
@@ -46,7 +47,7 @@ const SETTINGS = {
 
 const MENU = [
   ['Породи','/breeds','HEADER',''],['Колекції','/collections','HEADER',''],
-  ['Вироби','/vyroby','HEADER',''],['Свій принт','/svoya-ideya','HEADER',''],
+  ['Базовий одяг','/vyroby','HEADER',''],['Свій принт','/svoya-ideya','HEADER',''],
   ['Магазин','/prints','FOOTER','Магазин'],['За породами','/#породи','FOOTER','Магазин'],
   ['Свій принт','/svoya-ideya','FOOTER','Магазин'],
   ['Розміри','/vyroby','FOOTER','Допомога'],['Оплата й доставка','/dostavka','FOOTER','Допомога'],
@@ -123,16 +124,77 @@ const page = (seed) => subst({
   breeds: [], collections: [], blocks: seed.blocks,
 });
 
+/*
+ * Вироби, кольори й розміри — спільні для трьох маршрутів: пропозиції принта,
+ * асортименту (/catalog/range) і сторінки базового одягу (/catalog/garments).
+ * Один набір даних — інакше локальна перевірка показує різні магазини на
+ * різних сторінках.
+ */
+const G = (n) => uuid(400 + n);
+const C = (n) => uuid(500 + n);
+const S = (n) => uuid(600 + n);
+const F = (n) => uuid(650 + n);
+const SIZES = ['S', 'M', 'L', 'XL'].map((label, i) => ({
+  id: S(i), label, position: i,
+  measurements: [
+    { key: 'LENGTH', value: String(68 + i * 2) },
+    { key: 'WIDTH', value: String(48 + i * 3) },
+    { key: 'SLEEVE', value: String(20 + i) },
+  ],
+}));
+const fabric = (n, name, gsm, comp) => ({ id: F(n), name, weightGsm: gsm, composition: comp, origin: null });
+const GARMENTS = [
+  { id: G(0), slug: 'klasychna-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'CLASSIC',
+    name: 'Класична футболка', lengthAdjustable: true, basePriceMinor: 89000,
+    description: 'Прямий крій, щільний трикотаж, не просвічує. Пасує всім, з ким ми досі мали справу.',
+    fabrics: [fabric(0, 'Кулір 190', 190, '100 % бавовна')], sizes: SIZES },
+  { id: G(1), slug: 'oversayz-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'OVERSIZE',
+    name: 'Оверсайз футболка', lengthAdjustable: true, basePriceMinor: 99000,
+    description: 'Справжній оверсайз: спущене плече, вільний корпус. Бери свій розмір, не менший.',
+    fabrics: [fabric(1, 'Кулір 220', 220, '100 % бавовна')], sizes: SIZES },
+  { id: G(2), slug: 'khudi', line: 'NATIVE_SPIRIT', type: 'HOODIE', fit: 'CLASSIC',
+    name: 'Худі', lengthAdjustable: false, basePriceMinor: 179000,
+    description: 'Native Spirit, органічна бавовна з начосом. Сертифікати — на сторінці «Вироби».',
+    fabrics: [fabric(2, 'Трьохнитка з начосом', 300, '85 % органічна бавовна, 15 % поліестер')], sizes: SIZES },
+];
+const COLOURS = [
+  { id: C(0), name: 'Чорний', supplierCode: '01', hex: '#111111', imageUrl: null },
+  { id: C(1), name: 'Молочний', supplierCode: '02', hex: '#f2efe8', imageUrl: null },
+];
+function variantsFor(garments) {
+  const variants = [];
+  garments.forEach((g, gi) => COLOURS.forEach((c, ci) => SIZES.forEach((sz, si) => {
+    const unavailable = g.slug === 'khudi' && si === 3;   // худі XL — немає
+    const madeToOrder = ci === 1 && si >= 2;              // молочний від L — під замовлення
+    variants.push({
+      id: uuid(1000 + gi * 100 + ci * 10 + si),
+      sku: `${g.slug}-${c.supplierCode}-${sz.label}`,
+      garmentId: g.id, fabricId: g.fabrics[0].id, colourId: c.id, sizeId: sz.id,
+      availability: unavailable ? 'UNAVAILABLE' : madeToOrder ? 'MADE_TO_ORDER' : 'IN_STOCK',
+      leadTimeDays: madeToOrder ? 5 : null,
+      priceOverrideMinor: null,
+      priceMinor: g.basePriceMinor + si * 3000,
+    });
+  })));
+  return variants;
+}
+
 const ROUTES = {
   '/content/site': () => ({ settings: SETTINGS, menu: MENU }),
   '/content/pages/home': () => page(HOME_PAGE),
+  '/content/pages/svoya-ideya': () => page(OWN_IDEA),
   '/catalog/home': () => ({ breeds: BREEDS, collections: COLLECTIONS,
     newPrints: PRINTS.slice(0,8), readyToShip: PRINTS.filter(p=>p.inStock).slice(0,8), totalPrints: PRINTS.length }),
   '/catalog/breeds': () => ({ items: BREEDS }),
   '/catalog/collections': () => ({ items: COLLECTIONS }),
   '/analytics/config': () => ({ googleAdsId: '', ga4MeasurementId: '', conversions: [] }),
   '/catalog/range': () => ({
-    garments: [], printPrices: [{ tier: 'MEDIUM', priceMinor: 30000 }],
+    garments: GARMENTS.map((g) => ({
+      ...g,
+      colours: COLOURS.map((c) => ({ ...c, hasPhoto: false })),
+      leadTimeDays: 5,
+    })),
+    printPrices: [{ tier: 'MEDIUM', priceMinor: 30000 }],
   }),
 };
 
@@ -177,76 +239,43 @@ http.createServer(async (req,res)=>{
     // кольору, розміру, «під замовлення» й «немає».
     const slug = url.pathname.split('/').pop();
     const p = PRINTS.find((x) => x.slug === slug) ?? PRINTS[0];
-    const G = (n) => uuid(400 + n);
-    const C = (n) => uuid(500 + n);
-    const S = (n) => uuid(600 + n);
-    const F = (n) => uuid(650 + n);
-    const sizes = ['S', 'M', 'L', 'XL'].map((label, i) => ({
-      id: S(i), label, position: i,
-      measurements: [
-        { key: 'LENGTH', value: String(68 + i * 2) },
-        { key: 'WIDTH', value: String(48 + i * 3) },
-        { key: 'SLEEVE', value: String(20 + i) },
-      ],
-    }));
-    const fabric = (n, name, gsm, comp) => ({ id: F(n), name, weightGsm: gsm, composition: comp, origin: null });
-    const garments = [
-      { id: G(0), slug: 'klasychna-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'CLASSIC',
-        name: 'Класична футболка', lengthAdjustable: true, basePriceMinor: 89000,
-        description: 'Прямий крій, щільний трикотаж, не просвічує. Пасує всім, з ким ми досі мали справу.',
-        fabrics: [fabric(0, 'Кулір 190', 190, '100 % бавовна')], sizes },
-      { id: G(1), slug: 'oversayz-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'OVERSIZE',
-        name: 'Оверсайз футболка', lengthAdjustable: true, basePriceMinor: 99000,
-        description: 'Справжній оверсайз: спущене плече, вільний корпус. Бери свій розмір, не менший.',
-        fabrics: [fabric(1, 'Кулір 220', 220, '100 % бавовна')], sizes },
-      { id: G(2), slug: 'khudi', line: 'NATIVE_SPIRIT', type: 'HOODIE', fit: 'CLASSIC',
-        name: 'Худі', lengthAdjustable: false, basePriceMinor: 179000,
-        description: 'Native Spirit, органічна бавовна з начосом. Сертифікати — на сторінці «Вироби».',
-        fabrics: [fabric(2, 'Трьохнитка з начосом', 300, '85 % органічна бавовна, 15 % поліестер')], sizes },
-    ];
-    const colours = [
-      { id: C(0), name: 'Чорний', supplierCode: '01', hex: '#111111', imageUrl: null },
-      { id: C(1), name: 'Молочний', supplierCode: '02', hex: '#f2efe8', imageUrl: null },
-    ];
-    const variants = [];
-    garments.forEach((g, gi) => colours.forEach((c, ci) => sizes.forEach((sz, si) => {
-      const unavailable = gi === 2 && si === 3;         // худі XL — немає
-      const madeToOrder = ci === 1 && si >= 2;          // молочний від L — під замовлення
-      variants.push({
-        id: uuid(1000 + gi * 100 + ci * 10 + si),
-        sku: `${g.slug}-${c.supplierCode}-${sz.label}`,
-        garmentId: g.id, fabricId: g.fabrics[0].id, colourId: c.id, sizeId: sz.id,
-        availability: unavailable ? 'UNAVAILABLE' : madeToOrder ? 'MADE_TO_ORDER' : 'IN_STOCK',
-        leadTimeDays: madeToOrder ? 5 : null,
-        priceOverrideMinor: null,
-        priceMinor: g.basePriceMinor + si * 3000,
-      });
-    })));
     body = {
       print: { id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
         collectionSlugs: ['collection-0'], breedSlugs: ['breed-6'],
         previewUrl: p.previewUrl, isPublished: true },
       images: PHOTOS.slice(0, 4).map((n) => ({ url: P(n), alt: p.title })),
-      garments, variants, colours, printPriceMinor: 40000,
+      garments: GARMENTS, variants: variantsFor(GARMENTS), colours: COLOURS, printPriceMinor: 40000,
     };
+  }
+  else if (url.pathname.startsWith('/catalog/garments/')) {
+    // Базовий одяг: той самий виріб, ті самі варіанти — без принта.
+    const slug = url.pathname.split('/').pop();
+    const g = GARMENTS.find((x) => x.slug === slug);
+    if (g) {
+      body = { garment: g, variants: variantsFor([g]), colours: COLOURS };
+    }
   }
   else if (url.pathname === '/cart/quote') {
     // Мок рахує кошик грубо — по 1290 ₴ за позицію: перевіряємо верстку
     // сторінки, а не ціноутворення (воно перевіряється тестами в apps/api).
     const items = (json?.items ?? []);
     const lines = items.map((it, i) => {
-      const p = PRINTS.find((x) => x.slug === it.printSlug) ?? PRINTS[i % PRINTS.length];
-      const unit = p.fromPriceMinor;
+      // printSlug: null — базовий одяг: рядок без принта, ціна самої речі.
+      const blank = it.printSlug == null;
+      const p = blank ? null : (PRINTS.find((x) => x.slug === it.printSlug) ?? PRINTS[i % PRINTS.length]);
+      const g = GARMENTS.find((x) => x.id === variantsFor(GARMENTS).find((v) => v.id === it.variantId)?.garmentId) ?? GARMENTS[0];
+      const unit = blank ? g.basePriceMinor : p.fromPriceMinor;
       const qty = it.quantity ?? 1;
       const discount = qty >= 2 ? Math.round(unit * qty * 0.1) : 0;
       return {
-        printSlug: it.printSlug, variantId: it.variantId, quantity: qty,
-        title: p.title, garmentName: 'Класична футболка', colourName: 'Чорний',
-        sizeLabel: 'M', previewUrl: p.previewUrl,
+        printSlug: blank ? null : it.printSlug, variantId: it.variantId, quantity: qty,
+        title: blank ? g.name : p.title,
+        garmentName: g.name, garmentSlug: g.slug, colourName: 'Чорний',
+        sizeLabel: 'M', previewUrl: blank ? '' : p.previewUrl,
         unitMinor: unit, lineTotalMinor: unit * qty - discount,
         discountName: discount > 0 ? 'Друга річ −10 %' : null, discountMinor: discount,
         blockedReason: i === 99 ? 'Знято з продажу' : null,
-        leadTimeDays: p.inStock ? null : 7,
+        leadTimeDays: blank ? null : (p.inStock ? null : 7),
       };
     });
     const subtotal = lines.reduce((s2, l) => s2 + l.unitMinor * l.quantity, 0);

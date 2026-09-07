@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
   BreedListDto, BreedPageDto, CatalogQueryDto, CollectionListDto, CollectionPageDto,
-  HomeDto, PrintCardDto, PrintListDto, PrintOfferDto, RangeColourDto, RangeDto,
+  GarmentOfferDto, HomeDto, PrintCardDto, PrintListDto, PrintOfferDto, RangeColourDto, RangeDto,
   SearchQueryDto, SearchResultDto, SitemapDto,
 } from '@dt/contracts';
 import { ErrorCode, minor } from '@dt/contracts';
@@ -134,6 +134,7 @@ export class CatalogService {
         collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
         breeds: { select: { breed: { select: { slug: true } } } },
         exclusions: { select: { garmentId: true } },
+        colourExclusions: { select: { colourId: true } },
       },
     });
     if (!print) {
@@ -201,7 +202,12 @@ export class CatalogService {
       },
     });
 
-    const colourIds = [...new Set(variants.map((v: { colourId: string }) => v.colourId))];
+    // Кольори — з варіантів, що лишаться після фільтра заборон: колір, у
+    // якому цей принт не існує, не має зʼявлятися навіть сірим квадратиком.
+    const excludedColourIds = new Set(print.colourExclusions.map((e: { colourId: string }) => e.colourId));
+    const colourIds = [...new Set(
+      variants.map((v: { colourId: string }) => v.colourId).filter((id) => !excludedColourIds.has(id)),
+    )];
     const colours = colourIds.length === 0 ? [] : await this.prisma.db.colour.findMany({
       where: { id: { in: colourIds } },
       select: { id: true, name: true, supplierCode: true, hex: true, imageUrl: true },
@@ -222,8 +228,13 @@ export class CatalogService {
     // structural reason (unpublished garment/print, print not offered on this
     // garment). "Unavailable" and "needs a lead time" stay in — the customer
     // needs to see those states, not have them silently disappear.
+    //
+    // Заборонені кольори — теж структурна причина: «песи в барі» на
+    // оранжевому не існують як товар, тож оранжевий на цій сторінці не
+    // показується взагалі, а не сіріє з поясненням.
     const garmentById = new Map(garments.map((g) => [g.id, g] as const));
     const offerableVariants = variants.flatMap((v) => {
+      if (excludedColourIds.has(v.colourId)) return [];
       const garment = garmentById.get(v.garmentId);
       if (!garment) return [];
       const pricingGarment: PricingGarment = {
@@ -238,7 +249,7 @@ export class CatalogService {
         fabricId: v.fabricId,
         colourId: v.colourId,
       };
-      const reason = blockReasonFor(pricingGarment, pricingPrint, pricingVariant, true);
+      const reason = blockReasonFor(pricingGarment, pricingPrint, pricingVariant, { onGarment: true, onColour: true });
       const keep = reason === null
         || reason === 'VARIANT_UNAVAILABLE'
         || reason === 'MISSING_LEAD_TIME'
@@ -285,6 +296,87 @@ export class CatalogService {
       variants: offerableVariants,
       colours,
       printPriceMinor,
+    };
+  }
+
+  /**
+   * Базовий одяг: один виріб із варіантами й цінами, без принта.
+   *
+   * Той самий зріз, що й вироби в пропозиції принта, і та сама цінова
+   * функція — тільки без цінового рядка друку. Сторінка виробу продає
+   * порожню річ, і їй потрібні кольори, розміри й чесні стани наявності.
+   */
+  async getGarmentOffer(slug: string): Promise<GarmentOfferDto> {
+    const garment = await this.prisma.db.garment.findFirst({
+      where: { slug, isPublished: true },
+      select: {
+        id: true, slug: true, line: true, type: true, fit: true, name: true,
+        lengthAdjustable: true, basePriceMinor: true, isPublished: true, description: true,
+        fabrics: {
+          orderBy: { isDefault: 'desc' },
+          select: { fabric: { select: { id: true, name: true, weightGsm: true, composition: true, origin: true } } },
+        },
+        sizes: {
+          orderBy: { position: 'asc' },
+          select: { id: true, label: true, position: true, measurements: { select: { key: true, value: true } } },
+        },
+      },
+    });
+    if (!garment) {
+      throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Виріб не знайдено' });
+    }
+
+    const [variants, modifiers] = await Promise.all([
+      this.prisma.db.variant.findMany({
+        where: { garmentId: garment.id },
+        select: {
+          id: true, sku: true, garmentId: true, fabricId: true, colourId: true, sizeId: true,
+          availability: true, leadTimeDays: true, priceOverrideMinor: true,
+          size: { select: { label: true } },
+        },
+      }),
+      this.priceBook.modifiers(),
+    ]);
+
+    const pricingGarment: PricingGarment = {
+      id: garment.id, basePriceMinor: minor(garment.basePriceMinor), isPublished: garment.isPublished,
+    };
+    const pricedVariants = variants.map((v) => {
+      const pricingVariant: PricingVariant = {
+        id: v.id,
+        availability: v.availability,
+        leadTimeDays: v.leadTimeDays,
+        priceOverrideMinor: v.priceOverrideMinor === null ? null : minor(v.priceOverrideMinor),
+        sizeLabel: v.size.label,
+        fabricId: v.fabricId,
+        colourId: v.colourId,
+      };
+      const { size: _size, ...row } = v;
+      return { ...row, priceMinor: garmentPriceFor(pricingGarment, pricingVariant, modifiers).amountMinor };
+    });
+
+    const colourIds = [...new Set(variants.map((v: { colourId: string }) => v.colourId))];
+    const colours = colourIds.length === 0 ? [] : await this.prisma.db.colour.findMany({
+      where: { id: { in: colourIds } },
+      select: { id: true, name: true, supplierCode: true, hex: true, imageUrl: true },
+    });
+
+    return {
+      garment: {
+        id: garment.id,
+        slug: garment.slug,
+        line: garment.line,
+        type: garment.type,
+        fit: garment.fit,
+        name: garment.name,
+        lengthAdjustable: garment.lengthAdjustable,
+        basePriceMinor: garment.basePriceMinor,
+        description: garment.description,
+        fabrics: garment.fabrics.map((f) => f.fabric),
+        sizes: garment.sizes,
+      },
+      variants: pricedVariants,
+      colours,
     };
   }
 

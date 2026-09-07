@@ -13,10 +13,12 @@ export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSettings();
   return {
-    title: `Вироби: футболки, світшоти, худі — тканини, кольори, розміри | ${site.brand}`,
+    title: `Базовий одяг: футболки, світшоти, худі без принта | ${site.brand}`,
     description:
-      'Сім виробів власного пошиття: класична та оверсайз футболки, гібриди, світшот і худі. '
-      + 'Склад тканини, щільність, повна розмірна сітка й усі доступні кольори.',
+      // «Світшот-футболка 2-в-1» замість «гібрид»: слово з внутрішньої кухні
+      // покупцеві нічого не каже (питання Даші, наша відповідь).
+      'Базовий одяг власного пошиття: класична та оверсайз футболки, світшот-футболки 2-в-1, світшот і худі. '
+      + 'Купуй без принта або обирай малюнок із каталогу. Склад тканини, розмірні сітки, всі кольори.',
     alternates: { canonical: '/vyroby' },
   
   };
@@ -46,13 +48,13 @@ export default async function RangePage() {
         <nav aria-label="Хлібні крихти" className="mb-4 text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
-          <span className="text-ink">Вироби</span>
+          <span className="text-ink">Базовий одяг</span>
         </nav>
-        <h1 className="font-display text-3xl font-bold text-ink md:text-4xl">На чому друкуємо</h1>
+        <h1 className="font-display text-3xl font-bold text-ink md:text-4xl">Базовий одяг</h1>
         <p className="mt-4 max-w-2xl text-ink-muted">
-          Шиємо самі {site.cityIn}. Нижче — усе, що є: склад тканини, щільність, повна
-          розмірна сітка й кожен колір, у якому виріб реально існує. Принт можна поставити
-          на будь-який із них.
+          Шиємо самі {site.cityIn}. Кожну річ можна купити просто так, без принта, —
+          або поставити на неї будь-який малюнок із каталогу. Нижче — склад тканини,
+          щільність, повна розмірна сітка й кожен колір, у якому виріб реально існує.
         </p>
       </Section>
 

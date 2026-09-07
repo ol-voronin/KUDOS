@@ -5,8 +5,8 @@ import { PrismaService } from '../common/prisma.service';
 import { PriceBookService } from '../pricing/price-book.service';
 import { bestDiscount } from '../pricing/price-rules';
 import {
-  priceOffer,
-  type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable,
+  priceBlankOffer, priceOffer,
+  type PricedOffer, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable,
 } from '../pricing/pricing.domain';
 
 /**
@@ -40,17 +40,19 @@ import {
  */
 
 export interface PricedCartLine {
-  readonly printId: string;
-  readonly printSlug: string;
+  /** null — базовий одяг: рядок без принта. Тоді printTitle — назва виробу. */
+  readonly printId: string | null;
+  readonly printSlug: string | null;
   readonly printTitle: string;
   readonly previewUrl: string;
   readonly variantId: string;
   readonly garmentId: string;
   readonly garmentName: string;
+  readonly garmentSlug: string;
   readonly colourName: string;
   readonly sizeLabel: string;
   readonly quantity: number;
-  readonly printMethod: PrintMethod;
+  readonly printMethod: PrintMethod | null;
   readonly garmentPriceMinor: number;
   readonly printPriceMinor: number;
   readonly unitMinor: number;
@@ -86,8 +88,17 @@ export interface PricedCart {
  */
 export function mergeCartItems(items: readonly CartItemDto[]): CartItemDto[] {
   const merged = new Map<string, CartItemDto>();
-  for (const item of items) {
-    const key = `${item.printSlug}|${item.variantId}|${item.printMethod}`;
+  for (const raw of items) {
+    /*
+     * Нормалізація пари принт×метод. Половинчастих комбінацій після неї не
+     * існує: без принта нема чого друкувати, з принтом без методу — метод за
+     * замовчуванням. Далі по коду `printSlug === null` — єдина перевірка
+     * «чи це базовий одяг», і на printMethod можна покладатися.
+     */
+    const item: CartItemDto = raw.printSlug === null
+      ? { ...raw, printMethod: null }
+      : { ...raw, printMethod: raw.printMethod ?? 'DTF' };
+    const key = `${item.printSlug ?? ''}|${item.variantId}|${item.printMethod ?? ''}`;
     const seen = merged.get(key);
     merged.set(key, seen === undefined
       ? item
@@ -125,12 +136,14 @@ export class CartPricingService {
      */
     const cart = mergeCartItems(items);
 
+    const printSlugs = cart.flatMap((i) => (i.printSlug === null ? [] : [i.printSlug]));
     const [prints, variants, priceRows, modifiers, discounts, rules, exclusions, freeFrom] = await Promise.all([
       this.prisma.db.print.findMany({
-        where: { slug: { in: cart.map((i) => i.printSlug) }, isPublished: true },
+        where: { slug: { in: printSlugs }, isPublished: true },
         select: {
           id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
           collections: { select: { collectionId: true } },
+          colourExclusions: { select: { colourId: true } },
         },
       }),
       this.prisma.db.variant.findMany({
@@ -138,11 +151,13 @@ export class CartPricingService {
         select: {
           id: true, garmentId: true, fabricId: true, colourId: true,
           availability: true, leadTimeDays: true, priceOverrideMinor: true,
-          garment: { select: { id: true, name: true, basePriceMinor: true, isPublished: true } },
+          garment: { select: { id: true, slug: true, name: true, basePriceMinor: true, isPublished: true } },
           // Кольори власного виробництва часто не мають назви — тільки номер
           // на фізичній палітрі. Тому `supplierCode` тут не про запас: без
           // нього половина варіантів у кошику лишилася б без підпису.
-          colour: { select: { name: true, supplierCode: true } },
+          // `imageUrl` — превʼю для рядка базового одягу: без принта показати
+          // більше нічого.
+          colour: { select: { name: true, supplierCode: true, imageUrl: true } },
           size: { select: { label: true } },
         },
       }),
@@ -172,7 +187,7 @@ export class CartPricingService {
     const discountNames = new Set<string>();
 
     for (const item of cart) {
-      const print = printBySlug.get(item.printSlug);
+      const print = item.printSlug === null ? null : printBySlug.get(item.printSlug);
       const variant = variantById.get(item.variantId);
 
       /*
@@ -181,26 +196,15 @@ export class CartPricingService {
        * весь кошик означало б показати людині порожній екран замість
        * пʼяти справних позицій і однієї зниклої.
        */
-      if (print === undefined || variant === undefined) {
+      if ((item.printSlug !== null && print == null) || variant === undefined) {
         lines.push(missingLine(item));
         continue;
       }
-
-      const collectionIds = print.collections.map((c: { collectionId: string }) => c.collectionId);
-      // Те саме правило, що й у каталозі: друкуємо на всьому, доки колекція
-      // явно не звузила вибір; точкова заборона прибирає окремий виріб.
-      const restricting = (rules as Array<{ collectionId: string; garmentId: string }>)
-        .filter((r) => collectionIds.includes(r.collectionId));
-      const offerable = !excluded.has(`${print.id}|${variant.garmentId}`)
-        && (restricting.length === 0 || restricting.some((r) => r.garmentId === variant.garmentId));
 
       const pricingGarment: PricingGarment = {
         id: variant.garment.id,
         basePriceMinor: minor(variant.garment.basePriceMinor),
         isPublished: variant.garment.isPublished,
-      };
-      const pricingPrint: PricingPrint = {
-        id: print.id, sizeTier: print.sizeTier, isPublished: print.isPublished,
       };
       const pricingVariant: PricingVariant = {
         id: variant.id,
@@ -212,7 +216,28 @@ export class CartPricingService {
         colourId: variant.colourId,
       };
 
-      const offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, offerable, modifiers);
+      let offer: PricedOffer;
+      let collectionIds: string[] = [];
+      if (print == null) {
+        // Базовий одяг: сама річ, без цінового рядка друку.
+        offer = priceBlankOffer(pricingGarment, pricingVariant, modifiers);
+      } else {
+        collectionIds = print.collections.map((c: { collectionId: string }) => c.collectionId);
+        // Те саме правило, що й у каталозі: друкуємо на всьому, доки колекція
+        // явно не звузила вибір; точкова заборона прибирає окремий виріб, а
+        // заборона кольору — окремий колір.
+        const restricting = (rules as Array<{ collectionId: string; garmentId: string }>)
+          .filter((r) => collectionIds.includes(r.collectionId));
+        const offered = {
+          onGarment: !excluded.has(`${print.id}|${variant.garmentId}`)
+            && (restricting.length === 0 || restricting.some((r) => r.garmentId === variant.garmentId)),
+          onColour: !print.colourExclusions.some((e: { colourId: string }) => e.colourId === variant.colourId),
+        };
+        const pricingPrint: PricingPrint = {
+          id: print.id, sizeTier: print.sizeTier, isPublished: print.isPublished,
+        };
+        offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, offered, modifiers);
+      }
       const lineSubtotal = mulMinor(offer.totalMinor, item.quantity);
 
       const discount = offer.purchasable
@@ -225,13 +250,15 @@ export class CartPricingService {
       if (discount !== null) discountNames.add(discount.name);
 
       const line: PricedCartLine = {
-        printId: print.id,
-        printSlug: print.slug,
-        printTitle: print.title,
-        previewUrl: print.previewUrl,
+        printId: print?.id ?? null,
+        printSlug: print?.slug ?? null,
+        // Для базового одягу заголовком рядка стає сам виріб.
+        printTitle: print?.title ?? variant.garment.name,
+        previewUrl: print?.previewUrl ?? variant.colour.imageUrl ?? '',
         variantId: variant.id,
         garmentId: variant.garmentId,
         garmentName: variant.garment.name,
+        garmentSlug: variant.garment.slug,
         colourName: variant.colour.name ?? variant.colour.supplierCode,
         sizeLabel: variant.size.label,
         quantity: item.quantity,
@@ -305,11 +332,12 @@ export class CartPricingService {
 /** Рядок, товару з якого більше немає. Показуємо з причиною, не ховаємо. */
 function missingLine(item: CartItemDto): PricedCartLine {
   return {
-    printId: '', printSlug: item.printSlug, printTitle: 'Товар більше недоступний',
+    printId: null, printSlug: item.printSlug, printTitle: 'Товар більше недоступний',
     previewUrl: '', variantId: item.variantId, garmentId: '',
     garmentName: '', colourName: '', sizeLabel: '',
     quantity: item.quantity, printMethod: item.printMethod,
     garmentPriceMinor: 0, printPriceMinor: 0, unitMinor: 0, lineSubtotalMinor: 0,
+    garmentSlug: '',
     discountName: null, discountMinor: 0, lineTotalMinor: 0, leadTimeDays: null,
     blockedReason: 'Цю позицію зняли з продажу — прибери її з кошика',
   };
@@ -324,6 +352,7 @@ export function toCartQuote(cart: PricedCart): CartQuoteDto {
       quantity: l.quantity,
       title: l.printTitle,
       garmentName: l.garmentName,
+      garmentSlug: l.garmentSlug,
       colourName: l.colourName,
       sizeLabel: l.sizeLabel,
       previewUrl: l.previewUrl,

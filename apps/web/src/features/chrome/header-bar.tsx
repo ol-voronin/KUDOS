@@ -26,11 +26,23 @@ import { useCart } from '@/features/cart/cart-store';
  *      це доказ, що по той бік є люди. Ховати номер за кнопкою означає
  *      просити довіру й нічого не давати натомість.
  */
+export interface HeaderNavItem {
+  readonly id: string;
+  readonly href: string;
+  readonly label: string;
+  /**
+   * Випадайка під пунктом. Наповнюється сервером (колекції — з каталогу),
+   * тож меню в адмінці лишається пласким: редактор керує пунктами, а їхні
+   * «діти» живуть у даних, які й так оновлюються самі.
+   */
+  readonly children?: ReadonlyArray<{ id: string; href: string; label: string }>;
+}
+
 export function HeaderBar({
   brand, nav, phone, phoneDisplay,
 }: {
   brand: string;
-  nav: ReadonlyArray<{ id: string; href: string; label: string }>;
+  nav: ReadonlyArray<HeaderNavItem>;
   phone: string;
   phoneDisplay: string;
 }) {
@@ -72,7 +84,52 @@ export function HeaderBar({
       <div className="mx-auto grid h-[4.4rem] max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6">
         <nav aria-label="Основна навігація" className="hidden items-center gap-7 md:flex">
           {nav.slice(0, 4).map((item) => (
-            <Link key={item.id} href={item.href} className="nav-link">{item.label}</Link>
+            (item.children?.length ?? 0) === 0 ? (
+              <Link key={item.id} href={item.href} className="nav-link">{item.label}</Link>
+            ) : (
+              /*
+                Пункт із випадайкою. Сам пункт лишається ПОСИЛАННЯМ: клік веде
+                на сторінку списку, як і раніше, а випадайка — прискорювач для
+                миші (hover) і клавіатури (focus-within). Це важливо для
+                тача: там hover немає, і без клікабельного пункта меню
+                стало б глухим.
+
+                Проміжок між пунктом і панеллю накритий `pt-3` обгортки —
+                інакше курсор «випадає» в щілину, і меню зникає на півдорозі.
+              */
+              <div key={item.id} className="group relative">
+                <Link href={item.href} className="nav-link inline-flex items-center gap-1.5">
+                  {item.label}
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                    className="mt-px transition-transform duration-200 group-hover:rotate-180"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </Link>
+                <div
+                  className={[
+                    'invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0',
+                    'transition-[opacity,visibility] duration-150 motion-reduce:transition-none',
+                    'group-hover:visible group-hover:opacity-100',
+                    'group-focus-within:visible group-focus-within:opacity-100',
+                  ].join(' ')}
+                >
+                  <div className="flex min-w-52 flex-col border border-line bg-surface py-2 shadow-lg">
+                    {item.children?.map((child) => (
+                      <Link
+                        key={child.id}
+                        href={child.href}
+                        className="whitespace-nowrap px-5 py-2 text-sm text-ink-muted hover:bg-surface-sunken hover:text-ink"
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
           ))}
         </nav>
 
@@ -159,14 +216,32 @@ export function HeaderBar({
       <div
         className={[
           'overflow-hidden border-t border-line transition-[max-height] duration-300 ease-out md:hidden motion-reduce:transition-none',
-          menu ? 'max-h-96' : 'max-h-0 border-t-0',
+          // 36rem, а не 96 (24rem): пункт «Колекції» тепер веде за собою
+          // список колекцій, і на 24rem меню обрізалося б посередині.
+          menu ? 'max-h-[36rem] overflow-y-auto' : 'max-h-0 border-t-0',
         ].join(' ')}
       >
         <nav aria-label="Мобільна навігація" className="flex flex-col px-4 py-2 sm:px-6">
           {nav.map((item) => (
-            <Link key={item.id} href={item.href} onClick={() => setMenu(false)} className="nav-link py-3">
-              {item.label}
-            </Link>
+            <div key={item.id} className="flex flex-col">
+              <Link href={item.href} onClick={() => setMenu(false)} className="nav-link py-3">
+                {item.label}
+              </Link>
+              {/* Діти — одразу видимим списком із відступом: акордеон на
+                  чотирьох пунктах — зайвий клік без виграшу місця. */}
+              {(item.children?.length ?? 0) > 0 && (
+                <div className="flex flex-col border-l border-line pl-4">
+                  {item.children?.map((child) => (
+                    <Link
+                      key={child.id} href={child.href} onClick={() => setMenu(false)}
+                      className="py-2 text-sm text-ink-muted"
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
           <Link href="/#faq" onClick={() => setMenu(false)} className="nav-link py-3">Часті запитання</Link>
           {/* На телефоні номер лишається: там натиснути на нього — це подзвонити. */}

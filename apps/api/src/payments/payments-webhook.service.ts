@@ -230,7 +230,8 @@ export class PaymentsWebhookService {
         orderNumber: order.number,
         customerName: order.customer.name,
         customerPhone: order.customer.phone,
-        printTitle: item.print.title,
+        // Рядок без принта — базовий одяг: у повідомленні чесне «Без принта».
+        printTitle: item.print?.title ?? 'Без принта',
         garmentName: item.variant.garment.name,
         colourName: item.variant.colour.name ?? item.variant.colour.supplierCode,
         sizeLabel: item.variant.size.label,

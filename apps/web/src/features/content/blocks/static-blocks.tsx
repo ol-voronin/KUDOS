@@ -1,9 +1,10 @@
 import { Fragment } from 'react';
 import type {
   CardsBlock, CtaBlock, FaqBlock, FeaturesBlock, GalleryBlock, HeroBlock,
-  ImageTextBlock, LegalBlock, QuoteBlock, StepsBlock, TextBlock,
+  ImageTextBlock, LegalBlock, QuoteBlock, SplitBlock, StepsBlock, TextBlock,
 } from '@dt/contracts';
-import type { BlockIcon } from '@dt/contracts';
+import { isSafeHref, type BlockIcon } from '@dt/contracts';
+import { ButtonLink } from '@/components/ui';
 import { Inline, InlineParagraph } from '../inline';
 import { BlockHeading, BlockLinks, palette } from './shared';
 
@@ -316,6 +317,62 @@ export function Cards({ block, onDark = false }: { block: CardsBlock } & Dark) {
   );
 }
 
+
+/**
+ * Розвилка: дві рівноправні панелі з ціною і власною кнопкою.
+ *
+ * Це не картки. У карток немає ні ціни, ні CTA, і їх буває багато; тут
+ * рівно два шляхи, з яких обирають один — «адаптація чи з нуля». Панелі
+ * в рамці, а не з волосінню зверху: рамка тримає кожен шлях як окрему
+ * пропозицію, яку можна «взяти в руки», і не дає колонкам злитися.
+ *
+ * Кнопки навмисно обидві контурні: зробити одну заливною означало б
+ * підказати «правильний» шлях, а його тут немає — ціна і строк уже
+ * сказали все, що треба для вибору.
+ */
+export function Split({ block, onDark = false }: { block: SplitBlock } & Dark) {
+  const c = palette(onDark);
+  return (
+    <>
+      <BlockHeading text={block.heading} lead={block.lead} onDark={onDark} />
+      <div className="grid gap-6 md:grid-cols-2">
+        {block.panels.map((panel, i) => (
+          <section key={i} className={`flex flex-col border p-6 sm:p-8 ${c.rule}`}>
+            {panel.icon !== 'none' && (
+              <div className={`mb-4 ${c.head}`}>
+                <Glyph icon={panel.icon} className="h-7 w-7" />
+              </div>
+            )}
+            <h3 className={`font-display text-lg font-bold uppercase leading-tight ${c.head}`}>
+              {panel.title}
+            </h3>
+            {panel.priceLine.trim() !== '' && (
+              <p className={`mt-1.5 font-semibold ${c.head}`}>{panel.priceLine}</p>
+            )}
+            <InlineParagraph text={panel.text} className={`mt-3 text-sm leading-relaxed ${c.body}`} />
+            {panel.bullets.length > 0 && (
+              <ul className={`mt-4 space-y-2 text-sm leading-relaxed ${c.body}`}>
+                {panel.bullets.map((b, j) => (
+                  <li key={j} className="flex gap-2.5">
+                    <span aria-hidden className={`mt-[0.55em] h-px w-4 shrink-0 ${onDark ? 'bg-surface/45' : 'bg-ink'}`} />
+                    <Inline text={b} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {panel.ctaLabel.trim() !== '' && isSafeHref(panel.ctaHref) && (
+              <div className="mt-6 pt-2 md:mt-auto">
+                <ButtonLink href={panel.ctaHref} variant={onDark ? 'onDarkOutline' : 'outline'} size="lg">
+                  {panel.ctaLabel}
+                </ButtonLink>
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export function Features({ block, onDark = false }: { block: FeaturesBlock } & Dark) {
   const c = palette(onDark);

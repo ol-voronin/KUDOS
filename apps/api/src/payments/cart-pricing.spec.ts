@@ -39,4 +39,23 @@ describe('mergeCartItems', () => {
     ]);
     expect(merged.map((m) => m.printSlug)).toEqual(['a', 'b']);
   });
+
+  it('складає базовий одяг окремо від того самого варіанта з принтом', () => {
+    // Порожня футболка і та сама футболка з принтом — різні товари.
+    const merged = mergeCartItems([
+      line(), line({ printSlug: null, printMethod: null }), line({ printSlug: null, printMethod: null }),
+    ]);
+    expect(merged).toHaveLength(2);
+    expect(merged[1]?.quantity).toBe(2);
+  });
+
+  it('нормалізує половинчасту пару принт×метод', () => {
+    // Без принта метод скидається; з принтом без методу — DTF за замовчуванням.
+    const merged = mergeCartItems([
+      line({ printSlug: null, printMethod: 'DTG' }),
+      line({ printMethod: null }),
+    ]);
+    expect(merged[0]?.printMethod).toBeNull();
+    expect(merged[1]?.printMethod).toBe('DTF');
+  });
 });

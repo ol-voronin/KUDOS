@@ -44,15 +44,22 @@ interface CartApi {
   readonly count: number;
   readonly ready: boolean;
   add: (line: CartLine) => void;
-  setQuantity: (variantId: string, printSlug: string, quantity: number) => void;
-  remove: (variantId: string, printSlug: string) => void;
+  setQuantity: (variantId: string, printSlug: string | null, quantity: number) => void;
+  remove: (variantId: string, printSlug: string | null) => void;
   clear: () => void;
 }
 
 const CartContext = createContext<CartApi | null>(null);
 
-/** Один рядок — це пара «принт + варіант». Метод друку на це не впливає. */
-function sameLine(a: { variantId: string; printSlug: string }, b: { variantId: string; printSlug: string }): boolean {
+/**
+ * Один рядок — це пара «принт + варіант». Метод друку на це не впливає.
+ * `printSlug: null` — базовий одяг: порожня футболка і та сама футболка з
+ * принтом — два різні рядки.
+ */
+function sameLine(
+  a: { variantId: string; printSlug: string | null },
+  b: { variantId: string; printSlug: string | null },
+): boolean {
   return a.variantId === b.variantId && a.printSlug === b.printSlug;
 }
 
@@ -68,13 +75,14 @@ function read(): CartLine[] {
       .filter((v): v is CartLine => (
         typeof v === 'object' && v !== null
         && typeof (v as CartLine).variantId === 'string'
-        && typeof (v as CartLine).printSlug === 'string'
+        && (typeof (v as CartLine).printSlug === 'string' || (v as CartLine).printSlug === null)
       ))
       .slice(0, MAX_LINES)
       .map((v) => ({
         variantId: v.variantId,
         printSlug: v.printSlug,
-        printMethod: v.printMethod === 'DTG' ? 'DTG' : 'DTF',
+        // Без принта метод друку не існує; з принтом — DTF за замовчуванням.
+        printMethod: v.printSlug === null ? null : (v.printMethod === 'DTG' ? 'DTG' : 'DTF'),
         quantity: Math.min(MAX_QTY, Math.max(1, Math.trunc(Number(v.quantity) || 1))),
         title: typeof v.title === 'string' ? v.title : '',
         previewUrl: typeof v.previewUrl === 'string' ? v.previewUrl : '',
@@ -133,7 +141,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setQuantity = useCallback((variantId: string, printSlug: string, quantity: number) => {
+  const setQuantity = useCallback((variantId: string, printSlug: string | null, quantity: number) => {
     setLines((prev) => (quantity <= 0
       ? prev.filter((l) => !sameLine(l, { variantId, printSlug }))
       : prev.map((l) => (sameLine(l, { variantId, printSlug })
@@ -141,7 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         : l))));
   }, []);
 
-  const remove = useCallback((variantId: string, printSlug: string) => {
+  const remove = useCallback((variantId: string, printSlug: string | null) => {
     setLines((prev) => prev.filter((l) => !sameLine(l, { variantId, printSlug })));
   }, []);
 

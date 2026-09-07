@@ -39,9 +39,10 @@ const MODULES: readonly NavModule[] = [
       // чекає, доки людина звірить наявність.
       { href: '/admin/zamovlennya', label: 'Замовлення' },
       { href: '/admin/prints', label: 'Принти' },
+      { href: '/admin/kolektsii', label: 'Колекції' },
       { href: '/admin/tsiny', label: 'Ціни' },
     ],
-    soon: ['Колекції'],
+    soon: [],
   },
 ];
 

@@ -50,7 +50,7 @@ export const FALLBACK_SETTINGS: SiteSettingsDto = {
  */
 const FALLBACK_MENU: MenuItemDto[] = [
   ['Породи', '/breeds'], ['Колекції', '/collections'],
-  ['Вироби', '/vyroby'], ['Свій принт', '/svoya-ideya'],
+  ['Базовий одяг', '/vyroby'], ['Свій принт', '/svoya-ideya'],
 ].map(([label, href], i) => ({
   id: `fallback-header-${i}`,
   area: 'HEADER' as const,

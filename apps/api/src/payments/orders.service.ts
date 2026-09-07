@@ -107,7 +107,9 @@ export class OrdersService {
         customerName: dto.customer.name,
         customerPhone: dto.customer.phone,
         lines: cart.lines.map((l) => ({
-          title: l.printTitle,
+          // Для базового одягу printTitle і так дорівнює назві виробу; кажемо
+          // «без принта» явно, щоб у цеху ніхто не шукав неіснуючий макет.
+          title: l.printSlug === null ? `${l.printTitle} (без принта)` : l.printTitle,
           garmentName: l.garmentName,
           colourName: l.colourName,
           sizeLabel: l.sizeLabel,

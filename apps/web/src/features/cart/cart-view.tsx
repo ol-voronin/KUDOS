@@ -32,7 +32,7 @@ export function CartView() {
     );
   }
 
-  const quoteFor = (variantId: string, printSlug: string) =>
+  const quoteFor = (variantId: string, printSlug: string | null) =>
     data?.lines.find((l) => l.variantId === variantId && l.printSlug === printSlug);
 
   return (
@@ -40,21 +40,29 @@ export function CartView() {
       <div className="border-t border-ink">
         {lines.map((line) => {
           const q = quoteFor(line.variantId, line.printSlug);
+          // Рядок без принта веде на сторінку виробу; slug виробу знає
+          // сервер — доки перерахунок у дорозі, ведемо на список.
+          const href = line.printSlug === null
+            ? (q?.garmentSlug ? `/vyroby/${q.garmentSlug}` : '/vyroby')
+            : `/prints/${line.printSlug}`;
           return (
-            <div key={`${line.printSlug}-${line.variantId}`} className="flex gap-4 border-b border-line py-4">
-              <Link href={`/prints/${line.printSlug}`} className="w-20 shrink-0 sm:w-24">
+            <div key={`${line.printSlug ?? 'blank'}-${line.variantId}`} className="flex gap-4 border-b border-line py-4">
+              <Link href={href} className="w-20 shrink-0 sm:w-24">
                 <PrintThumb src={q?.previewUrl || line.previewUrl} alt={q?.title ?? line.title} />
               </Link>
 
               <div className="flex min-w-0 flex-1 flex-col">
-                <Link href={`/prints/${line.printSlug}`} className="font-medium text-ink hover:opacity-70">
+                <Link href={href} className="font-medium text-ink hover:opacity-70">
                   {q?.title ?? line.title}
                 </Link>
                 {q === undefined
                   ? <Skeleton className="mt-1.5 h-4 w-40" />
                   : (
                     <p className="mt-1 text-sm text-ink-muted">
-                      {[q.garmentName, q.colourName, q.sizeLabel].filter(Boolean).join(' · ')}
+                      {/* Для базового одягу назва виробу вже в заголовку рядка —
+                          не повторюємо її в деталях. */}
+                      {[line.printSlug === null ? 'без принта' : q.garmentName, q.colourName, q.sizeLabel]
+                        .filter(Boolean).join(' · ')}
                     </p>
                   )}
 

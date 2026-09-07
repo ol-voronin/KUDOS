@@ -84,12 +84,14 @@ const BREEDS: Array<{ slug: string; name: string; synonyms: string[] }> = [
  * жанрів на вітрину.
  */
 const COLLECTIONS: Array<{ slug: string; title: string; description: string; published: boolean }> = [
-  { slug: 'mystetstvo', title: 'Мистецтво бути шедевром', published: true, description: 'Шість полотен, які знає кожен. І шість морд, які знаєте тільки ви.' },
+  // «Мистецтво бути шедевром» злито у Vintage міграцією
+  // `20260907120000_blanks_colours_collections` — сід більше не знає такої
+  // колекції, а Vintage відтоді опублікований.
   { slug: 'bos-dzvonyt', title: 'Бос дзвонить', published: true, description: 'Екран вхідного дзвінка, а в колі — ваш пес. Той самий макет можна зробити з вашого фото.' },
   { slug: 'call-of-woof', title: 'Call of Woof', published: true, description: 'Welcome to blackout, soldier. Колекція, яку зрозуміють без пояснень усі, хто пережив зиму без світла.' },
   { slug: 'dogue', title: 'DOGUE', published: false, description: 'Твій пес на обкладинці глянцю. Найпопулярніший жанр — і найкращий подарунок.' },
   { slug: 'pes-pub', title: 'Пес Pub', published: false, description: 'Компанія псів за барною стійкою. Той випадок, коли принт помічають раніше, ніж тебе.' },
-  { slug: 'vintage', title: 'Vintage', published: false, description: 'Класичний портрет у стилі старих майстрів. Ренесанс, бароко, олія — з твого фото.' },
+  { slug: 'vintage', title: 'Vintage', published: true, description: 'Класичний портрет у стилі старих майстрів. Ренесанс, бароко, олія — з твого фото.' },
   { slug: 'polo-style', title: 'Polo style', published: false, description: 'Стримана лінія: поло, мінімальний принт, спокійні кольори. Для тих, кому на роботу.' },
   { slug: 'ua-diiachi', title: 'UA діячі', published: false, description: 'Українські постаті — і песики в їхніх образах. Обережно з цим жанром: тут легко перейти межу.' },
   { slug: 'kino', title: 'Кіно', published: false, description: 'Улюблені кадри й постери, у яких головну роль грає ваша собака.' },

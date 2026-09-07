@@ -14,6 +14,16 @@ const nextConfig = {
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/api/:path*` }];
   },
+  async redirects() {
+    return [
+      /*
+       * «Мистецтво бути шедевром» злито у Vintage (міграція
+       * 20260907120000). Стара адреса вже могла розійтися посиланнями —
+       * 301 веде їх на нову полицю, а не на 404.
+       */
+      { source: '/collections/mystetstvo', destination: '/collections/vintage', permanent: true },
+    ];
+  },
   async headers() {
     return [{
       source: '/:path*',

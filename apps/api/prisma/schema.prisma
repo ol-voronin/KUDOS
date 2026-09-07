@@ -213,6 +213,7 @@ model Colour {
   fabrics   FabricColour[]
   variants  Variant[]
   modifiers PriceModifier[]
+  printExclusions PrintColourExclusion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -403,6 +404,7 @@ model Print {
   orderItems  OrderItem[]
   images      PrintImage[]
   exclusions  PrintGarmentExclusion[]
+  colourExclusions PrintColourExclusion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -498,6 +500,27 @@ model PrintGarmentExclusion {
 
   @@id([printId, garmentId])
   @@index([garmentId])
+}
+
+/// Точкова заборона: цей принт не друкуємо на цьому кольорі.
+///
+/// Той самий принцип, що й у PrintGarmentExclusion: за замовчуванням принт
+/// існує в усіх кольорах виробу, а заборона — виняток із причиною.
+/// «Песи в барі» темні й тонуть на оранжевому — це рішення про конкретну
+/// пару принт×колір, і жити воно має в даних, а не в голові.
+model PrintColourExclusion {
+  printId  String @db.Uuid
+  colourId String @db.Uuid
+  /// Для адмінки: чому заборонено. Порожній рядок припустимий.
+  reason   String @default("")
+
+  print  Print  @relation(fields: [printId], references: [id], onDelete: Cascade)
+  colour Colour @relation(fields: [colourId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([printId, colourId])
+  @@index([colourId])
 }
 
 /// Куди дивиться надбавка: на розмір, на тканину або на колір.
@@ -1167,10 +1190,14 @@ model OrderItem {
   id        String @id @default(uuid()) @db.Uuid
   orderId   String @db.Uuid
   variantId String @db.Uuid
-  printId   String @db.Uuid
+  /// NULL — це базовий одяг: виріб без принта. Такий рядок цілком легальний
+  /// і має нульову ціну друку. Разом із printId нульовим стає й printMethod —
+  /// друкувати нічого. Обидва поля стали nullable в одній міграції; рядок,
+  /// у якого одне з них NULL, а інше ні, — помилка даних.
+  printId   String? @db.Uuid
 
   quantity    Int
-  printMethod PrintMethod
+  printMethod PrintMethod?
 
   /// Price snapshots taken at checkout. Never join to current prices to
   /// display an old order.
@@ -1183,7 +1210,7 @@ model OrderItem {
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variant Variant @relation(fields: [variantId], references: [id])
-  print   Print   @relation(fields: [printId], references: [id])
+  print   Print?  @relation(fields: [printId], references: [id])
 
   @@index([orderId])
   @@index([variantId])

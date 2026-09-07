@@ -84,7 +84,8 @@ export type BlockReason =
   | 'VARIANT_UNAVAILABLE'
   | 'MISSING_LEAD_TIME'
   | 'LEAD_TIME_TOO_LONG'
-  | 'PRINT_NOT_OFFERED_ON_GARMENT';
+  | 'PRINT_NOT_OFFERED_ON_GARMENT'
+  | 'COLOUR_NOT_OFFERED_FOR_PRINT';
 
 /** Messages are shown to the customer verbatim, so they are written for them. */
 const BLOCK_MESSAGES: Readonly<Record<BlockReason, string>> = {
@@ -94,7 +95,20 @@ const BLOCK_MESSAGES: Readonly<Record<BlockReason, string>> = {
   MISSING_LEAD_TIME: 'Цю позицію шиємо під замовлення — напиши нам, і ми назвемо строк.',
   LEAD_TIME_TOO_LONG: 'Цю позицію шиємо під замовлення — напиши нам, і ми назвемо строк.',
   PRINT_NOT_OFFERED_ON_GARMENT: 'Цей принт не друкується на цьому виробі.',
+  COLOUR_NOT_OFFERED_FOR_PRINT: 'Цей принт не друкується на цьому кольорі — обери інший.',
 };
+
+/**
+ * Де принт дозволений.
+ *
+ * Обʼєкт із двома обовʼязковими полями, а не два boolean-аргументи: місце
+ * виклику, яке забуло про кольори, не скомпілюється, замість того щоб
+ * мовчки продати «песів у барі» на оранжевому.
+ */
+export interface OfferedOn {
+  readonly onGarment: boolean;
+  readonly onColour: boolean;
+}
 
 /**
  * Ціна виробу: ручна ціна варіанта, інакше база плюс надбавки.
@@ -136,12 +150,18 @@ export function blockReasonFor(
   garment: PricingGarment,
   print: PricingPrint,
   variant: PricingVariant,
-  isPrintOfferedOnGarment: boolean,
+  offered: OfferedOn,
 ): BlockReason | null {
   if (!garment.isPublished) return 'GARMENT_UNPUBLISHED';
   if (!print.isPublished) return 'PRINT_UNPUBLISHED';
-  if (!isPrintOfferedOnGarment) return 'PRINT_NOT_OFFERED_ON_GARMENT';
+  if (!offered.onGarment) return 'PRINT_NOT_OFFERED_ON_GARMENT';
+  if (!offered.onColour) return 'COLOUR_NOT_OFFERED_FOR_PRINT';
 
+  return variantAvailabilityReason(variant);
+}
+
+/** Доступність самого варіанта — спільна для принта й базового одягу. */
+function variantAvailabilityReason(variant: PricingVariant): BlockReason | null {
   switch (variant.availability) {
     case 'IN_STOCK':
       return null;
@@ -159,13 +179,13 @@ export function priceOffer(
   print: PricingPrint,
   variant: PricingVariant,
   table: PrintPriceTable,
-  isPrintOfferedOnGarment: boolean,
+  offered: OfferedOn,
   modifiers: readonly PriceModifierRule[],
 ): PricedOffer {
   const garmentPrice = garmentPriceFor(garment, variant, modifiers);
   const garmentPriceMinor = garmentPrice.amountMinor;
   const printPriceMinor = printPriceFor(print, table);
-  const reason = blockReasonFor(garment, print, variant, isPrintOfferedOnGarment);
+  const reason = blockReasonFor(garment, print, variant, offered);
 
   return {
     variantId: variant.id,
@@ -174,6 +194,35 @@ export function priceOffer(
     steps: garmentPrice.steps,
     printPriceMinor,
     totalMinor: addMinor(garmentPriceMinor, printPriceMinor),
+    purchasable: reason === null,
+    blockedReason: reason === null ? null : BLOCK_MESSAGES[reason],
+    leadTimeDays: variant.availability === 'MADE_TO_ORDER' ? variant.leadTimeDays : null,
+  };
+}
+
+/**
+ * Базовий одяг: виріб без принта.
+ *
+ * Та сама структура PricedOffer, щоб кошику було байдуже, з принтом рядок
+ * чи ні: `printId` порожній рядок, ціна друку — нуль. Причини блокування —
+ * тільки про виріб і варіант; правила принтів тут не існують.
+ */
+export function priceBlankOffer(
+  garment: PricingGarment,
+  variant: PricingVariant,
+  modifiers: readonly PriceModifierRule[],
+): PricedOffer {
+  const garmentPrice = garmentPriceFor(garment, variant, modifiers);
+  const garmentPriceMinor = garmentPrice.amountMinor;
+  const reason = garment.isPublished ? variantAvailabilityReason(variant) : 'GARMENT_UNPUBLISHED';
+
+  return {
+    variantId: variant.id,
+    printId: '',
+    garmentPriceMinor,
+    steps: garmentPrice.steps,
+    printPriceMinor: minor(0),
+    totalMinor: garmentPriceMinor,
     purchasable: reason === null,
     blockedReason: reason === null ? null : BLOCK_MESSAGES[reason],
     leadTimeDays: variant.availability === 'MADE_TO_ORDER' ? variant.leadTimeDays : null,

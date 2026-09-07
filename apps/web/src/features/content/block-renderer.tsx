@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { AnyBlock, BlockType } from '@dt/contracts';
 import { Section } from '@/components/section';
 import {
-  Cards, Cta, Faq, Features, Gallery, Hero, ImageText, Legal, Quote, Steps, Text,
+  Cards, Cta, Faq, Features, Gallery, Hero, ImageText, Legal, Quote, Split, Steps, Text,
 } from './blocks/static-blocks';
 import {
   ArticleListBlockView, BreedStripBlockView, CollectionStripBlockView,
@@ -27,7 +27,7 @@ type Renderers = Record<BlockType, true>;
 
 /** Існує лише заради помилки компіляції, якщо тип блока лишиться без гілки. */
 const IMPLEMENTED: Renderers = {
-  hero: true, text: true, legal: true, steps: true, cards: true, features: true,
+  hero: true, text: true, legal: true, steps: true, cards: true, split: true, features: true,
   faq: true, cta: true, leadForm: true, imageText: true, gallery: true, quote: true,
   articleList: true, printGrid: true, breedStrip: true, collectionStrip: true,
 };
@@ -47,6 +47,7 @@ function renderBlock(block: AnyBlock, onDark = false): ReactNode {
     case 'legal': return <Legal block={block} onDark={onDark} />;
     case 'steps': return <Steps block={block} onDark={onDark} />;
     case 'cards': return <Cards block={block} onDark={onDark} />;
+    case 'split': return <Split block={block} onDark={onDark} />;
     case 'features': return <Features block={block} onDark={onDark} />;
     case 'faq': return <Faq block={block} onDark={onDark} />;
     case 'cta': return <Cta block={block} onDark={onDark} />;

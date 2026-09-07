@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import type { MenuItemDto } from '@dt/contracts';
-import { HeaderBar } from '@/features/chrome/header-bar';
+import { CollectionListDto, type MenuItemDto } from '@dt/contracts';
+import { HeaderBar, type HeaderNavItem } from '@/features/chrome/header-bar';
+import { serverFetchOrNull } from '@/lib/server-api';
 import { getChrome } from '@/lib/site-settings';
 
 /**
@@ -28,11 +29,30 @@ function groupFooter(menu: readonly MenuItemDto[]): Array<[string, MenuItemDto[]
 export async function PublicHeader() {
   const { settings: site, menu } = await getChrome();
   const nav = menu.filter((m) => m.area === 'HEADER');
+
+  /*
+   * Випадайка «Колекції» наповнюється каталогом, а не адмінкою меню.
+   *
+   * Пункти меню редагують руками, колекції публікують у своєму розділі —
+   * зшивати їх удруге означало б два джерела правди й меню, що бреше після
+   * кожної нової колекції. Тому діти вʼїжджають сюди в момент рендеру.
+   * Якщо каталог мовчить — пункт лишається звичайним посиланням.
+   */
+  const collections = await serverFetchOrNull('/catalog/collections', CollectionListDto, 300);
+  const children = (collections?.items ?? []).map((c) => ({
+    id: c.id, href: `/collections/${c.slug}`, label: c.title,
+  }));
+
+  const items: HeaderNavItem[] = nav.map((m) => ({
+    id: m.id, href: m.href, label: m.label,
+    ...(m.href === '/collections' && children.length > 0 ? { children } : {}),
+  }));
+
   return (
     <Suspense fallback={<div className="h-[4.4rem] border-b border-line" />}>
       <HeaderBar
         brand={site.brand}
-        nav={nav.map((m) => ({ id: m.id, href: m.href, label: m.label }))}
+        nav={items}
         phone={site.phone}
         phoneDisplay={site.phoneDisplay}
       />

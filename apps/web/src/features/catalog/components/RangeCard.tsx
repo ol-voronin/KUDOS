@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { formatUAH, minor, type RangeGarmentDto } from '@dt/contracts';
+import { ButtonLink } from '@/components/ui';
 import { garmentPhoto } from '../garment-photos';
 import { SizeChart } from './SizeChart';
 
@@ -64,7 +66,10 @@ export function RangeCard({ garment, cheapestPrintMinor }: {
       </div>
 
       <div>
-        <h2 className="font-display text-xl font-bold text-ink">{garment.name}</h2>
+        <h2 className="font-display text-xl font-bold text-ink">
+          {/* Заголовок веде на сторінку покупки: картка — це вітрина, купують на PDP. */}
+          <Link href={`/vyroby/${garment.slug}`} className="hover:underline">{garment.name}</Link>
+        </h2>
         {garment.description && <p className="mt-2 text-sm text-ink-muted">{garment.description}</p>}
 
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -89,15 +94,28 @@ export function RangeCard({ garment, cheapestPrintMinor }: {
         </dl>
 
         <p className="mt-4 text-lg font-semibold text-ink">
-          {cheapestPrintMinor === null
-            ? formatUAH(minor(garment.basePriceMinor))
-            : `від ${formatUAH(minor(garment.basePriceMinor + cheapestPrintMinor))}`}
+          {formatUAH(minor(garment.basePriceMinor))}
           <span className="ml-2 text-sm font-normal text-ink-subtle">
-            {cheapestPrintMinor === null
-              ? 'без принта'
-              : `${formatUAH(minor(garment.basePriceMinor))} виріб + друк`}
+            без принта
+            {cheapestPrintMinor !== null && (
+              <> · з принтом від {formatUAH(minor(garment.basePriceMinor + cheapestPrintMinor))}</>
+            )}
           </span>
         </p>
+
+        {/*
+          Дві дії, бо в людини два наміри: купити чисту річ або піти
+          обирати малюнок. Раніше сторінка була довідником без жодної
+          кнопки — тепер базовий одяг купується (прохання Даші).
+        */}
+        <div className="mt-4 flex flex-wrap gap-3">
+          <ButtonLink href={`/vyroby/${garment.slug}`} variant="primary" size="md">
+            Купити без принта
+          </ButtonLink>
+          <ButtonLink href="/prints" variant="outline" size="md">
+            Обрати принт
+          </ButtonLink>
+        </div>
 
         <SizeChart sizes={garment.sizes} />
       </div>

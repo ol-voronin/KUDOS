@@ -12,6 +12,7 @@ export * from './phone';
 export * from './slug';
 export * from './admin-print.dto';
 export * from './admin-garment.dto';
+export * from './admin-collection.dto';
 export * from './pricing.dto';
 export * from './settings.dto';
 export * from './analytics.dto';

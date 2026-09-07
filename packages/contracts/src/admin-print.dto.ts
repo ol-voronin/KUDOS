@@ -21,6 +21,20 @@ export const CatalogOptionDto = z.object({
 export type CatalogOptionDto = z.infer<typeof CatalogOptionDto>;
 
 /**
+ * Колір для чипів заборон у формі принта.
+ *
+ * `name` вже зведений: назва або код постачальника — форма не мусить знати,
+ * що власні кольори живуть без назв. `hex` для квадратика; null — малюємо
+ * без заливки, кольору ще не оцифрували.
+ */
+export const ColourOptionDto = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  hex: z.string().nullable(),
+});
+export type ColourOptionDto = z.infer<typeof ColourOptionDto>;
+
+/**
  * Скільки фото можна повісити на один принт.
  *
  * Пʼять — це не технічна межа, а межа уваги: далі покупець не гортає, а
@@ -91,6 +105,8 @@ export const AdminPrintDto = z.object({
   images: z.array(PrintImageDto),
   breeds: z.array(CatalogOptionDto),
   collections: z.array(CatalogOptionDto),
+  /** Кольори, на яких цей принт НЕ друкується. Порожньо — друкується на всіх. */
+  excludedColourIds: z.array(z.string().uuid()),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -139,6 +155,11 @@ export const AdminPrintCreateDto = z.object({
   isPublished: z.boolean().default(false),
   breedIds: z.array(z.string().uuid()).max(20).default([]),
   collectionIds: z.array(z.string().uuid()).max(20).default([]),
+  /**
+   * Заборонені кольори. Список ПОВНИЙ, а не дельта: форма надсилає те, що
+   * бачить, сервер приводить таблицю заборон до цього списку.
+   */
+  excludedColourIds: z.array(z.string().uuid()).max(60).default([]),
 });
 export type AdminPrintCreateDto = z.infer<typeof AdminPrintCreateDto>;
 /**

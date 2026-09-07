@@ -6,7 +6,7 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
   AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
-  type CatalogOptionDto,
+  type CatalogOptionDto, type ColourOptionDto,
 } from '@dt/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -27,7 +27,7 @@ export class PrintsAdminController {
 
   /** Породи й колекції для селектів у формі. Окремо, щоб форма робила один запит. */
   @Get('options')
-  options(): Promise<{ breeds: CatalogOptionDto[]; collections: CatalogOptionDto[] }> {
+  options(): Promise<{ breeds: CatalogOptionDto[]; collections: CatalogOptionDto[]; colours: ColourOptionDto[] }> {
     return this.prints.options();
   }
 

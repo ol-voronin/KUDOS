@@ -2,8 +2,8 @@ import { Controller, Get, Param, Query, UsePipes } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   CatalogQueryDto, SearchQueryDto, type BreedListDto, type BreedPageDto,
-  type CollectionListDto, type CollectionPageDto, type HomeDto, type PrintListDto,
-  type PrintOfferDto, type RangeDto, type SearchResultDto, type SitemapDto,
+  type CollectionListDto, type CollectionPageDto, type GarmentOfferDto, type HomeDto,
+  type PrintListDto, type PrintOfferDto, type RangeDto, type SearchResultDto, type SitemapDto,
 } from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CatalogService } from './catalog.service';
@@ -36,6 +36,12 @@ export class CatalogController {
   @Get('range')
   getRange(): Promise<RangeDto> {
     return this.catalog.getRange();
+  }
+
+  /** Базовий одяг: один виріб із варіантами й цінами, без принта. */
+  @Get('garments/:slug')
+  getGarment(@Param('slug') slug: string): Promise<GarmentOfferDto> {
+    return this.catalog.getGarmentOffer(slug);
   }
 
   /** Усі породи, включно з порожніми — сторінка без принтів усе одно працює. */

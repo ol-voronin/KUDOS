@@ -232,7 +232,7 @@ export function CheckoutForm() {
           <ul className="mt-4 flex flex-col gap-3 text-sm">
             {quote === undefined && isLoading && <li><Skeleton className="h-4 w-full" /></li>}
             {quote?.lines.map((l) => (
-              <li key={`${l.printSlug}-${l.variantId}`} className="flex justify-between gap-3">
+              <li key={`${l.printSlug ?? 'blank'}-${l.variantId}`} className="flex justify-between gap-3">
                 <span className="min-w-0 text-ink-muted">
                   {l.title} <span className="text-ink-subtle">× {l.quantity}</span>
                 </span>

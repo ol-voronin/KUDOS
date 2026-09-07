@@ -1,5 +1,5 @@
 import {
-  AdminPrintDto, AdminPrintListDto, CatalogOptionDto,
+  AdminPrintDto, AdminPrintListDto, CatalogOptionDto, ColourOptionDto,
   type AdminPrintCreateInput, type AdminPrintImageCreateDto, type AdminPrintUpdateInput,
   type AdminBreedCreateDto,
 } from '@dt/contracts';
@@ -38,6 +38,7 @@ export function deletePrint(id: string): Promise<{ ok: true }> {
 const OptionsDto = z.object({
   breeds: z.array(CatalogOptionDto),
   collections: z.array(CatalogOptionDto),
+  colours: z.array(ColourOptionDto),
 });
 
 export function getPrintOptions() {

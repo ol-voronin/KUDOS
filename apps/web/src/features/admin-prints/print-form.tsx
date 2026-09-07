@@ -48,6 +48,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
   const [breedIds, setBreedIds] = useState<string[]>(initial?.breeds.map((b) => b.id) ?? []);
   const [collectionIds, setCollectionIds] = useState<string[]>(initial?.collections.map((c) => c.id) ?? []);
+  const [excludedColourIds, setExcludedColourIds] = useState<string[]>(initial?.excludedColourIds ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -78,6 +79,7 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
         isPublished,
         breedIds,
         collectionIds,
+        excludedColourIds,
       };
       return initial ? updatePrint(initial.id, dto) : createPrint(dto);
     },
@@ -177,6 +179,12 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
           emptyHint="Колекцій ще немає. Принт працюватиме й без них."
           note="Колекція вирішує, на яких виробах можна друкувати цей принт."
         />
+
+        <ColourExclusionPicker
+          colours={options?.colours ?? []}
+          excluded={excludedColourIds}
+          onChange={setExcludedColourIds}
+        />
       </div>
 
       <aside className="space-y-5 lg:sticky lg:top-8">
@@ -241,6 +249,60 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
         )}
       </aside>
     </form>
+  );
+}
+
+/**
+ * Заборонені кольори: «песи в барі не на оранжевому».
+ *
+ * Логіка навпаки від решти чипів: позначений колір — це колір, на якому
+ * принт НЕ друкується. Тому позначені — червоним перекресленням, а не
+ * чорною заливкою «вибрано»: заливка тут читалася б як «доступно».
+ */
+function ColourExclusionPicker({
+  colours, excluded, onChange,
+}: {
+  colours: ReadonlyArray<{ id: string; name: string; hex: string | null }>;
+  excluded: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  if (colours.length === 0) return null;
+
+  function toggle(id: string) {
+    onChange(excluded.includes(id) ? excluded.filter((x) => x !== id) : [...excluded, id]);
+  }
+
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-sm font-medium text-ink">Не друкувати на кольорах</legend>
+      <p className="mb-2 text-sm text-ink-muted">
+        Позначені кольори зникнуть зі сторінки цього принта. Порожньо — друкуємо на всіх.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {colours.map((c) => {
+          const banned = excluded.includes(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={banned}
+              onClick={() => toggle(c.id)}
+              className={[
+                'inline-flex min-h-10 items-center gap-2 rounded-pill border-2 px-3.5 text-sm font-medium transition',
+                banned ? 'border-danger text-danger' : 'border-line text-ink-muted hover:border-ink-subtle',
+              ].join(' ')}
+            >
+              <span
+                aria-hidden
+                className="h-4 w-4 shrink-0 rounded-full border border-line"
+                {...(c.hex ? { style: { backgroundColor: c.hex } } : {})}
+              />
+              <span className={banned ? 'line-through' : ''}>{c.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

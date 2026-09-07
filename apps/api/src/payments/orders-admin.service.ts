@@ -200,7 +200,9 @@ export class OrdersAdminService {
         webHookUrl: `${apiBase}/api/v1/payments/monobank/webhook`,
         paymentType: 'hold',
         basketOrder: order.items.map((item) => ({
-          name: `${item.variant.garment.name} — ${item.print.title}`,
+          name: item.print === null
+            ? `${item.variant.garment.name} — без принта`
+            : `${item.variant.garment.name} — ${item.print.title}`,
           qty: item.quantity,
           sum: Math.round(item.lineTotalMinor / item.quantity),
           total: item.lineTotalMinor,
@@ -247,7 +249,8 @@ type OrderRow = {
   customer: { name: string; phone: string };
   items: Array<{
     quantity: number; lineTotalMinor: number; promisedLeadTimeDays: number | null;
-    print: { title: string; slug: string };
+    /** null — базовий одяг: рядок замовлення без принта. */
+    print: { title: string; slug: string } | null;
     variant: {
       size: { label: string };
       garment: { name: string };
@@ -273,8 +276,10 @@ function toAdminOrder(order: OrderRow): AdminOrderDto {
     },
     note: order.note ?? '',
     items: order.items.map((item) => ({
-      printTitle: item.print.title,
-      printSlug: item.print.slug,
+      // Базовий одяг: замість назви принта — чесне «без принта», щоб в
+      // адмінці ніхто не шукав макет, якого не існує.
+      printTitle: item.print?.title ?? 'Без принта',
+      printSlug: item.print?.slug ?? null,
       garmentName: item.variant.garment.name,
       colourName: item.variant.colour.name ?? item.variant.colour.supplierCode,
       sizeLabel: item.variant.size.label,

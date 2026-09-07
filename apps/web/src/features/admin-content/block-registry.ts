@@ -129,6 +129,45 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockSpec> = {
     summary: (b) => (b.type === 'cards' ? excerptOf(b.heading) || countOf(b.items.length, 'картка', 'картки', 'карток') : ''),
   },
 
+  split: {
+    label: 'Розвилка',
+    hint: 'Два рівноправні шляхи поруч: ціна, пункти й кнопка в кожного. «Або так, або так».',
+    fields: [
+      HEADING, LEAD,
+      { kind: 'list', name: 'panels', label: 'Панелі (рівно дві)', itemLabel: 'Панель', max: 2, fields: [
+        { kind: 'select', name: 'icon', label: 'Іконка', options: [
+          { value: 'none', label: 'Без іконки' },
+          { value: 'pencil', label: 'Олівець — правки' },
+          { value: 'palette', label: 'Палітра — малюємо з нуля' },
+          { value: 'box', label: 'Коробка — готове, відправляємо' },
+          { value: 'paw', label: 'Лапа — про собаку' },
+          { value: 'sparkle', label: 'Іскра — новинка' },
+          { value: 'chat', label: 'Хмарка — розмова' },
+          { value: 'shield', label: 'Щит — гарантія' },
+          { value: 'scissors', label: 'Ножиці — пошиття' },
+          { value: 'printer', label: 'Принтер — друк' },
+          { value: 'truck', label: 'Авто — доставка' },
+          { value: 'heart', label: 'Серце — турбота' },
+          { value: 'clock', label: 'Годинник — строки' },
+        ] },
+        { kind: 'text', name: 'title', label: 'Назва шляху' },
+        { kind: 'text', name: 'priceLine', label: 'Рядок ціни', help: 'Наприклад: «+200 ₴ до ціни виробу». Можна лишити порожнім.' },
+        { kind: 'rich', name: 'text', label: 'Текст', rows: 3, help: RICH_HELP },
+        { kind: 'strings', name: 'bullets', label: 'Пункти', itemLabel: 'Пункт', max: 6, rich: true },
+        { kind: 'text', name: 'ctaLabel', label: 'Напис на кнопці' },
+        { kind: 'text', name: 'ctaHref', label: 'Адреса кнопки', help: 'Наприклад: /zayavka. Порожньо — кнопки не буде.' },
+      ] },
+    ],
+    create: (id) => ({
+      id, type: 'split', tone: 'plain', heading: '', lead: '',
+      panels: [
+        { icon: 'none', title: 'Перший шлях', priceLine: '', text: '', bullets: [], ctaLabel: '', ctaHref: '' },
+        { icon: 'none', title: 'Другий шлях', priceLine: '', text: '', bullets: [], ctaLabel: '', ctaHref: '' },
+      ],
+    }),
+    summary: (b) => (b.type === 'split' ? b.panels.map((p) => p.title).join(' | ') : ''),
+  },
+
   steps: {
     label: 'Кроки',
     hint: 'Пронумерована послідовність: «як це працює». Номери ставляться самі.',

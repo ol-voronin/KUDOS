@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import type {
   AdminBreedCreateDto, AdminPrintCreateDto, AdminPrintDto, AdminPrintImageCreateDto,
   AdminPrintImageReorderDto, AdminPrintListDto, AdminPrintListQueryDto, AdminPrintUpdateDto,
-  CatalogOptionDto,
+  CatalogOptionDto, ColourOptionDto,
 } from '@dt/contracts';
 import { ErrorCode, MAX_PRINT_IMAGES } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
@@ -21,6 +21,7 @@ const PRINT_SELECT = {
   },
   breeds: { select: { breed: { select: { id: true, slug: true, name: true } } } },
   collections: { select: { collection: { select: { id: true, slug: true, title: true } } } },
+  colourExclusions: { select: { colourId: true } },
 } satisfies Prisma.PrintSelect;
 
 type PrintRow = Prisma.PrintGetPayload<{ select: typeof PRINT_SELECT }>;
@@ -39,6 +40,7 @@ function toDto(row: PrintRow): AdminPrintDto {
     collections: row.collections.map((c) => ({
       id: c.collection.id, slug: c.collection.slug, name: c.collection.title,
     })),
+    excludedColourIds: row.colourExclusions.map((e) => e.colourId),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -98,6 +100,7 @@ export class PrintsAdminService {
         isPublished: dto.isPublished,
         breeds: { create: dto.breedIds.map((breedId) => ({ breedId })) },
         collections: { create: dto.collectionIds.map((collectionId) => ({ collectionId })) },
+        colourExclusions: { create: dto.excludedColourIds.map((colourId) => ({ colourId })) },
       },
       select: PRINT_SELECT,
     });
@@ -135,6 +138,12 @@ export class PrintsAdminService {
         await tx.printCollection.deleteMany({ where: { printId: id } });
         await tx.printCollection.createMany({
           data: dto.collectionIds.map((collectionId) => ({ printId: id, collectionId })),
+        });
+      }
+      if (dto.excludedColourIds !== undefined) {
+        await tx.printColourExclusion.deleteMany({ where: { printId: id } });
+        await tx.printColourExclusion.createMany({
+          data: dto.excludedColourIds.map((colourId) => ({ printId: id, colourId })),
         });
       }
 
@@ -176,14 +185,22 @@ export class PrintsAdminService {
     return { ok: true };
   }
 
-  async options(): Promise<{ breeds: CatalogOptionDto[]; collections: CatalogOptionDto[] }> {
-    const [breeds, collections] = await this.prisma.db.$transaction([
+  async options(): Promise<{ breeds: CatalogOptionDto[]; collections: CatalogOptionDto[]; colours: ColourOptionDto[] }> {
+    const [breeds, collections, colours] = await this.prisma.db.$transaction([
       this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
       this.prisma.db.collection.findMany({ select: { id: true, slug: true, title: true }, orderBy: { position: 'asc' } }),
+      // Кольори — лише ті, у яких існує хоч один варіант: заборона кольору,
+      // якого й так нема в продажу, — це шум у формі.
+      this.prisma.db.colour.findMany({
+        where: { variants: { some: {} } },
+        select: { id: true, name: true, supplierCode: true, hex: true },
+        orderBy: { supplierCode: 'asc' },
+      }),
     ]);
     return {
       breeds,
       collections: collections.map((c) => ({ id: c.id, slug: c.slug, name: c.title })),
+      colours: colours.map((c) => ({ id: c.id, name: c.name ?? c.supplierCode, hex: c.hex })),
     };
   }
 

@@ -231,6 +231,40 @@ export const CardsBlock = z.object({
   })).max(12).default([]),
 });
 
+/**
+ * Дві панелі поруч: «або так, або так».
+ *
+ * Народився зі сторінки «Свій принт»: адаптація готового принту й власна
+ * ідея — два рівноправні шляхи з різною ціною, строком і кнопкою. Це не
+ * картки (у карток немає CTA й ціни) і не кроки (тут немає послідовності):
+ * покупець стоїть на розвилці, і верстка мусить її показувати.
+ *
+ * CTA — два плоскі поля, а не масив BlockLink: у панелі рівно одна кнопка,
+ * і форма адмінки для пари рядків простіша за редактор списку посилань.
+ */
+export const SplitBlock = z.object({
+  ...base,
+  type: z.literal('split'),
+  heading: ShortText.default(''),
+  lead: InlineText.default(''),
+  panels: z.array(z.object({
+    icon: BlockIcon.default('none'),
+    title: ShortText.min(1),
+    /** Рядок ціни під назвою: «+200 ₴ до ціни виробу». Порожній — не малюється. */
+    priceLine: ShortText.default(''),
+    text: InlineText.default(''),
+    bullets: z.array(InlineText).max(6).default([]),
+    ctaLabel: ShortText.default(''),
+    ctaHref: ShortText.default(''),
+    /*
+     * min(1), а не min(2): редактор у адмінці додає панелі по одній, і блок
+     * мусить бути валідним на кожному проміжному кроці — інакше його
+     * неможливо довести до придатного стану. Одна панель просто малюється
+     * однією колонкою.
+     */
+  })).min(1).max(2),
+});
+
 export const FeaturesBlock = z.object({
   ...base,
   type: z.literal('features'),
@@ -346,6 +380,7 @@ export type TextBlock = z.infer<typeof TextBlock>;
 export type LegalBlock = z.infer<typeof LegalBlock>;
 export type StepsBlock = z.infer<typeof StepsBlock>;
 export type CardsBlock = z.infer<typeof CardsBlock>;
+export type SplitBlock = z.infer<typeof SplitBlock>;
 export type FeaturesBlock = z.infer<typeof FeaturesBlock>;
 export type FaqBlock = z.infer<typeof FaqBlock>;
 export type CtaBlock = z.infer<typeof CtaBlock>;
@@ -369,7 +404,7 @@ export type CollectionStripBlock = z.infer<typeof CollectionStripBlock>;
 // перемикачем, а не гілкою в репозиторії.
 
 const CORE_BLOCKS = [
-  HeroBlock, TextBlock, LegalBlock, StepsBlock, CardsBlock, FeaturesBlock,
+  HeroBlock, TextBlock, LegalBlock, StepsBlock, CardsBlock, SplitBlock, FeaturesBlock,
   FaqBlock, CtaBlock, LeadFormBlock, ImageTextBlock, GalleryBlock, QuoteBlock,
   ArticleListBlock,
 ] as const;
@@ -397,7 +432,7 @@ export type BlockType = AnyBlock['type'];
  * не алфавітний: спершу те, що ставлять найчастіше.
  */
 export const CORE_BLOCK_TYPES = [
-  'hero', 'text', 'cards', 'steps', 'features', 'faq', 'cta', 'leadForm',
+  'hero', 'text', 'cards', 'split', 'steps', 'features', 'faq', 'cta', 'leadForm',
   'imageText', 'gallery', 'quote', 'articleList', 'legal',
 ] as const satisfies readonly BlockType[];
 

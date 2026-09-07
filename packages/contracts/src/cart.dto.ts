@@ -28,11 +28,15 @@ const Slug = z.string().min(1).max(120);
  * `printSlug` і `variantId` разом — це і є товар: малюнок і конкретний виріб
  * у розмірі й кольорі. Кількість обмежена пʼятьма з тієї ж причини, що й
  * раніше: більше — це вже опт, і на нього інша ціна й інша розмова.
+ *
+ * `printSlug: null` — базовий одяг: виріб без принта. Тоді й `printMethod`
+ * null — друкувати нічого. Половинчастої комбінації не існує; сервер
+ * нормалізує її в `mergeCartItems`, а база тримає CHECK на OrderItem.
  */
 export const CartItemDto = z.object({
-  printSlug: Slug,
+  printSlug: Slug.nullable().default(null),
   variantId: z.string().uuid(),
-  printMethod: PrintMethod.default('DTF'),
+  printMethod: PrintMethod.nullable().default(null),
   quantity: z.number().int().min(1).max(5).default(1),
 });
 export type CartItemDto = z.infer<typeof CartItemDto>;
@@ -112,11 +116,14 @@ export type OrderDraftResponseDto = z.infer<typeof OrderDraftResponseDto>;
  * суму на сторінці й іншу в касі.
  */
 export const CartLineDto = z.object({
-  printSlug: Slug,
+  /** null — базовий одяг без принта; тоді `title` — це назва виробу. */
+  printSlug: Slug.nullable(),
   variantId: z.string().uuid(),
   quantity: z.number().int().positive(),
   title: z.string(),
   garmentName: z.string(),
+  /** Куди вести рядок без принта: сторінка виробу. */
+  garmentSlug: z.string(),
   colourName: z.string(),
   sizeLabel: z.string(),
   previewUrl: z.string(),
@@ -181,8 +188,9 @@ export const AdminOrderListDto = z.object({
 export type AdminOrderListDto = z.infer<typeof AdminOrderListDto>;
 
 export const AdminOrderItemDto = z.object({
+  /** Для базового одягу (без принта): назва виробу і printSlug: null. */
   printTitle: z.string(),
-  printSlug: Slug,
+  printSlug: Slug.nullable(),
   garmentName: z.string(),
   colourName: z.string(),
   sizeLabel: z.string(),
