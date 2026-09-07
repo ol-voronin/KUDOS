@@ -144,27 +144,29 @@ const SIZES = ['S', 'M', 'L', 'XL'].map((label, i) => ({
 }));
 const fabric = (n, name, gsm, comp) => ({ id: F(n), name, weightGsm: gsm, composition: comp, origin: null });
 const GARMENTS = [
-  { id: G(0), slug: 'klasychna-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'CLASSIC',
+  { id: G(0), slug: 'futbolka-klasychna', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'CLASSIC',
     name: 'Класична футболка', lengthAdjustable: true, basePriceMinor: 89000,
     description: 'Прямий крій, щільний трикотаж, не просвічує. Пасує всім, з ким ми досі мали справу.',
     fabrics: [fabric(0, 'Кулір 190', 190, '100 % бавовна')], sizes: SIZES },
-  { id: G(1), slug: 'oversayz-futbolka', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'OVERSIZE',
+  { id: G(1), slug: 'futbolka-oversayz-cholovicha', line: 'OWN_PRODUCTION', type: 'TSHIRT', fit: 'OVERSIZE',
     name: 'Оверсайз футболка', lengthAdjustable: true, basePriceMinor: 99000,
     description: 'Справжній оверсайз: спущене плече, вільний корпус. Бери свій розмір, не менший.',
     fabrics: [fabric(1, 'Кулір 220', 220, '100 % бавовна')], sizes: SIZES },
-  { id: G(2), slug: 'khudi', line: 'NATIVE_SPIRIT', type: 'HOODIE', fit: 'CLASSIC',
+  { id: G(2), slug: 'hudi-klasychnyi', line: 'NATIVE_SPIRIT', type: 'HOODIE', fit: 'CLASSIC',
     name: 'Худі', lengthAdjustable: false, basePriceMinor: 179000,
     description: 'Native Spirit, органічна бавовна з начосом. Сертифікати — на сторінці «Вироби».',
     fabrics: [fabric(2, 'Трьохнитка з начосом', 300, '85 % органічна бавовна, 15 % поліестер')], sizes: SIZES },
 ];
+// supplierCode = імена файлів у public/garments/*: мокапи й превʼю виробу
+// знаходять фото саме за цим кодом, як і на проді.
 const COLOURS = [
-  { id: C(0), name: 'Чорний', supplierCode: '01', hex: '#111111', imageUrl: null },
-  { id: C(1), name: 'Молочний', supplierCode: '02', hex: '#f2efe8', imageUrl: null },
+  { id: C(0), name: 'Чорний', supplierCode: 'chornyi', hex: '#111111', imageUrl: null },
+  { id: C(1), name: 'Молочний', supplierCode: 'slonova-kistka', hex: '#f2efe8', imageUrl: null },
 ];
 function variantsFor(garments) {
   const variants = [];
   garments.forEach((g, gi) => COLOURS.forEach((c, ci) => SIZES.forEach((sz, si) => {
-    const unavailable = g.slug === 'khudi' && si === 3;   // худі XL — немає
+    const unavailable = g.slug === 'hudi-klasychnyi' && si === 3;   // худі XL — немає
     const madeToOrder = ci === 1 && si >= 2;              // молочний від L — під замовлення
     variants.push({
       id: uuid(1000 + gi * 100 + ci * 10 + si),
@@ -191,7 +193,7 @@ function variantsFor(garments) {
 const ADMIN_NOW = () => new Date().toISOString();
 const ADMIN_PRINTS = PRINTS.map((p, i) => ({
   id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
-  previewUrl: p.previewUrl, artworkKey: '', isPublished: p.inStock,
+  previewUrl: p.previewUrl, artworkKey: '', mockupUrl: '', isPublished: p.inStock,
   // Контракт вимагає СПРАВЖНІЙ URL у фото (z.string().url()) — відносний
   // шлях тихо валив схему, і пікер вічно крутив скелетони.
   images: [{ id: uuid(800 + i), url: `http://localhost:3010${p.previewUrl}`, pathname: `mock/${i}`, alt: p.title, position: 0 }],
@@ -274,7 +276,7 @@ http.createServer(async (req,res)=>{
     body = {
       print: { id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
         collectionSlugs: ['collection-0'], breedSlugs: ['breed-6'],
-        previewUrl: p.previewUrl, isPublished: true },
+        previewUrl: p.previewUrl, mockupUrl: '/mock/artwork-demo.png', isPublished: true },
       images: PHOTOS.slice(0, 4).map((n) => ({ url: P(n), alt: p.title })),
       garments: GARMENTS, variants: variantsFor(GARMENTS), colours: COLOURS, printPriceMinor: 40000,
     };

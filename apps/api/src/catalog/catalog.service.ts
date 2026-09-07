@@ -126,7 +126,7 @@ export class CatalogService {
     const print = await this.prisma.db.print.findFirst({
       where: { slug, isPublished: true },
       select: {
-        id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
+        id: true, slug: true, title: true, sizeTier: true, previewUrl: true, mockupUrl: true, isPublished: true,
         images: {
           select: { url: true, alt: true },
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
@@ -272,6 +272,7 @@ export class CatalogService {
         collectionSlugs: print.collections.map((c: { collection: { slug: string } }) => c.collection.slug),
         breedSlugs: print.breeds.map((b: { breed: { slug: string } }) => b.breed.slug),
         previewUrl: print.previewUrl,
+        mockupUrl: print.mockupUrl,
         isPublished: print.isPublished,
       },
       images: print.images.map((img: { url: string; alt: string }) => ({

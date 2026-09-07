@@ -396,6 +396,10 @@ model Print {
   previewUrl String        @default("")
   /// Production artwork location. Never exposed through the public API.
   artworkKey String
+  /// Вебмакет для авто-мокапів: PNG із прозорим тлом, лягає поверх фото
+  /// виробу на сторінці товару. Порожній рядок — мокапи не малюються, і це
+  /// нормальний стан: сторінка показує те, що показувала завжди.
+  mockupUrl  String @default("")
 
   isPublished Boolean @default(false)
 

@@ -9,7 +9,8 @@ import { ApiError } from '@/lib/api-client';
 import { PrintThumb } from '@/components/print-thumb';
 import { Field, Select, SubmitButton } from '@/features/forms/fields';
 import { PrintImageUploader } from './image-uploader';
-import { createBreed, createPrint, deletePrint, getPrintOptions, updatePrint } from './api';
+import { compressImage } from './compress-image';
+import { createBreed, createPrint, deletePrint, getPrintOptions, updatePrint, uploadPrintPhoto } from './api';
 import { ConfirmButton, useToast, ErrorBanner } from '@/components/ui';
 
 const SIZE_TIERS: ReadonlyArray<{ value: PrintSizeTier; label: string }> = [
@@ -43,6 +44,8 @@ export function PrintForm({ initial, presetCollectionIds }: {
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [sizeTier, setSizeTier] = useState<string>(initial?.sizeTier ?? 'MEDIUM');
   const [artworkKey, setArtworkKey] = useState(initial?.artworkKey ?? '');
+  const [mockupUrl, setMockupUrl] = useState(initial?.mockupUrl ?? '');
+  const [mockupBusy, setMockupBusy] = useState(false);
   /**
    * Фото живуть окремо від решти форми: вони зберігаються одразу, своїми
    * запитами, і не чекають кнопки «Зберегти». Тому тут — актуальний принт,
@@ -82,6 +85,7 @@ export function PrintForm({ initial, presetCollectionIds }: {
         sizeTier: sizeTier as PrintSizeTier,
         // previewUrl не надсилаємо: обкладинку тримає перше фото.
         artworkKey: artworkKey.trim(),
+        mockupUrl,
         isPublished,
         breedIds,
         collectionIds,
@@ -167,6 +171,68 @@ export function PrintForm({ initial, presetCollectionIds }: {
           placeholder="Google Drive / Принти / korgi-renesans.psd"
           hint="Не показується на сайті. Це підказка вам самим, коли настане час друкувати."
         />
+
+        {/*
+          Вебмакет для авто-мокапів. Один файл — і принт сам лягає на фото
+          виробу в БУДЬ-ЯКОМУ кольорі на сторінці товару. Без нього сторінка
+          показує маленьку картку «носія», як раніше, — тобто поле
+          необовʼязкове й нічого не ламає.
+        */}
+        <fieldset>
+          <legend className="mb-1.5 text-sm font-medium text-ink">Макет для мокапів</legend>
+          <p className="mb-2 text-sm text-ink-muted">
+            PNG із прозорим тлом — сам малюнок, без футболки. Ляже поверх фото виробу
+            в кожному кольорі; окремі мокапи більше не потрібні.
+          </p>
+          <div className="flex items-center gap-4">
+            {mockupUrl !== '' && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mockupUrl} alt="Вебмакет"
+                className="h-20 w-20 rounded-card border border-line bg-[repeating-conic-gradient(#eee_0%_25%,#fff_0%_50%)] bg-[length:16px_16px] object-contain p-1"
+              />
+            )}
+            <label className="inline-flex min-h-10 cursor-pointer items-center rounded-card border border-line px-4 text-sm font-medium text-ink transition hover:border-ink">
+              {mockupBusy ? 'Завантажую…' : mockupUrl === '' ? 'Завантажити PNG' : 'Замінити'}
+              <input
+                type="file"
+                accept="image/png,image/webp"
+                className="sr-only"
+                disabled={mockupBusy || slug.trim() === ''}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setMockupBusy(true);
+                  void (async () => {
+                    try {
+                      const { blob, filename } = await compressImage(file);
+                      const uploaded = await uploadPrintPhoto(slug.trim(), blob, `mockup-${filename}`);
+                      setMockupUrl(uploaded.url);
+                      toast('Макет завантажено — не забудьте зберегти принт');
+                    } catch {
+                      toast('Не вдалося завантажити макет');
+                    } finally {
+                      setMockupBusy(false);
+                    }
+                  })();
+                }}
+              />
+            </label>
+            {mockupUrl !== '' && (
+              <button
+                type="button"
+                onClick={() => setMockupUrl('')}
+                className="text-sm text-ink-subtle underline-offset-4 hover:text-danger hover:underline"
+              >
+                Прибрати
+              </button>
+            )}
+          </div>
+          {slug.trim() === '' && (
+            <p className="mt-2 text-xs text-ink-subtle">Спершу заповніть назву — макет прикріплюється до адреси принта.</p>
+          )}
+        </fieldset>
 
         <OptionPicker
           legend="Породи" error={errors['breeds']}

@@ -14,6 +14,7 @@ import { findVariant, selectableColours, selectableSizes } from '../variant-sele
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
 import { GarmentPreview } from './GarmentPreview';
+import { canMockup, PrintOnGarment } from './PrintOnGarment';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
@@ -294,7 +295,29 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </fieldset>
         )}
 
-        {garment && selectedColour && (
+        {/*
+          Авто-мокап: якщо в принта є вебмакет, а в кольору — фото, покупець
+          бачить саме цей принт на саме цьому виробі в саме цьому кольорі.
+          Картинка складається на льоту (фото + прозорий PNG), тож комбінацій
+          може бути скільки завгодно без жодного намальованого мокапа.
+          Немає макета чи кадру — стара маленька картка «носія», як і було.
+        */}
+        {garment && selectedColour && canMockup(garment.slug, selectedColour.supplierCode, data.print.mockupUrl) ? (
+          <figure className="mt-6 rounded-card border border-line bg-surface-sunken p-3">
+            <PrintOnGarment
+              garmentSlug={garment.slug}
+              colourCode={selectedColour.supplierCode}
+              mockupUrl={data.print.mockupUrl}
+              sizeTier={data.print.sizeTier}
+              alt={`${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode}`}
+              className="mx-auto max-w-xs"
+            />
+            <figcaption className="mt-2 text-center text-xs text-ink-subtle">
+              Орієнтовний вигляд · {garment.name}, {selectedColour.name ?? selectedColour.supplierCode}.
+              Розмір принта: {data.print.sizeTier}.
+            </figcaption>
+          </figure>
+        ) : garment && selectedColour && (
           <GarmentPreview
             garmentSlug={garment.slug}
             garmentName={garment.name}

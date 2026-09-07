@@ -112,6 +112,11 @@ export const PrintDto = z.object({
   collectionSlugs: z.array(Slug),
   breedSlugs: z.array(Slug),
   previewUrl: ImageRef,
+  /**
+   * Вебмакет для авто-мокапів: PNG із прозорим тлом. Порожній рядок —
+   * мокапів у цього принта немає, сторінка показує превʼю як раніше.
+   */
+  mockupUrl: ImageRef,
   isPublished: z.boolean(),
 });
 export type PrintDto = z.infer<typeof PrintDto>;

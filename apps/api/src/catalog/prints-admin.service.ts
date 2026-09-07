@@ -14,7 +14,7 @@ import type { TransactionClient } from '../common/tenancy';
 /** Один select на всі відповіді — щоб форма й таблиця бачили однакову форму даних. */
 const PRINT_SELECT = {
   id: true, slug: true, title: true, sizeTier: true, previewUrl: true,
-  artworkKey: true, isPublished: true, createdAt: true, updatedAt: true,
+  artworkKey: true, mockupUrl: true, isPublished: true, createdAt: true, updatedAt: true,
   images: {
     select: { id: true, url: true, pathname: true, alt: true, position: true },
     orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
@@ -34,6 +34,7 @@ function toDto(row: PrintRow): AdminPrintDto {
     sizeTier: row.sizeTier,
     previewUrl: row.previewUrl,
     artworkKey: row.artworkKey,
+    mockupUrl: row.mockupUrl,
     isPublished: row.isPublished,
     images: row.images,
     breeds: row.breeds.map((b) => b.breed),
@@ -97,6 +98,7 @@ export class PrintsAdminService {
         sizeTier: dto.sizeTier,
         previewUrl: dto.previewUrl,
         artworkKey: dto.artworkKey,
+        mockupUrl: dto.mockupUrl,
         isPublished: dto.isPublished,
         breeds: { create: dto.breedIds.map((breedId) => ({ breedId })) },
         collections: { create: dto.collectionIds.map((collectionId) => ({ collectionId })) },
@@ -155,6 +157,7 @@ export class PrintsAdminService {
           ...(dto.sizeTier !== undefined ? { sizeTier: dto.sizeTier } : {}),
           ...(dto.previewUrl !== undefined ? { previewUrl: dto.previewUrl } : {}),
           ...(dto.artworkKey !== undefined ? { artworkKey: dto.artworkKey } : {}),
+          ...(dto.mockupUrl !== undefined ? { mockupUrl: dto.mockupUrl } : {}),
           ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
         },
         select: PRINT_SELECT,

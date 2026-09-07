@@ -101,6 +101,8 @@ export const AdminPrintDto = z.object({
   sizeTier: PrintSizeTier,
   previewUrl: z.string(),
   artworkKey: z.string(),
+  /** Вебмакет для авто-мокапів (PNG із прозорим тлом). Порожньо — мокапів немає. */
+  mockupUrl: z.string(),
   isPublished: z.boolean(),
   images: z.array(PrintImageDto),
   breeds: z.array(CatalogOptionDto),
@@ -152,6 +154,8 @@ export const AdminPrintCreateDto = z.object({
    * будь-що, що допоможе його знайти. У публічний API не виходить ніколи.
    */
   artworkKey: z.string().trim().max(500).default(''),
+  /** Адреса вебмакета у сховищі. Заливає форма тим самим шляхом, що й фото. */
+  mockupUrl: z.string().trim().url().or(z.literal('')).default(''),
   isPublished: z.boolean().default(false),
   breedIds: z.array(z.string().uuid()).max(20).default([]),
   collectionIds: z.array(z.string().uuid()).max(20).default([]),
