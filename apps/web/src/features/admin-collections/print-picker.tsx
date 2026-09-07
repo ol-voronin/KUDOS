@@ -31,7 +31,7 @@ export function PrintPicker({
 
   // Всі принти однією сторінкою: їх десятки, не тисячі, і сітка з прокруткою
   // працює краще за пагінацію в шухляді.
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-print-picker', q],
     queryFn: () => listPrints({ ...(q.trim() ? { q: q.trim() } : {}), perPage: 100 }),
     staleTime: 10_000,
@@ -77,7 +77,14 @@ export function PrintPicker({
         <div className="mt-4 grid flex-1 auto-rows-min grid-cols-3 gap-3 sm:grid-cols-4">
           {isLoading && Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
 
-          {!isLoading && items.length === 0 && (
+          {/* Помилка — словами, а не вічними скелетонами. */}
+          {isError && (
+            <p className="col-span-full text-sm text-danger">
+              Не вдалося завантажити принти. Онови сторінку й спробуй ще раз.
+            </p>
+          )}
+
+          {!isLoading && !isError && items.length === 0 && (
             <p className="col-span-full text-sm text-ink-muted">
               {q.trim() ? 'Нічого не знайшлося — спробуй іншу назву.' : 'Принтів ще немає.'}
             </p>

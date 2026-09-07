@@ -57,6 +57,22 @@ export function AdminShell({
         ].join(' ')}
       >
         <p className="label-eyebrow mb-5 px-3">{brand} · адмін</p>
+        {/*
+          Сайт — у новій вкладці: з адмінки на вітрину ходять постійно
+          («а як воно виглядає?»), і губити при цьому відкритий екран
+          редагування — найдорожча з дрібниць.
+        */}
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener"
+          className="mb-4 mx-3 inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-sm font-medium text-ink transition hover:border-ink"
+        >
+          Відкрити сайт
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 17 17 7M9 7h8v8" />
+          </svg>
+        </a>
         <AdminNav />
         <div className="mt-auto flex flex-col items-start gap-2 border-t border-line pt-4">
           <p className="px-3 text-xs text-ink-subtle">{email}</p>

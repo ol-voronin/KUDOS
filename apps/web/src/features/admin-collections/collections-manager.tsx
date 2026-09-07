@@ -274,6 +274,20 @@ function CollectionCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold text-ink">{collection.title}</h2>
         <div className="flex flex-wrap gap-2">
+          {/* Подивитись те, що щойно зібрав, — у новій вкладці, не гублячи форму. */}
+          {collection.isPublished && (
+            <a
+              href={`/collections/${collection.slug}`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-pill border border-line px-4 text-sm font-medium text-ink transition hover:border-ink"
+            >
+              На сайті
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 17 17 7M9 7h8v8" />
+              </svg>
+            </a>
+          )}
           <Button
             variant={collection.isPublished ? 'outline' : 'primary'}
             disabled={publish.isPending}

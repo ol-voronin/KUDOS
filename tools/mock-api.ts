@@ -179,7 +179,38 @@ function variantsFor(garments) {
   return variants;
 }
 
+/*
+ * ── Адмінка в моку ─────────────────────────────────────────────────────
+ *
+ * Досі мок покривав лише вітрину, і кожен адмінський екран їхав до
+ * замовника неподивленим — бо справжня адмінка за логіном, а пароль не
+ * наш. Тепер мок відповідає на /auth/me і тримає колекції В ПАМʼЯТІ:
+ * можна клікати створення, перейменування, порядок і принти — і бачити,
+ * що зберігається (до перезапуску мока, чого для перевірки досить).
+ */
+const ADMIN_NOW = () => new Date().toISOString();
+const ADMIN_PRINTS = PRINTS.map((p, i) => ({
+  id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
+  previewUrl: p.previewUrl, artworkKey: '', isPublished: p.inStock,
+  // Контракт вимагає СПРАВЖНІЙ URL у фото (z.string().url()) — відносний
+  // шлях тихо валив схему, і пікер вічно крутив скелетони.
+  images: [{ id: uuid(800 + i), url: `http://localhost:3010${p.previewUrl}`, pathname: `mock/${i}`, alt: p.title, position: 0 }],
+  breeds: [], collections: [], excludedColourIds: [],
+  createdAt: NOW, updatedAt: NOW,
+}));
+const printRef = (p) => ({ id: p.id, slug: p.slug, title: p.title, previewUrl: p.previewUrl, isPublished: p.isPublished });
+let ADMIN_COLLECTIONS = COLLECTIONS.map((c, i) => ({
+  id: c.id, slug: c.slug, title: c.title, description: c.description,
+  position: (i + 1) * 10, isPublished: i < 2,
+  prints: ADMIN_PRINTS.slice(i * 3, i * 3 + 3).map(printRef),
+  createdAt: NOW, updatedAt: NOW,
+}));
+const collectionsSorted = () => [...ADMIN_COLLECTIONS].sort((a, b) => a.position - b.position);
+
 const ROUTES = {
+  '/auth/me': () => ({ email: 'dasha@local.dev' }),
+  '/admin/leads': () => ({ items: [], total: 0, page: 1, perPage: 20 }),
+  '/admin/collections': () => ({ items: collectionsSorted() }),
   '/content/site': () => ({ settings: SETTINGS, menu: MENU }),
   '/content/pages/home': () => page(HOME_PAGE),
   '/content/pages/svoya-ideya': () => page(OWN_IDEA),
@@ -206,7 +237,7 @@ const CORS = (origin) => ({
   'access-control-allow-origin': origin ?? '*',
   'access-control-allow-credentials': 'true',
   'access-control-allow-headers': 'content-type',
-  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
   'vary': 'Origin',
 });
 
@@ -220,14 +251,15 @@ http.createServer(async (req,res)=>{
 
   // POST-и кошика й каси приходять із тілом — читаємо його один раз тут.
   let json = null;
-  if (req.method === 'POST') {
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE') {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     try { json = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { json = {}; }
   }
 
   let body = null;
-  if (ROUTES[url.pathname]) body = ROUTES[url.pathname]();
+  let status = null;
+  if (req.method === 'GET' && ROUTES[url.pathname]) body = ROUTES[url.pathname]();
   else if (url.pathname === '/catalog/prints') {
     const perPage = Number(url.searchParams.get('perPage') ?? 12);
     body = { items: PRINTS.slice(0, perPage), total: PRINTS.length, page: 1, perPage };
@@ -291,6 +323,78 @@ http.createServer(async (req,res)=>{
   } else if (url.pathname.startsWith('/orders/') && url.pathname.endsWith('/status')) {
     body = { orderNumber: 42, status: 'NEW', totalMinor: 258000 };
   }
+  // ── адмінські маршрути (в памʼяті) ──────────────────────────────────
+  else if (url.pathname === '/admin/prints' && req.method === 'GET') {
+    const q = (url.searchParams.get('q') ?? '').toLowerCase();
+    const perPage = Number(url.searchParams.get('perPage') ?? 20);
+    const all = ADMIN_PRINTS.filter((p) => !q || p.title.toLowerCase().includes(q) || p.slug.includes(q));
+    body = { items: all.slice(0, perPage), total: all.length, page: 1, perPage };
+  }
+  else if (url.pathname === '/admin/prints/options') {
+    body = { breeds: [], collections: ADMIN_COLLECTIONS.map((c) => ({ id: c.id, slug: c.slug, name: c.title })), colours: [] };
+  }
+  else if (url.pathname === '/admin/collections/reorder' && req.method === 'PATCH') {
+    (json?.ids ?? []).forEach((id, i) => {
+      const c = ADMIN_COLLECTIONS.find((x) => x.id === id);
+      if (c) c.position = (i + 1) * 10;
+    });
+    body = { items: collectionsSorted() };
+  }
+  else if (url.pathname === '/admin/collections' && req.method === 'POST') {
+    const c = {
+      id: uuid(3000 + ADMIN_COLLECTIONS.length), slug: json?.slug ?? 'nova', title: json?.title ?? 'Нова',
+      description: json?.description ?? '', isPublished: json?.isPublished ?? false,
+      position: Math.max(0, ...ADMIN_COLLECTIONS.map((x) => x.position)) + 10,
+      prints: [], createdAt: ADMIN_NOW(), updatedAt: ADMIN_NOW(),
+    };
+    ADMIN_COLLECTIONS.push(c);
+    body = c;
+    status = 201;
+  }
+  else if (/^\/admin\/collections\/[^/]+\/prints$/.test(url.pathname) && req.method === 'POST') {
+    const c = ADMIN_COLLECTIONS.find((x) => x.id === url.pathname.split('/')[3]);
+    if (c) {
+      for (const pid of json?.printIds ?? []) {
+        if (!c.prints.some((p) => p.id === pid)) {
+          const p = ADMIN_PRINTS.find((x) => x.id === pid);
+          if (p) c.prints.push(printRef(p));
+        }
+      }
+      c.updatedAt = ADMIN_NOW();
+      body = c;
+      status = 201;
+    }
+  }
+  else if (/^\/admin\/collections\/[^/]+\/prints\/[^/]+$/.test(url.pathname) && req.method === 'DELETE') {
+    const parts = url.pathname.split('/');
+    const c = ADMIN_COLLECTIONS.find((x) => x.id === parts[3]);
+    if (c) {
+      c.prints = c.prints.filter((p) => p.id !== parts[5]);
+      c.updatedAt = ADMIN_NOW();
+      body = c;
+    }
+  }
+  else if (/^\/admin\/collections\/[^/]+$/.test(url.pathname)) {
+    const id = url.pathname.split('/').pop();
+    const c = ADMIN_COLLECTIONS.find((x) => x.id === id);
+    if (c && req.method === 'PATCH') {
+      for (const k of ['title', 'slug', 'description', 'isPublished']) {
+        if (json?.[k] !== undefined) c[k] = json[k];
+      }
+      c.updatedAt = ADMIN_NOW();
+      body = c;
+    } else if (c && req.method === 'DELETE') {
+      if (c.prints.length > 0) {
+        body = { code: 'CONFLICT', message: `У колекції ${c.prints.length} принт(и). Спершу приберіть їх.` };
+        status = 409;
+      } else {
+        ADMIN_COLLECTIONS = ADMIN_COLLECTIONS.filter((x) => x.id !== id);
+        body = { ok: true };
+      }
+    } else if (c) {
+      body = c;
+    }
+  }
   else if (url.pathname === '/catalog/search') {
     const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
     const hit = (t) => t.toLowerCase().includes(q);
@@ -306,6 +410,6 @@ http.createServer(async (req,res)=>{
   // не приймає відповідь із `origin: *` — тільки з конкретним джерелом і
   // дозволом на облікові дані. Без цих двох рядків живий пошук у локальній
   // перевірці мовчки не працює, і ми знову дивимося не на те.
-  res.writeHead(body ? 200 : 404, { 'content-type': 'application/json', ...CORS(req.headers.origin) });
+  res.writeHead(status ?? (body ? 200 : 404), { 'content-type': 'application/json', ...CORS(req.headers.origin) });
   res.end(JSON.stringify(body ?? { error: 'no mock for ' + url.pathname }));
 }).listen(3001, ()=>console.log('mock api :3001'));
