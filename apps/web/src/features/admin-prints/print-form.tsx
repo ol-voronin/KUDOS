@@ -28,7 +28,11 @@ const SIZE_TIERS: ReadonlyArray<{ value: PrintSizeTier; label: string }> = [
  *  • породу можна створити прямо тут. Без цього перший принт нової породи
  *    впирається в порожній селект.
  */
-export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
+export function PrintForm({ initial, presetCollectionIds }: {
+  initial?: AdminPrintDto;
+  /** Колекції, вибрані наперед: прийшли з розділу «Колекції» — вона вже тут. */
+  presetCollectionIds?: string[];
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -47,7 +51,9 @@ export function PrintForm({ initial }: { initial?: AdminPrintDto }) {
   const [current, setCurrent] = useState<AdminPrintDto | undefined>(initial);
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
   const [breedIds, setBreedIds] = useState<string[]>(initial?.breeds.map((b) => b.id) ?? []);
-  const [collectionIds, setCollectionIds] = useState<string[]>(initial?.collections.map((c) => c.id) ?? []);
+  const [collectionIds, setCollectionIds] = useState<string[]>(
+    initial?.collections.map((c) => c.id) ?? presetCollectionIds ?? [],
+  );
   const [excludedColourIds, setExcludedColourIds] = useState<string[]>(initial?.excludedColourIds ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);

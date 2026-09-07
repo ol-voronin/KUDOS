@@ -141,20 +141,27 @@ export class CollectionsAdminService {
     return this.list();
   }
 
-  async addPrint(id: string, printId: string): Promise<AdminCollectionDto> {
-    const [collection, print] = await Promise.all([
-      this.prisma.db.collection.findUnique({ where: { id }, select: { id: true } }),
-      this.prisma.db.print.findUnique({ where: { id: printId }, select: { id: true } }),
-    ]);
+  async addPrints(id: string, printIds: readonly string[]): Promise<AdminCollectionDto> {
+    const collection = await this.prisma.db.collection.findUnique({ where: { id }, select: { id: true } });
     if (!collection) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Колекцію не знайдено' });
-    if (!print) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Принт не знайдено' });
+
+    // Додаємо тільки принти, які існують: сітка в адмінці могла застаріти,
+    // поки хтось видаляв принт у сусідній вкладці. Зниклий — не привід
+    // відмовити всій пачці.
+    const existing = await this.prisma.db.print.findMany({
+      where: { id: { in: [...printIds] } },
+      select: { id: true },
+    });
+    if (existing.length === 0) {
+      throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Жодного з цих принтів не знайдено' });
+    }
 
     // Повторне додавання — не помилка, а подвійний клік.
     await this.prisma.db.printCollection.createMany({
-      data: [{ printId, collectionId: id }],
+      data: existing.map((p) => ({ printId: p.id, collectionId: id })),
       skipDuplicates: true,
     });
-    this.logger.log(`collection.print.added collectionId=${id} printId=${printId}`);
+    this.logger.log(`collection.prints.added collectionId=${id} count=${existing.length}`);
     return this.get(id);
   }
 

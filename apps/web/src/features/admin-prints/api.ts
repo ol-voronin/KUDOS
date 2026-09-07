@@ -10,12 +10,15 @@ export interface PrintFilters {
   q?: string;
   published?: 'true' | 'false';
   page?: number;
+  /** Сітка вибору принтів у колекції хоче бачити все одразу, а не по 20. */
+  perPage?: number;
 }
 
 export function listPrints(filters: PrintFilters = {}): Promise<AdminPrintListDto> {
   const params = new URLSearchParams({ page: String(filters.page ?? 1) });
   if (filters.q) params.set('q', filters.q);
   if (filters.published) params.set('published', filters.published);
+  if (filters.perPage) params.set('perPage', String(filters.perPage));
   return apiFetch(`/admin/prints?${params.toString()}`, AdminPrintListDto);
 }
 

@@ -70,7 +70,15 @@ export const AdminCollectionReorderDto = z.object({
 });
 export type AdminCollectionReorderDto = z.infer<typeof AdminCollectionReorderDto>;
 
-export const AdminCollectionAddPrintDto = z.object({
-  printId: z.string().uuid(),
+/**
+ * Додавання принтів — ПАЧКОЮ.
+ *
+ * Колекцію збирають, відзначивши пʼять-шість принтів у сітці за раз;
+ * по одному запиту на клік — це шість тостів і шість перерендерів списку.
+ * Дублікати сервер тихо пропускає: повторне додавання — подвійний клік,
+ * а не помилка.
+ */
+export const AdminCollectionAddPrintsDto = z.object({
+  printIds: z.array(z.string().uuid()).min(1).max(100),
 });
-export type AdminCollectionAddPrintDto = z.infer<typeof AdminCollectionAddPrintDto>;
+export type AdminCollectionAddPrintsDto = z.infer<typeof AdminCollectionAddPrintsDto>;

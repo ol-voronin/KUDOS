@@ -28,10 +28,10 @@ export function reorderCollections(ids: string[]): Promise<AdminCollectionListDt
   });
 }
 
-export function addPrintToCollection(id: string, printId: string): Promise<AdminCollectionDto> {
+export function addPrintsToCollection(id: string, printIds: string[]): Promise<AdminCollectionDto> {
   return apiFetch(`/admin/collections/${id}/prints`, AdminCollectionDto, {
     method: 'POST',
-    body: JSON.stringify({ printId }),
+    body: JSON.stringify({ printIds }),
   });
 }
 

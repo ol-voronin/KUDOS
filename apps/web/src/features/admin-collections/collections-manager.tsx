@@ -1,18 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { slugify, type AdminCollectionDto } from '@dt/contracts';
 import { PrintThumb } from '@/components/print-thumb';
 import {
-  AdminField, AdminTextArea, Button, ConfirmButton, ErrorBanner, TableSkeleton, useToast,
+  AdminField, AdminTextArea, Button, ButtonLink, ConfirmButton, ErrorBanner, TableSkeleton, useToast,
 } from '@/components/ui';
 import { ApiError } from '@/lib/api-client';
-import { listPrints } from '@/features/admin-prints/api';
 import {
-  addPrintToCollection, createCollection, deleteCollection, listCollections,
+  addPrintsToCollection, createCollection, deleteCollection, listCollections,
   removePrintFromCollection, reorderCollections, updateCollection,
 } from './api';
+import { PrintPicker } from './print-picker';
 
 /**
  * Розділ «Колекції»: список + картка обраної на одному екрані.
@@ -116,7 +117,23 @@ export function CollectionsManager() {
                     </button>
                     <p className="text-xs text-ink-subtle">/collections/{c.slug}</p>
                   </td>
-                  <td className="px-3 py-2 tabular-nums text-ink-muted">{c.prints.length}</td>
+                  <td className="px-3 py-2">
+                    {/* Три обкладинки поруч із числом: полицю впізнають очима,
+                        а не рахунком. */}
+                    <div className="flex items-center gap-2.5">
+                      {c.prints.length > 0 && (
+                        <div className="flex -space-x-2">
+                          {c.prints.slice(0, 3).map((p) => (
+                            p.previewUrl
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img key={p.id} src={p.previewUrl} alt="" className="h-8 w-8 rounded-card border border-surface object-cover" />
+                              : <span key={p.id} className="h-8 w-8 rounded-card border border-surface bg-surface-sunken" />
+                          ))}
+                        </div>
+                      )}
+                      <span className="tabular-nums text-ink-muted">{c.prints.length}</span>
+                    </div>
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={[
@@ -209,7 +226,7 @@ function CollectionCard({
   const [title, setTitle] = useState(collection.title);
   const [slug, setSlug] = useState(collection.slug);
   const [description, setDescription] = useState(collection.description);
-  const [printQuery, setPrintQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const dirty = title !== collection.title || slug !== collection.slug || description !== collection.description;
 
@@ -234,9 +251,13 @@ function CollectionCard({
     onError: (e) => toast(e instanceof ApiError ? e.message : 'Не вдалося видалити'),
   });
 
-  const addPrint = useMutation({
-    mutationFn: (printId: string) => addPrintToCollection(collection.id, printId),
-    onSuccess: (next) => { toast('Принт додано'); onChanged(next); },
+  const addPrints = useMutation({
+    mutationFn: (printIds: string[]) => addPrintsToCollection(collection.id, printIds),
+    onSuccess: (next, printIds) => {
+      toast(printIds.length === 1 ? 'Принт додано' : `Додано принтів: ${printIds.length}`);
+      onChanged(next);
+      setPickerOpen(false);
+    },
     onError: (e) => toast(e instanceof ApiError ? e.message : 'Не вдалося додати'),
   });
 
@@ -246,16 +267,7 @@ function CollectionCard({
     onError: (e) => toast(e instanceof ApiError ? e.message : 'Не вдалося прибрати'),
   });
 
-  // Пошук принтів для додавання: той самий адмінський список, що на екрані
-  // «Принти». Уже привʼязані відсіюються тут — двічі додавати нема чого.
-  const search = useQuery({
-    queryKey: ['admin-collection-print-search', printQuery],
-    queryFn: () => listPrints({ q: printQuery }),
-    enabled: printQuery.trim().length >= 2,
-    staleTime: 10_000,
-  });
   const inCollection = useMemo(() => new Set(collection.prints.map((p) => p.id)), [collection.prints]);
-  const candidates = (search.data?.items ?? []).filter((p) => !inCollection.has(p.id)).slice(0, 6);
 
   return (
     <section className="rounded-card border border-line bg-surface-raised p-5">
@@ -302,23 +314,54 @@ function CollectionCard({
         </div>
       )}
 
-      <h3 className="label-eyebrow mt-6">Принти в колекції · {collection.prints.length}</h3>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="label-eyebrow">Принти в колекції · {collection.prints.length}</h3>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+            + Додати з каталогу
+          </Button>
+          {/*
+            Новий принт народжується у формі принта — там фото, розмір і
+            породи, дублювати це в шухляді немає сенсу. Але колекція вже
+            буде вибрана: людина не мусить памʼятати, звідки прийшла.
+          */}
+          <ButtonLink
+            href={`/admin/prints/new?collectionId=${collection.id}`}
+            variant="quiet"
+            size="sm"
+          >
+            Новий принт у цю колекцію
+          </ButtonLink>
+        </div>
+      </div>
+
       {collection.prints.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">Поки порожньо. Знайди принт нижче й додай.</p>
+        <div className="mt-3 rounded-card border border-dashed border-line-strong bg-surface-sunken p-6 text-center">
+          <p className="text-sm font-medium text-ink">Полиця порожня</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-ink-muted">
+            Натисни «Додати з каталогу» й відзнач принти в сітці — або створи новий одразу в цій колекції.
+          </p>
+        </div>
       ) : (
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        /*
+          Принти — обкладинками, а не рядками: колекцію звіряють очима.
+          Клік по картці веде у форму принта; ✕ лише знімає з полиці,
+          сам принт нікуди не зникає.
+        */
+        <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {collection.prints.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 rounded-card border border-line p-2">
-              <div className="w-10 shrink-0"><PrintThumb src={p.previewUrl} alt={p.title} /></div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{p.title}</p>
-                <p className="text-xs text-ink-subtle">{p.isPublished ? 'на сайті' : 'чернетка'}</p>
-              </div>
+            <li key={p.id} className="group relative">
+              <Link href={`/admin/prints/${p.id}`} className="block rounded-card border border-line p-1.5 transition hover:border-ink">
+                <PrintThumb src={p.previewUrl} alt={p.title} />
+                <p className="mt-1.5 truncate text-xs font-medium text-ink">{p.title}</p>
+                <p className="text-[0.65rem] text-ink-subtle">{p.isPublished ? '● на сайті' : '○ чернетка'}</p>
+              </Link>
               <button
                 type="button"
-                aria-label={`Прибрати ${p.title}`}
+                aria-label={`Прибрати ${p.title} з колекції`}
+                title="Прибрати з колекції"
                 onClick={() => removePrint.mutate(p.id)}
-                className="tap-sm px-2 text-sm text-ink-subtle hover:text-danger"
+                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-pill border border-line bg-surface text-xs text-ink-subtle shadow-sm transition hover:border-danger hover:text-danger"
               >
                 ✕
               </button>
@@ -327,33 +370,13 @@ function CollectionCard({
         </ul>
       )}
 
-      <div className="mt-4">
-        <AdminField
-          label="Додати принт" id="print-search" value={printQuery}
-          onChange={(e) => setPrintQuery(e.target.value)}
-          hint="Почніть вводити назву — покажемо збіги з каталогу."
-        />
-        {printQuery.trim().length >= 2 && (
-          <div className="mt-2 flex flex-col gap-1.5">
-            {search.isLoading && <p className="text-sm text-ink-subtle">Шукаю…</p>}
-            {search.data && candidates.length === 0 && (
-              <p className="text-sm text-ink-subtle">Нічого нового не знайшлося.</p>
-            )}
-            {candidates.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => { addPrint.mutate(p.id); setPrintQuery(''); }}
-                className="flex items-center gap-3 rounded-card border border-line p-2 text-left hover:border-ink"
-              >
-                <div className="w-9 shrink-0"><PrintThumb src={p.previewUrl} alt={p.title} /></div>
-                <span className="text-sm font-medium text-ink">{p.title}</span>
-                <span className="ml-auto text-xs text-ink-subtle">додати →</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <PrintPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        inCollectionIds={inCollection}
+        onAdd={(ids) => addPrints.mutate(ids)}
+        adding={addPrints.isPending}
+      />
     </section>
   );
 }

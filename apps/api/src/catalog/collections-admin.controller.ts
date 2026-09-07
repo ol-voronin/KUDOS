@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
-  AdminCollectionAddPrintDto, AdminCollectionCreateDto, AdminCollectionReorderDto,
+  AdminCollectionAddPrintsDto, AdminCollectionCreateDto, AdminCollectionReorderDto,
   AdminCollectionUpdateDto, type AdminCollectionDto, type AdminCollectionListDto,
 } from '@dt/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -62,11 +62,11 @@ export class CollectionsAdminController {
 
   @Post(':id/prints')
   @HttpCode(HttpStatus.CREATED)
-  addPrint(
+  addPrints(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(AdminCollectionAddPrintDto)) dto: AdminCollectionAddPrintDto,
+    @Body(new ZodValidationPipe(AdminCollectionAddPrintsDto)) dto: AdminCollectionAddPrintsDto,
   ): Promise<AdminCollectionDto> {
-    return this.collections.addPrint(id, dto.printId);
+    return this.collections.addPrints(id, dto.printIds);
   }
 
   @Delete(':id/prints/:printId')
