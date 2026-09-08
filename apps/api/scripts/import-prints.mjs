@@ -114,10 +114,20 @@ const ASSETS = flag('--assets');
 const envFile = flag('--env');
 
 if (envFile) {
-  // Толерантний парсер: беремо KEY=значення, ігноруємо коментарі й примітки.
+  // Толерантний парсер: KEY=значення — як завжди, а голий рядок без ключа
+  // розпізнаємо за префіксом (так люди і вставляють: скопіював — вклеїв).
+  const BARE = [
+    ['DATABASE_URL', /^postgres(ql)?:\/\//],
+    ['BLOB_READ_WRITE_TOKEN', /^vercel_blob_rw_/],
+    ['GITHUB_TOKEN', /^(github_pat_|ghp_)/],
+  ];
   for (const line of readFileSync(envFile, 'utf8').split('\n')) {
     const m = line.match(/^\s*([A-Z_]+)\s*=\s*["']?([^"'\s]+)/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+    if (m) { if (!process.env[m[1]]) process.env[m[1]] = m[2]; continue; }
+    const v = line.trim().replace(/^["']|["']$/g, '');
+    for (const [key, rx] of BARE) {
+      if (rx.test(v) && !process.env[key]) process.env[key] = v;
+    }
   }
 }
 
