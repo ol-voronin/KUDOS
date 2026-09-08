@@ -4,6 +4,7 @@ import { RangeDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { Section } from '@/components/section';
 import { RangeCard } from '@/features/catalog/components/RangeCard';
+import { RangeAnchors } from '@/features/catalog/components/RangeAnchors';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
@@ -34,6 +35,61 @@ export async function generateMetadata(): Promise<Metadata> {
  * Обидва питання про виріб, а не про малюнок, і жодне з них не мало
  * сторінки.
  */
+/**
+ * Секції за типом виробу + липкі якорі.
+ *
+ * Тип виводиться зі слага (futbolka-, svitshot-, hudi-, hibryd-), а не з
+ * нового поля в базі: слаги в нас і є номенклатурою, дублювати її колонкою
+ * заради навігації — плодити другу правду. Гібриди — окремою секцією «2-в-1»:
+ * це фішка асортименту, а не підвид світшота (рішення Олексія).
+ */
+const RANGE_GROUPS = [
+  { id: 'futbolky', label: 'Футболки', match: (slug: string) => slug.startsWith('futbolka-'),
+    blurb: 'Класична й оверсайз. Щільна бавовна, шиємо самі — можемо вкоротити під зріст.' },
+  { id: 'svitshoty', label: 'Світшоти', match: (slug: string) => slug.startsWith('svitshot-'),
+    blurb: 'Тепла тринитка з начосом. Вільний крій, манжети тримають форму.' },
+  { id: 'khudi', label: 'Худі', match: (slug: string) => slug.startsWith('hudi-'),
+    blurb: 'Капюшон, кишеня-кенгуру і вісімнадцять кольорів — від молочного шоколаду до бузку.' },
+  { id: 'dva-v-odnomu', label: '2-в-1', match: (slug: string) => slug.startsWith('hibryd-'),
+    blurb: 'Світшот-футболка та худі-футболка: короткий рукав, тепле тіло. Таке мало хто шиє.' },
+] as const;
+
+function RangeSections({ garments, cheapestPrint }: {
+  garments: RangeDto['garments'];
+  cheapestPrint: number | null;
+}) {
+  const grouped = RANGE_GROUPS
+    .map((group) => ({ ...group, items: garments.filter((g) => group.match(g.slug)) }))
+    .filter((group) => group.items.length > 0);
+  const leftovers = garments.filter((g) => !RANGE_GROUPS.some((group) => group.match(g.slug)));
+  const sections = [
+    ...grouped,
+    ...(leftovers.length > 0
+      ? [{ id: 'inshe', label: 'Інше', blurb: '', items: leftovers } as const]
+      : []),
+  ];
+
+  return (
+    <>
+      <RangeAnchors anchors={sections.map((s) => ({ id: s.id, label: s.label, count: s.items.length }))} />
+      {sections.map((s) => (
+        <Section key={s.id}>
+          {/* scroll-mt: щоб якір не ховав заголовок під липкими шапками. */}
+          <div id={s.id} className="scroll-mt-36">
+            <h2 className="font-display text-2xl font-bold text-ink">{s.label}</h2>
+            {s.blurb !== '' && <p className="mt-2 max-w-2xl text-ink-muted">{s.blurb}</p>}
+            <div className="mt-6 flex flex-col gap-6">
+              {s.items.map((g) => (
+                <RangeCard key={g.id} garment={g} cheapestPrintMinor={cheapestPrint} />
+              ))}
+            </div>
+          </div>
+        </Section>
+      ))}
+    </>
+  );
+}
+
 export default async function RangePage() {
   const site = await getSettings();
   const range = await serverFetchOrNull('/catalog/range', RangeDto, 300);
@@ -58,17 +114,13 @@ export default async function RangePage() {
         </p>
       </Section>
 
-      <Section>
-        {garments.length === 0 ? (
+      {garments.length === 0 ? (
+        <Section>
           <p className="text-ink-muted">Асортимент тимчасово недоступний. Спробуй оновити сторінку.</p>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {garments.map((g) => (
-              <RangeCard key={g.id} garment={g} cheapestPrintMinor={cheapestPrint} />
-            ))}
-          </div>
-        )}
-      </Section>
+        </Section>
+      ) : (
+        <RangeSections garments={garments} cheapestPrint={cheapestPrint} />
+      )}
 
       <Section tone="teal">
         <h2 className="font-display text-2xl font-bold text-ink">Не знайшли свій розмір або колір?</h2>

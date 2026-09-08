@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { formatUAH, minor, type RangeGarmentDto } from '@dt/contracts';
 import { ButtonLink } from '@/components/ui';
-import { garmentPhoto } from '../garment-photos';
+import { garmentCardPhoto } from '../garment-photos';
 import { SizeChart } from './SizeChart';
 
 /**
@@ -19,23 +19,24 @@ export function RangeCard({ garment, cheapestPrintMinor }: {
   garment: RangeGarmentDto;
   cheapestPrintMinor: number | null;
 }) {
-  const withPhoto = garment.colours.filter((c) => garmentPhoto(garment.slug, c.supplierCode) !== null);
+  const withPhoto = garment.colours.filter((c) => garmentCardPhoto(garment.slug, c.supplierCode) !== null);
   const gallery = withPhoto.length > 0 ? withPhoto : garment.colours;
   const [activeId, setActiveId] = useState(gallery[0]?.id ?? null);
   const active = gallery.find((c) => c.id === activeId) ?? gallery[0];
-  const src = active ? garmentPhoto(garment.slug, active.supplierCode) : null;
+  // Знімальний кадр, якщо є: вітрина продає виглядом, а не схемою крою.
+  const src = active ? garmentCardPhoto(garment.slug, active.supplierCode) : null;
   const fabric = garment.fabrics[0];
 
   return (
     <article className="grid gap-6 rounded-card border border-line bg-surface p-6 md:grid-cols-[minmax(0,15rem)_1fr]">
       <div>
-        <div className="flex aspect-square items-center justify-center rounded-card bg-surface-sunken p-4">
+        <div className="flex aspect-square items-center justify-center overflow-hidden rounded-card bg-surface-sunken">
           {src && active ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={src}
               alt={`${garment.name}, ${active.name ?? active.supplierCode}`}
-              className="max-h-full w-auto object-contain"
+              className="h-full w-full object-cover"
             />
           ) : (
             <span className="text-sm text-ink-subtle">Фото готуємо</span>

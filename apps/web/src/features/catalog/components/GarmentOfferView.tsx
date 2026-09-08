@@ -12,6 +12,7 @@ import { useGarmentOffer } from '../hooks/useGarmentOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
+import { GarmentGallery } from './GarmentGallery';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
@@ -138,18 +139,18 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
   return (
     <div className="grid items-start gap-10 md:grid-cols-2">
       <div className="md:sticky md:top-24">
-        <div className="flex aspect-square items-center justify-center bg-surface-sunken p-6">
-          {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photo}
-              alt={`${garment.name}, ${selectedColour?.name ?? selectedColour?.supplierCode ?? ''}`}
-              className="max-h-full w-auto object-contain"
-            />
-          ) : (
+        {selectedColour ? (
+          <GarmentGallery
+            garmentSlug={garment.slug}
+            colourCode={selectedColour.supplierCode}
+            colourName={selectedColour.name ?? selectedColour.supplierCode}
+            garmentName={garment.name}
+          />
+        ) : (
+          <div className="flex aspect-square items-center justify-center bg-surface-sunken p-6">
             <span className="text-sm text-ink-subtle">Фото цього кольору готуємо</span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div>
