@@ -10,9 +10,10 @@ import { garmentPhoto } from '../garment-photos';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { useGarmentOffer } from '../hooks/useGarmentOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
+import { garmentViews, viewLabel } from '../garment-photos';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
-import { GarmentGallery } from './GarmentGallery';
+import { MediaStack, type MediaFrame } from './MediaStack';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
@@ -136,24 +137,34 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
     setAdded(true);
   }
 
+  // Кадри обраного кольору: знімальні у своїй пропорції, схема крою —
+  // останньою (на ній найкраще видно крій без людини й інтерʼєру).
+  const colourName = selectedColour?.name ?? selectedColour?.supplierCode ?? '';
+  const frames: MediaFrame[] = selectedColour ? [
+    ...garmentViews(garment.slug, selectedColour.supplierCode).map((s) => ({
+      key: s.view,
+      src: s.src,
+      alt: `${garment.name}, ${colourName} — ${viewLabel(s.view).toLowerCase()}`,
+    })),
+    ...(photo !== null ? [{
+      key: 'scheme', src: photo, alt: `${garment.name}, ${colourName} — схема крою`, kind: 'scheme' as const,
+    }] : []),
+  ] : [];
+
   return (
-    <div className="grid items-start gap-10 md:grid-cols-2">
-      <div className="md:sticky md:top-24">
-        {selectedColour ? (
-          <GarmentGallery
-            garmentSlug={garment.slug}
-            colourCode={selectedColour.supplierCode}
-            colourName={selectedColour.name ?? selectedColour.supplierCode}
-            garmentName={garment.name}
-          />
-        ) : (
-          <div className="flex aspect-square items-center justify-center bg-surface-sunken p-6">
-            <span className="text-sm text-ink-subtle">Фото цього кольору готуємо</span>
-          </div>
-        )}
+    /*
+     * Розкладка як у великих магазинів одягу: фото стосом ліворуч, а
+     * праворуч — компактна панель покупки, що ЛИПНЕ до верху. Липне саме
+     * панель, а не фото: стос довший за екран, і липке фото ховало б
+     * решту кадрів. Опис і догляд — під фото в лівій колонці, бо їх
+     * читають після вибору, а не замість нього.
+     */
+    <div className="grid items-start gap-x-10 gap-y-12 md:grid-cols-2">
+      <div>
+        <MediaStack frames={frames} emptyText="Фото цього кольору готуємо" />
       </div>
 
-      <div>
+      <div className="md:sticky md:top-24">
         <h1 className="font-display text-section font-bold uppercase text-ink">{garment.name}</h1>
         <div className="mt-3 border-t border-ink pt-3" aria-live="polite">
           <p className="font-display text-3xl font-bold text-ink">
@@ -292,8 +303,11 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
             Дивитись принти
           </ButtonLink>
         </div>
+      </div>
 
-        <div className="mt-8 divide-y divide-line border-y border-line">
+      {/* Довгий довідковий хвіст — під фото, щоб липка панель лишалася короткою. */}
+      <div className="md:col-start-1">
+        <div className="divide-y divide-line border-y border-line">
           <DetailsSection title="Виріб" open>
             <p>
               {garment.description !== ''

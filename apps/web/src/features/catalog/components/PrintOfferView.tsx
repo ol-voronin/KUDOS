@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
-import { PrintThumb } from '@/components/print-thumb';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
@@ -14,6 +12,7 @@ import { findVariant, selectableColours, selectableSizes } from '../variant-sele
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
 import { GarmentPreview } from './GarmentPreview';
+import { MediaStack, type MediaFrame } from './MediaStack';
 import { canMockup, PrintOnGarment } from './PrintOnGarment';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
@@ -203,22 +202,24 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     setAdded(true);
   }
 
-  return (
-    <div className="grid items-start gap-10 md:grid-cols-2">
-      {/*
-        Галерея липне до верху на широкому екрані.
+  const frames: MediaFrame[] = (data.images.length > 0
+    ? data.images
+    : (data.print.previewUrl ? [{ url: data.print.previewUrl, alt: data.print.title }] : [])
+  ).map((image, index) => ({ key: `${image.url}-${index}`, src: image.url, alt: image.alt || data.print.title }));
 
-        Права колонка з описом і акордеоном удвічі довша за фото, і без
-        цього під галереєю лишалася порожня половина екрана — а товар,
-        заради якого сторінку відкрили, їхав угору саме тоді, коли людина
-        читає, з чого він і коли приїде. Baymard називає це прямо: фото має
-        лишатися в полі зору весь час, поки триває вибір.
-      */}
-      <div className="md:sticky md:top-24">
-        <Gallery images={data.images} fallback={data.print.previewUrl} title={data.print.title} />
+  return (
+    /*
+     * Фото стосом ліворуч, панель покупки липне праворуч — тепер липне
+     * САМЕ панель, а не галерея: кадрів стало багато, вони довші за екран,
+     * і липка галерея ховала б власні нижні кадри. Довідковий хвіст
+     * (догляд, доставка) — під фото, щоб липка панель була короткою.
+     */
+    <div className="grid items-start gap-x-10 gap-y-12 md:grid-cols-2">
+      <div>
+        <MediaStack frames={frames} emptyText="Фото принта готуємо" />
       </div>
 
-      <div>
+      <div className="md:sticky md:top-24">
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
         <div className="mt-3 border-t border-ink pt-3" aria-live="polite">
           <p className="font-display text-3xl font-bold text-ink">
@@ -475,16 +476,19 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </ButtonLink>
         </div>
 
-        {/*
-          Опис розбито на розділи, а не викладено абзацом.
+      </div>
 
-          Baymard: на сторінці товару читають не підряд, а шукають свою
-          відповідь — «з чого це», «як прати», «коли приїде», «що як не
-          підійде». Суцільний текст змушує вичитувати чуже, щоб знайти своє.
-          Перший розділ відкритий: якщо всі згорнуті, більшість не відкриє
-          жодного.
-        */}
-        <div className="mt-8 divide-y divide-line border-y border-line">
+      {/*
+        Опис розбито на розділи, а не викладено абзацом.
+
+        Baymard: на сторінці товару читають не підряд, а шукають свою
+        відповідь — «з чого це», «як прати», «коли приїде», «що як не
+        підійде». Суцільний текст змушує вичитувати чуже, щоб знайти своє.
+        Перший розділ відкритий: якщо всі згорнуті, більшість не відкриє
+        жодного. Живе під фото: це читання ПІСЛЯ вибору, а не замість.
+      */}
+      <div className="md:col-start-1">
+        <div className="divide-y divide-line border-y border-line">
           <Section title="Виріб і друк" open>
             <p>
               {garment?.description !== undefined && garment.description !== ''
@@ -555,131 +559,3 @@ function Section({ title, children, open = false }: { title: string; children: R
   );
 }
 
-/**
- * Галерея товару.
- *
- * Без сторонніх бібліотек і без каруселі: пʼять фото — це рівно той обсяг,
- * який показується мініатюрами без гортання. Карусель тут додала б анімацію,
- * свайпи й клавіатурну навігацію на порожньому місці.
- */
-function Gallery({
-  images, fallback, title,
-}: { images: ReadonlyArray<{ url: string; alt: string }>; fallback: string; title: string }) {
-  const list = images.length > 0
-    ? images
-    : (fallback ? [{ url: fallback, alt: title }] : []);
-  const [active, setActive] = useState(0);
-  const [zoomed, setZoomed] = useState(false);
-  const current = list[Math.min(active, list.length - 1)];
-
-  /*
-   * Стрілки гортають і Escape закриває, поки збільшене фото відкрите.
-   *
-   * Слухач висить лише в стані zoom — постійний перехоплював би стрілки
-   * в полях вводу решти сторінки.
-   */
-  useEffect(() => {
-    if (!zoomed) return;
-    function onKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') setZoomed(false);
-      if (e.key === 'ArrowRight') setActive((i) => (i + 1) % list.length);
-      if (e.key === 'ArrowLeft') setActive((i) => (i - 1 + list.length) % list.length);
-    }
-    window.addEventListener('keydown', onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previous;
-    };
-  }, [zoomed, list.length]);
-
-  if (!current) return <PrintThumb src={null} alt={title} />;
-
-  return (
-    <div>
-      {/*
-        Фото збільшується кліком.
-
-        Для одягу це не прикраса: рішення про покупку ухвалюють, роздивившись
-        принт і фактуру, а квадрат у пів колонки цього не дає. Збільшення на
-        весь екран — найдешевша форма зуму, яка працює й на телефоні.
-      */}
-      <button
-        type="button"
-        onClick={() => setZoomed(true)}
-        className="block w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-        aria-label="Збільшити фото"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={current.url}
-          alt={current.alt}
-          className="aspect-square w-full bg-surface-sunken object-cover"
-        />
-      </button>
-
-      {/*
-        Портал у body, а не рендер на місці.
-
-        Галерея живе всередині sticky-обгортки, і `fixed` елемент усередині
-        неї опиняється в чужому stacking context: підкладка не накривала
-        шапку, і крізь «затемнення» просвічували кнопки сторінки. Портал
-        виносить оверлей на верхній рівень документа, де z-index означає
-        те, що написано.
-      */}
-      {zoomed && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${title} — збільшене фото`}
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/90 animate-[fade-in_.15s_ease-out]"
-          onClick={() => setZoomed(false)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={current.url}
-            alt={current.alt}
-            className="max-h-[92vh] max-w-[92vw] cursor-zoom-out object-contain"
-          />
-          {list.length > 1 && (
-            <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm tabular-nums text-white/80">
-              {active + 1} / {list.length} · гортай стрілками
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => setZoomed(false)}
-            aria-label="Закрити"
-            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center text-white hover:opacity-70"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>,
-        document.body,
-      )}
-      {list.length > 1 && (
-        <div className="mt-3 flex gap-2">
-          {list.map((image, index) => (
-            <button
-              key={image.url}
-              type="button"
-              onClick={() => setActive(index)}
-              aria-label={`Фото ${index + 1} з ${list.length}`}
-              aria-current={index === active}
-              className={[
-                'w-1/5 overflow-hidden border-2 transition',
-                index === active ? 'border-ink' : 'border-transparent hover:border-line-strong',
-              ].join(' ')}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image.url} alt="" className="aspect-square w-full object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

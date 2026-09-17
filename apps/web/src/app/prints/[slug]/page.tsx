@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { PrintOfferDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintOfferView } from '@/features/catalog/components/PrintOfferView';
+import { RelatedPrints } from '@/features/catalog/components/RelatedRail';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breadcrumbJsonLd, JsonLd, productJsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
@@ -90,6 +91,7 @@ export default async function PrintPage({ params }: Params) {
           <span className="text-ink">{offer.print.title}</span>
         </nav>
         <PrintOfferView slug={params.slug} initialData={offer} />
+        <RelatedPrints excludeSlug={params.slug} collectionSlug={offer.print.collectionSlugs[0]} />
       </div>
     </PublicShell>
   );

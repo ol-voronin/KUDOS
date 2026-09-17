@@ -68,7 +68,10 @@ export async function PublicFooter() {
     <footer className="mt-16 border-t border-ink">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 text-sm sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div>
-          <p className="label-eyebrow">Хто ми</p>
+          {/* Біжучий песик зі слоганом — жива частина лого, а не декор. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-dog.svg" alt="" className="h-12 w-auto" draggable={false} />
+          <p className="mt-2 font-medium text-ink">Одяг щасливих собачників</p>
           <p className="mt-2 leading-relaxed text-ink-muted">
             Шиємо й друкуємо {site.cityIn}. Відправляємо по всій Україні.
           </p>

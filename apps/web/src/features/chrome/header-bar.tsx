@@ -147,11 +147,19 @@ export function HeaderBar({
           </span>
         </button>
 
-        <Link
-          href="/"
-          className="justify-self-center font-display text-[0.95rem] font-medium uppercase tracking-[0.14em] text-ink sm:text-base"
-        >
-          {brand}
+        {/*
+          Лого «Бабака»: векторний лок-ап (песик + напис) замість текстового
+          логотипа. alt несе назву з бази — скрінрідери і SEO бачать бренд,
+          навіть якщо картинка не завантажилась.
+        */}
+        <Link href="/" className="tap-sm justify-self-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-lockup.svg"
+            alt={brand}
+            className="h-8 w-auto sm:h-9"
+            draggable={false}
+          />
         </Link>
 
         <div className="flex items-center justify-end gap-5">

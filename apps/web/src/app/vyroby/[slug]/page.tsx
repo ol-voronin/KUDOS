@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { GarmentOfferDto } from '@dt/contracts';
+import { GarmentOfferDto, RangeDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { GarmentOfferView } from '@/features/catalog/components/GarmentOfferView';
+import { RelatedGarments } from '@/features/catalog/components/RelatedRail';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breadcrumbJsonLd, JsonLd, productJsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
@@ -46,6 +47,8 @@ export default async function GarmentPage({ params }: Params) {
   }
 
   const site = await getSettings();
+  // Для рейки «Вам також може сподобатись» — решта асортименту.
+  const range = await serverFetchOrNull('/catalog/range', RangeDto, 300);
 
   const totals = offer.variants.map((v) => v.priceMinor);
   const inStock = offer.variants.some((v) => v.availability === 'IN_STOCK');
@@ -78,6 +81,7 @@ export default async function GarmentPage({ params }: Params) {
           <span className="text-ink">{offer.garment.name}</span>
         </nav>
         <GarmentOfferView slug={params.slug} initialData={offer} />
+        <RelatedGarments garments={range?.garments ?? []} excludeSlug={params.slug} />
       </div>
     </PublicShell>
   );

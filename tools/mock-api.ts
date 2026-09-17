@@ -28,7 +28,7 @@ const PHOTOS = ['art-black','art-white','art-pair','boss-w','boss-chi','boss-pit
 const uuid = (i) => `00000000-0000-4000-8000-${String(i).padStart(12,'0')}`;
 
 const SETTINGS = {
-  brand: 'Хвісторія', legalEntityName: 'Фізична особа-підприємець Воронін Олексій Петрович',
+  brand: 'Бабака', legalEntityName: 'Фізична особа-підприємець Воронін Олексій Петрович',
   taxNumber: '3442812170', city: 'Харків', cityIn: 'у Харкові',
   phone: '+380508646355', phoneDisplay: '+380 50 864 63 55',
   telegram: 'kudos_print', telegramUrl: 'https://t.me/kudos_print',
