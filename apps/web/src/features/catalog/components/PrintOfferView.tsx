@@ -202,10 +202,45 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     setAdded(true);
   }
 
-  const frames: MediaFrame[] = (data.images.length > 0
+  const photoFrames: MediaFrame[] = (data.images.length > 0
     ? data.images
     : (data.print.previewUrl ? [{ url: data.print.previewUrl, alt: data.print.title }] : [])
   ).map((image, index) => ({ key: `${image.url}-${index}`, src: image.url, alt: image.alt || data.print.title }));
+
+  /*
+   * Авто-мокап живе В ГАЛЕРЕЇ, другим кадром після обкладинки, — прохання
+   * Даші: «як виглядає принт» має бути фотографією зліва, а не віджетом у
+   * колонці покупки. Кадр живий: перемкнули виріб чи колір — мокап у стосі
+   * перемалювався. Немає макета чи фото кольору — кадр просто не додається.
+   */
+  const mockupFrame: MediaFrame[] = garment && selectedColour
+    && canMockup(garment.slug, selectedColour.supplierCode, data.print.mockupUrl)
+    ? [{
+      key: 'mockup',
+      alt: `${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode} — орієнтовний вигляд`,
+      node: (
+        <figure className="p-3">
+          <PrintOnGarment
+            garmentSlug={garment.slug}
+            colourCode={selectedColour.supplierCode}
+            mockupUrl={data.print.mockupUrl}
+            sizeTier={data.print.sizeTier}
+            alt={`${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode}`}
+            className="mx-auto max-w-md"
+          />
+          <figcaption className="mt-2 text-center text-xs text-ink-subtle">
+            Орієнтовний вигляд · {garment.name}, {selectedColour.name ?? selectedColour.supplierCode}
+          </figcaption>
+        </figure>
+      ),
+    }]
+    : [];
+
+  const frames: MediaFrame[] = [
+    ...photoFrames.slice(0, 1),
+    ...mockupFrame,
+    ...photoFrames.slice(1),
+  ];
 
   return (
     /*
@@ -297,28 +332,12 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         )}
 
         {/*
-          Авто-мокап: якщо в принта є вебмакет, а в кольору — фото, покупець
-          бачить саме цей принт на саме цьому виробі в саме цьому кольорі.
-          Картинка складається на льоту (фото + прозорий PNG), тож комбінацій
-          може бути скільки завгодно без жодного намальованого мокапа.
-          Немає макета чи кадру — стара маленька картка «носія», як і було.
+          Мокап тепер живе другим кадром у галереї зліва (прохання Даші).
+          Тут лишається тільки запасна картка «носія» для принтів БЕЗ
+          вебмакета — щоб вибір кольору все одно щось показував.
         */}
-        {garment && selectedColour && canMockup(garment.slug, selectedColour.supplierCode, data.print.mockupUrl) ? (
-          <figure className="mt-6 rounded-card border border-line bg-surface-sunken p-3">
-            <PrintOnGarment
-              garmentSlug={garment.slug}
-              colourCode={selectedColour.supplierCode}
-              mockupUrl={data.print.mockupUrl}
-              sizeTier={data.print.sizeTier}
-              alt={`${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode}`}
-              className="mx-auto max-w-xs"
-            />
-            <figcaption className="mt-2 text-center text-xs text-ink-subtle">
-              Орієнтовний вигляд · {garment.name}, {selectedColour.name ?? selectedColour.supplierCode}.
-              Розмір принта: {data.print.sizeTier}.
-            </figcaption>
-          </figure>
-        ) : garment && selectedColour && (
+        {garment && selectedColour
+          && !canMockup(garment.slug, selectedColour.supplierCode, data.print.mockupUrl) && (
           <GarmentPreview
             garmentSlug={garment.slug}
             garmentName={garment.name}

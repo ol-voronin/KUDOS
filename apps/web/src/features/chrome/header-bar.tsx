@@ -179,7 +179,7 @@ export function HeaderBar({
             футері й на сторінці контактів: там його шукають свідомо, а в
             шапці він конкурував із кошиком.
           */}
-          <Link href="/#faq" className="nav-link hidden whitespace-nowrap lg:inline">Часті запитання</Link>
+          <Link href="/faq" className="nav-link hidden whitespace-nowrap lg:inline">Часті запитання</Link>
           {/*
             Кошик. Число в дужках зʼявляється тільки коли воно є: «Кошик (0)»
             на порожньому магазині — це підпис до кнопки, яка нічого не
@@ -251,7 +251,7 @@ export function HeaderBar({
               )}
             </div>
           ))}
-          <Link href="/#faq" onClick={() => setMenu(false)} className="nav-link py-3">Часті запитання</Link>
+          <Link href="/faq" onClick={() => setMenu(false)} className="nav-link py-3">Часті запитання</Link>
           {/* На телефоні номер лишається: там натиснути на нього — це подзвонити. */}
           <a href={`tel:${phone}`} className="nav-link py-3 font-semibold">{phoneDisplay}</a>
         </nav>

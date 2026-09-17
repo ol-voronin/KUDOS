@@ -5,10 +5,17 @@ import { createPortal } from 'react-dom';
 
 export interface MediaFrame {
   readonly key: string;
-  readonly src: string;
+  readonly src?: string;
   readonly alt: string;
   /** 'photo' — прямокутний кадр у своїй пропорції; 'scheme' — квадратна схема на підкладці. */
   readonly kind?: 'photo' | 'scheme';
+  /**
+   * Живий кадр замість картинки — наприклад, авто-мокап принта на виробі,
+   * який міняється разом з обраним кольором. Малюється як повноцінний кадр
+   * стоса/стрічки; зум по кліку для нього не вмикається (це вже композиція,
+   * а не файл, який можна показати більшим).
+   */
+  readonly node?: React.ReactNode;
 }
 
 /**
@@ -34,12 +41,18 @@ export function MediaStack({ frames, emptyText = 'Фото готуємо' }: {
   const [dot, setDot] = useState(0);
   const stripRef = useRef<HTMLDivElement>(null);
 
+  // Стрілки гортають лише справжні картинки: живий node-кадр у зумі не має чого показати.
+  const zoomable = frames.map((f, i) => (f.src !== undefined ? i : -1)).filter((i) => i !== -1);
   useEffect(() => {
     if (zoom === null) return;
+    function step(from: number, dir: 1 | -1): number {
+      const at = zoomable.indexOf(from);
+      return zoomable[(at + dir + zoomable.length) % zoomable.length] ?? from;
+    }
     function onKey(e: KeyboardEvent): void {
       if (e.key === 'Escape') setZoom(null);
-      if (e.key === 'ArrowRight') setZoom((i) => (i === null ? i : (i + 1) % frames.length));
-      if (e.key === 'ArrowLeft') setZoom((i) => (i === null ? i : (i - 1 + frames.length) % frames.length));
+      if (e.key === 'ArrowRight') setZoom((i) => (i === null ? i : step(i, 1)));
+      if (e.key === 'ArrowLeft') setZoom((i) => (i === null ? i : step(i, -1)));
     }
     window.addEventListener('keydown', onKey);
     const previous = document.body.style.overflow;
@@ -59,6 +72,9 @@ export function MediaStack({ frames, emptyText = 'Фото готуємо' }: {
   }
 
   function frameImg(f: MediaFrame, index: number): React.ReactNode {
+    if (f.node !== undefined) {
+      return <div className="bg-surface-sunken" role="img" aria-label={f.alt}>{f.node}</div>;
+    }
     const img = f.kind === 'scheme'
       // eslint-disable-next-line @next/next/no-img-element
       ? <img src={f.src} alt={f.alt} className="mx-auto aspect-square w-full max-w-md object-contain p-8" draggable={false} />
@@ -125,9 +141,9 @@ export function MediaStack({ frames, emptyText = 'Фото готуємо' }: {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={zoomed.src} alt={zoomed.alt} className="max-h-[92vh] max-w-[92vw] cursor-zoom-out object-contain" />
-          {frames.length > 1 && (
+          {zoomable.length > 1 && (
             <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm tabular-nums text-white/80">
-              {(zoom ?? 0) + 1} / {frames.length} · гортай стрілками
+              {zoomable.indexOf(zoom ?? 0) + 1} / {zoomable.length} · гортай стрілками
             </p>
           )}
           <button

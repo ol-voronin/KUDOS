@@ -25,6 +25,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // наміром купити, і вони не про принт. Сторінка асортименту єдина на них
     // відповідає, тож у карті вона стоїть нарівні з каталогом.
     { url: `${BASE}/vyroby`, changeFrequency: 'monthly', priority: 0.8 },
+    // FAQ із розміткою FAQPage: сторінка, за яку Google показує відповіді
+    // просто у видачі — «скільки їде», «чи можна повернути».
+    { url: `${BASE}/faq`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/statti`, changeFrequency: 'weekly', priority: 0.7 },
   ];
