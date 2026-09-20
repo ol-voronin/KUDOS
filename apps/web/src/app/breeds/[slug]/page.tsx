@@ -101,22 +101,44 @@ export default async function BreedPage({ params }: Params) {
           <span className="text-ink">{breed.name}</span>
         </nav>
 
-        <h1 className="mt-3 font-display text-hero font-bold text-ink">
-          Футболки й худі з принтом {breed.name}
-        </h1>
+        {/*
+          Фото породи стоїть ПОРУЧ із заголовком, а не банером на всю ширину.
+          Це не герой сторінки: людина прийшла по принти, фото лише підтверджує,
+          що вона потрапила до своєї собаки. Немає фото — колонка просто не
+          малюється, і текст займає всю ширину, як раніше.
+        */}
+        <div className={breed.photoUrl ? 'mt-3 grid gap-6 md:grid-cols-[1fr_18rem] md:items-start' : 'mt-3'}>
+          <div>
+            <h1 className="font-display text-hero font-bold text-ink">
+              Футболки й худі з принтом {breed.name}
+            </h1>
 
-        <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
-          {prints.length > 0
-            ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Друкуємо {site.cityIn} на власних виробах і на органічній бавовні Native Spirit.</>
-            : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
-        </p>
+            <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
+              {prints.length > 0
+                ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Друкуємо {site.cityIn} на власних виробах і на органічній бавовні Native Spirit.</>
+                : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
+            </p>
 
-        {/* Синоніми — те, за чим реально гуглять. Поле в схемі було завжди. */}
-        {breed.synonyms.length > 0 && (
-          <p className="mt-3 max-w-prose text-sm text-ink-subtle">
-            Також шукають як: {breed.synonyms.join(', ')}.
-          </p>
-        )}
+            {/* Синоніми — те, за чим реально гуглять. Поле в схемі було завжди. */}
+            {breed.synonyms.length > 0 && (
+              <p className="mt-3 max-w-prose text-sm text-ink-subtle">
+                Також шукають як: {breed.synonyms.join(', ')}.
+              </p>
+            )}
+          </div>
+
+          {breed.photoUrl && (
+            <figure className="order-first md:order-none">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={breed.photoUrl}
+                alt={breed.name}
+                className="aspect-[4/3] w-full rounded-card object-cover"
+              />
+              <figcaption className="mt-2 text-xs text-ink-subtle">{breed.name}</figcaption>
+            </figure>
+          )}
+        </div>
 
         {garmentTypes.length > 1 && (
           <div className="mt-8 flex flex-wrap gap-2" aria-label="Доступні вироби">

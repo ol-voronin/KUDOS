@@ -517,20 +517,30 @@ export class CatalogService {
    * гроші, заради одного лічильника не варто.
    */
   /**
-   * Обкладинка для плитки породи — превʼю найновішого її принта.
+   * Обкладинка для плитки породи: фото самої собаки, якщо воно є, інакше —
+   * превʼю найновішого її принта.
    *
-   * Свідомо НЕ окреме поле «фото породи» в базі. Фотографію породи довелося б
-   * знайти, купити й вивантажити на кожну з них, вона показувала б чужу
-   * собаку й не мала б стосунку до того, що ми продаємо. Превʼю принта
-   * показує наш малюнок, береться з даних, які вже є, і оновлюється саме.
+   * Довго тут було тільки друге, і це створювало коло: плитка «такса» вела
+   * малюнком такси в капелюсі, з якого породи не видно. Людина ж приходить
+   * саме перевірити, чи то її собака. Фото має пріоритет; принт лишається
+   * запасним, тож породи без фото працюють як працювали.
    */
   private async breedPreviews(): Promise<Map<string, string>> {
-    const rows = await this.prisma.db.printBreed.findMany({
-      where: { print: { isPublished: true, previewUrl: { not: '' } } },
-      select: { breedId: true, print: { select: { previewUrl: true } } },
-      orderBy: { print: { createdAt: 'desc' } },
-    });
+    const [photos, rows] = await Promise.all([
+      this.prisma.db.breed.findMany({
+        where: { photoUrl: { not: null } },
+        select: { id: true, photoUrl: true },
+      }),
+      this.prisma.db.printBreed.findMany({
+        where: { print: { isPublished: true, previewUrl: { not: '' } } },
+        select: { breedId: true, print: { select: { previewUrl: true } } },
+        orderBy: { print: { createdAt: 'desc' } },
+      }),
+    ]);
     const map = new Map<string, string>();
+    for (const b of photos as Array<{ id: string; photoUrl: string | null }>) {
+      if (b.photoUrl) map.set(b.id, b.photoUrl);
+    }
     for (const r of rows as Array<{ breedId: string; print: { previewUrl: string } }>) {
       if (!map.has(r.breedId)) map.set(r.breedId, r.print.previewUrl);
     }
@@ -714,7 +724,7 @@ export class CatalogService {
   async getBreedPage(slug: string): Promise<BreedPageDto> {
     const breed = await this.prisma.db.breed.findUnique({
       where: { slug },
-      select: { id: true, slug: true, name: true, synonyms: true },
+      select: { id: true, slug: true, name: true, synonyms: true, photoUrl: true },
     });
     if (!breed) {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Породу не знайдено' });
