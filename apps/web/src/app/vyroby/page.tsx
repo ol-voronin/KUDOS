@@ -45,13 +45,13 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 const RANGE_GROUPS = [
   { id: 'futbolky', label: 'Футболки', match: (slug: string) => slug.startsWith('futbolka-'),
-    blurb: 'Класична й оверсайз. Щільна бавовна, шиємо самі — можемо вкоротити під зріст.' },
+    blurb: 'Класична й оверсайз. Щільна бавовна, виготовляємо самі.' },
   { id: 'svitshoty', label: 'Світшоти', match: (slug: string) => slug.startsWith('svitshot-'),
     blurb: 'Тепла тринитка з начосом. Вільний крій, манжети тримають форму.' },
   { id: 'khudi', label: 'Худі', match: (slug: string) => slug.startsWith('hudi-'),
     blurb: 'Капюшон, кишеня-кенгуру і вісімнадцять кольорів — від молочного шоколаду до бузку.' },
   { id: 'dva-v-odnomu', label: '2-в-1', match: (slug: string) => slug.startsWith('hibryd-'),
-    blurb: 'Світшот-футболка та худі-футболка: короткий рукав, тепле тіло. Таке мало хто шиє.' },
+    blurb: 'Світшот-футболка та худі-футболка: короткий рукав, тепле тіло. Таке мало хто робить.' },
 ] as const;
 
 function RangeSections({ garments, cheapestPrint }: {

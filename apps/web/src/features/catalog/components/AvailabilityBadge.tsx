@@ -24,7 +24,7 @@ export function AvailabilityBadge({
     return (
       <span className="inline-flex items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-strong">
         <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-        Пошиємо за {leadTimeDays} дн.
+        Виготовимо за {leadTimeDays} дн.
       </span>
     );
   }

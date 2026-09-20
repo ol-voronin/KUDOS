@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatUAH, minor, type PrintCardDto } from '@dt/contracts';
+import { type PrintCardDto } from '@dt/contracts';
 import { PrintThumb } from '@/components/print-thumb';
 
 /**
@@ -10,9 +10,10 @@ import { PrintThumb } from '@/components/print-thumb';
  * вкладені прямокутники читаються як шум, і саме тому обидва референси
  * кладуть товар на голе тло й розділяють колонки волосінню.
  *
- * Ціна показується як «від N ₴», бо принт друкується на кількох виробах із
- * різною базовою ціною. Не показати ціну взагалі гірше: людина мусить
- * заходити в картку, щоб зрозуміти, чи це взагалі її діапазон.
+ * Ціни на плитці немає. Друк коштує однаково на всіх принтах, тож «від 890 ₴»
+ * стояло б під кожною карткою тим самим числом — це не інформація, а шум, який
+ * ще й відволікає від малюнка. Ціна живе там, де вона нарешті щось означає:
+ * у картці принта, поруч із вибором виробу.
  */
 export function PrintCard({ print }: { print: PrintCardDto }) {
   return (
@@ -27,22 +28,14 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
       */}
       <div className="relative overflow-hidden bg-surface-sunken">
         <div className="transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none">
-          <PrintThumb src={print.previewUrl} alt={print.title} />
+          <PrintThumb src={print.previewUrl} alt={print.title} ratio="portrait" />
         </div>
       </div>
 
-      <p className="mt-3 border-t border-ink pt-2 text-sm font-medium text-ink transition-opacity duration-200 group-hover:opacity-60">
-        {print.title}
-      </p>
-
-      <div className="mt-1 flex items-baseline justify-between gap-2">
-        {print.fromPriceMinor === null
-          ? <span className="text-sm text-ink-subtle">ціну уточнюємо</span>
-          : (
-            <p className="font-display text-lg font-bold text-ink">
-              {formatUAH(minor(print.fromPriceMinor))}
-            </p>
-          )}
+      <div className="mt-3 flex items-baseline justify-between gap-2 border-t border-ink pt-2">
+        <p className="text-sm font-medium text-ink transition-opacity duration-200 group-hover:opacity-60">
+          {print.title}
+        </p>
         {/*
           Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
           кожній картці однаково голосно, тобто не означала нічого. Але й одна

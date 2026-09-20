@@ -5,6 +5,7 @@ import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
+import { RETURN_LINE_PRINTED, RETURN_POLICY_TEXT } from '@/config/returns';
 import { shipWindow } from '../delivery-estimate';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
@@ -256,20 +257,22 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
       <div className="md:sticky md:top-24">
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
+        {/*
+          Розкладу «стільки виріб + стільки друк» тут більше немає.
+          Покупець платить одну суму; знати, як вона ділиться всередині, йому
+          ні для чого — це наша бухгалтерія, винесена на вітрину. Що йому
+          справді треба — побачити, у скільки обійдеться саме худі, а не
+          футболка; це видно на кнопках вибору виробу нижче.
+        */}
         <div className="mt-3 border-t border-ink pt-3" aria-live="polite">
           <p className="font-display text-3xl font-bold text-ink">
             {priceIsExact ? '' : 'від '}{formatUAH(minor(totalMinor))}
           </p>
-          {garment && (
-            <p className="mt-1 text-sm text-ink-subtle">
-              {formatUAH(minor(garmentPriceMinor))} виріб + {formatUAH(minor(data.printPriceMinor))} друк
-            </p>
-          )}
         </div>
 
         {data.garments.length > 1 && (
           <fieldset className="mt-6">
-            <legend className="label-eyebrow mb-2">Виріб</legend>
+            <legend className="label-eyebrow mb-2">Обрати виріб</legend>
             <div className="flex flex-wrap gap-2">
               {data.garments.map((g) => (
                 <button
@@ -470,7 +473,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
             */
             <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
               <li>· Оплата не зараз — спершу підтвердимо наявність і напишемо</li>
-              <li>· Обмін і повернення {site.returnDays} днів, якщо річ не носили</li>
+              <li>· {RETURN_LINE_PRINTED}</li>
               <li>
                 · Доставка від {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ — за наш рахунок
               </li>
@@ -544,11 +547,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
               Після оформлення ми звіряємо наявність і надсилаємо рахунок. Картку вводиш на
               стороні Monobank, не в нас; гроші блокуються й списуються після підтвердження.
             </p>
-            <p>
-              Обмін і повернення — {site.returnDays} днів, якщо річ не носили й збережено вигляд.
-              Принт, намальований із твого фото, поверненню не підлягає: він зроблений
-              персонально. Помилились ми — переробимо або повернемо гроші, зворотна пересилка наша.
-            </p>
+            {RETURN_POLICY_TEXT.map((p) => <p key={p}>{p}</p>)}
           </Section>
         </div>
       </div>

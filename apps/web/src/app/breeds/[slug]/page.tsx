@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const count = data.prints.length;
   const title = `Футболки й худі з принтом ${name} — ${site.brand}`;
   const description = count > 0
-    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}, шиємо самі.`
+    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}, виготовляємо самі.`
     : `Принта з ${name} ще немає в каталозі — намалюємо з твого фото. Друкуємо ${site.cityIn}.`;
 
   return {

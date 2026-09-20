@@ -9,13 +9,26 @@ import { useState } from 'react';
  * будь-який з посилань може виявитись мертвим. Порожній прямокутник виглядає
  * як зламана сторінка; підписаний — як товар, у якого просто ще немає фото.
  */
-export function PrintThumb({ src, alt, className = '' }: { src?: string | null; alt: string; className?: string }) {
+export function PrintThumb({
+  src, alt, className = '', ratio = 'square',
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+  /**
+   * Квадрат — для дрібних мініатюр (кошик, пошук, адмінка), де важливо, щоб
+   * рядок не розповзався. Вертикаль 3:4 — для вітрини: обкладинка принта це
+   * фото людини у виробі, і квадрат різав би її по груди.
+   */
+  ratio?: 'square' | 'portrait';
+}) {
   const [failed, setFailed] = useState(false);
+  const box = ratio === 'portrait' ? 'aspect-[3/4]' : 'aspect-square';
 
   if (!src || failed) {
     return (
       <div
-        className={`flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-card border border-dashed border-line-strong bg-surface-sunken text-ink-subtle ${className}`}
+        className={`flex ${box} w-full flex-col items-center justify-center gap-2 rounded-card border border-dashed border-line-strong bg-surface-sunken text-ink-subtle ${className}`}
         role="img"
         aria-label={`${alt} — фото ще немає`}
       >
@@ -36,7 +49,7 @@ export function PrintThumb({ src, alt, className = '' }: { src?: string | null; 
       src={src}
       alt={alt}
       onError={() => setFailed(true)}
-      className={`aspect-square w-full rounded-card object-cover ${className}`}
+      className={`${box} w-full rounded-card object-cover ${className}`}
     />
   );
 }

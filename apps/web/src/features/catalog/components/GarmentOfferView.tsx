@@ -5,6 +5,7 @@ import { minor, formatUAH, type GarmentOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
+import { RETURN_LINE_BASIC } from '@/config/returns';
 import { shipWindow } from '../delivery-estimate';
 import { garmentPhoto } from '../garment-photos';
 import { readRememberedSize, rememberSize } from '../remembered-size';
@@ -209,7 +210,6 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
         {selectedFabric && (
           <p className="mt-4 text-sm text-ink-muted">
             {selectedFabric.composition} · {selectedFabric.weightGsm} г/м²
-            {garment.lengthAdjustable ? ' · можемо вкоротити під зріст' : ''}
           </p>
         )}
 
@@ -280,7 +280,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
           ) : (
             <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
               <li>· Оплата не зараз — спершу підтвердимо наявність і напишемо</li>
-              <li>· Обмін і повернення {site.returnDays} днів, якщо річ не носили</li>
+              <li>· {RETURN_LINE_BASIC} — {site.returnDays} днів, якщо річ не носили</li>
               <li>
                 · Доставка від {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ — за наш рахунок
               </li>
@@ -346,7 +346,12 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
               стороні Monobank, не в нас; гроші блокуються й списуються після підтвердження.
             </p>
             <p>
-              Обмін і повернення — {site.returnDays} днів, якщо річ не носили й збережено вигляд.
+              Це базова річ без принта — її можна обміняти чи повернути протягом{' '}
+              {site.returnDays} днів, якщо річ не носили й збережено вигляд.
+            </p>
+            <p>
+              Одяг із принтами — інша історія: його виготовляємо під конкретне замовлення,
+              тож обмін можливий лише за браку чи нашої помилки.
             </p>
           </DetailsSection>
         </div>

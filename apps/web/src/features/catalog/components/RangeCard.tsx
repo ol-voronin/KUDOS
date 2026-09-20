@@ -86,7 +86,7 @@ export function RangeCard({ garment, cheapestPrintMinor }: {
           <dd className="text-ink">{garment.sizes.map((s) => s.label).join(' · ')}</dd>
           {garment.leadTimeDays !== null && (
             <>
-              <dt className="text-ink-subtle">Шиємо</dt>
+              <dt className="text-ink-subtle">Виготовляємо</dt>
               <dd className="text-ink">
                 {garment.leadTimeDays} {plural(garment.leadTimeDays, 'робочий день', 'робочі дні', 'робочих днів')}
               </dd>
@@ -99,7 +99,9 @@ export function RangeCard({ garment, cheapestPrintMinor }: {
           <span className="ml-2 text-sm font-normal text-ink-subtle">
             без принта
             {cheapestPrintMinor !== null && (
-              <> · з принтом від {formatUAH(minor(garment.basePriceMinor + cheapestPrintMinor))}</>
+              /* Без «від»: друк коштує однаково на будь-якому принті, тож це
+                 не діапазон, а точна ціна цієї ж речі з малюнком. */
+              <> · з принтом {formatUAH(minor(garment.basePriceMinor + cheapestPrintMinor))}</>
             )}
           </span>
         </p>
