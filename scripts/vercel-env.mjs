@@ -74,11 +74,13 @@ const previous = readEnvFile('vercel-api-env.txt') ?? {};
 const keepOrMake = (key) => previous[key] || secret();
 
 // Адреса сайту потрібна API, щоб було куди стукати після публікації.
-// Коли зʼявиться власний домен — поміняти тут і в обох проєктах Vercel.
+// З вересня 2026 це власний домен; адреса *.vercel.app лишається робочою,
+// але канонічною більше не є — на неї не має посилатись ні лист, ні карта
+// сайту, ні вебхук.
 const webUrl = local['WEB_URL']
   || local['NEXT_PUBLIC_SITE_URL']
   || previous['WEB_URL']
-  || 'https://kudos-web-ten.vercel.app';
+  || 'https://babaka.shop';
 
 const vars = {
   DATABASE_URL: forPrismaPool(neon['DATABASE_URL']),
