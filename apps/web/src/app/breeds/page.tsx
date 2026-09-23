@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BreedListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
-import { BreedStrip, plural } from '@/features/home/blocks';
+import { BreedStrip } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink, EmptyState } from '@/components/ui';
@@ -32,7 +32,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function BreedsPage() {
   const data = await serverFetchOrNull('/catalog/breeds', BreedListDto, 300);
   const breeds = data?.items ?? [];
-  const withPrints = breeds.filter((b) => b.printCount > 0).length;
 
   return (
     <PublicShell>
@@ -46,8 +45,8 @@ export default async function BreedsPage() {
         <h1 className="mt-3 font-display text-hero font-bold uppercase text-ink">Породи</h1>
         {breeds.length > 0 && (
           <p className="mt-3 max-w-prose text-lg text-ink-muted">
-            {withPrints} {plural(withPrints, 'порода', 'породи', 'порід')} з готовими принтами.
-            Решту малюємо з твого фото.
+            Шукай готові принти по породам, а як треба особливе — замовляй адаптацію
+            або власний дизайн.
           </p>
         )}
 

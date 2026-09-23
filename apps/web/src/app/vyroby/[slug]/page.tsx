@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const title = `${offer.garment.name} без принта — базовий одяг | ${site.brand}`;
   const description = `${offer.garment.name}: базовий одяг без принта. `
-    + `${offer.garment.fabrics[0]?.composition ?? ''}. Шиємо ${site.cityIn}, доставка по Україні.`;
+    + `${offer.garment.fabrics[0]?.composition ?? ''}. Виготовляємо ${site.cityIn}, доставка по Україні.`;
 
   return {
     title,
@@ -58,7 +58,7 @@ export default async function GarmentPage({ params }: Params) {
       {totals.length > 0 && (
         <JsonLd data={productJsonLd({
           name: `${offer.garment.name} без принта`,
-          description: `${offer.garment.name}: базовий одяг без принта. Шиємо ${site.cityIn}.`,
+          description: `${offer.garment.name}: базовий одяг без принта. Виготовляємо ${site.cityIn}.`,
           images: [],
           url: `${BASE}/vyroby/${params.slug}`,
           lowPriceMinor: Math.min(...totals),

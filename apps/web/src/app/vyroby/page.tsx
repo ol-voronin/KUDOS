@@ -4,7 +4,6 @@ import { RangeDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { Section } from '@/components/section';
 import { RangeCard } from '@/features/catalog/components/RangeCard';
-import { RangeAnchors } from '@/features/catalog/components/RangeAnchors';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
@@ -71,11 +70,10 @@ function RangeSections({ garments, cheapestPrint }: {
 
   return (
     <>
-      <RangeAnchors anchors={sections.map((s) => ({ id: s.id, label: s.label, count: s.items.length }))} />
       {sections.map((s) => (
         <Section key={s.id}>
-          {/* scroll-mt: щоб якір не ховав заголовок під липкими шапками. */}
-          <div id={s.id} className="scroll-mt-36">
+          {/* scroll-mt: під липку шапку сайту; стрічки якорів тут більше немає. */}
+          <div id={s.id} className="scroll-mt-24">
             <h2 className="font-display text-2xl font-bold text-ink">{s.label}</h2>
             {s.blurb !== '' && <p className="mt-2 max-w-2xl text-ink-muted">{s.blurb}</p>}
             <div className="mt-6 flex flex-col gap-6">
@@ -107,11 +105,15 @@ export default async function RangePage() {
           <span className="text-ink">Базовий одяг</span>
         </nav>
         <h1 className="font-display text-3xl font-bold text-ink md:text-4xl">Базовий одяг</h1>
-        <p className="mt-4 max-w-2xl text-ink-muted">
-          Шиємо самі {site.cityIn}. Кожну річ можна купити просто так, без принта, —
-          або поставити на неї будь-який малюнок із каталогу. Нижче — склад тканини,
-          щільність, повна розмірна сітка й кожен колір, у якому виріб реально існує.
-        </p>
+        <div className="mt-4 flex max-w-2xl flex-col gap-3 text-ink-muted">
+          <p>Друкуємо наших Бабак на речах еко-бренду Native Spirit (Франція).</p>
+          <p>
+            Ці речі виготовлені із високоякісних органічних матеріалів та поліестеру
+            вторинної переробки, а якість матеріалів перевірена і підтверджена
+            міжнародними сертифікатами та стандартами.
+          </p>
+          <p>Кожну річ можна придбати як базу, без принту.</p>
+        </div>
       </Section>
 
       {garments.length === 0 ? (
@@ -125,7 +127,7 @@ export default async function RangePage() {
       <Section tone="teal">
         <h2 className="font-display text-2xl font-bold text-ink">Не знайшли свій розмір або колір?</h2>
         <p className="mt-3 max-w-2xl text-ink-muted">
-          Шиємо самі, тому багато що можемо зробити під тебе. Напиши — порахуємо.
+          Виготовляємо самі, тому багато що можемо зробити під тебе. Напиши — порахуємо.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <ButtonLink href="/prints" size="lg">Обрати принт</ButtonLink>

@@ -73,7 +73,7 @@ export async function PublicFooter() {
           <img src="/brand/logo-dog.svg" alt="" className="h-12 w-auto" draggable={false} />
           <p className="mt-2 font-medium text-ink">Одяг щасливих собачників</p>
           <p className="mt-2 leading-relaxed text-ink-muted">
-            Шиємо й друкуємо {site.cityIn}. Відправляємо по всій Україні.
+            Виготовляємо й друкуємо {site.cityIn}. Відправляємо по всій Україні.
           </p>
         </div>
 

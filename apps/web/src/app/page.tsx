@@ -37,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
     : `${settings.brand} — одяг з принтом твоєї собаки`;
   const description = page?.seo.description.trim() !== ''
     ? page?.seo.description
-    : `Готові принти за породами або власний портрет із фото. Шиємо й друкуємо ${settings.cityIn}.`;
+    : `Готові принти за породами або власний портрет із фото. Виготовляємо й друкуємо ${settings.cityIn}.`;
 
   return {
     title,

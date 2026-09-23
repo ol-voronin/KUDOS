@@ -133,7 +133,7 @@ export default async function BreedPage({ params }: Params) {
               <img
                 src={breed.photoUrl}
                 alt={breed.name}
-                className="aspect-[4/3] w-full rounded-card object-cover"
+                className="aspect-square w-full rounded-card object-cover"
               />
               <figcaption className="mt-2 text-xs text-ink-subtle">{breed.name}</figcaption>
             </figure>

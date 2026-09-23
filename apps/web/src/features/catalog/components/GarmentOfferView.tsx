@@ -312,7 +312,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
             <p>
               {garment.description !== ''
                 ? garment.description
-                : 'Шиємо самі або беремо готові від еко-бренду Native Spirit (Франція).'}
+                : 'Друкуємо на речах еко-бренду Native Spirit (Франція) та на власних виробах.'}
             </p>
             {selectedFabric && (
               <p>
