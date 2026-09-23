@@ -142,27 +142,36 @@ export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <>
       {/*
-        Посилання «до змісту» — і чому воно тут утретє переписане.
+        Посилання «до змісту» — і чому воно тут учетверте переписане.
 
         Перша версія ховала його зсувом (`-translate-y-20`) — зсув
         застосовувався до елемента в потоці, і на прокрученій сторінці
         пігулка лишалася на видноті. Друга ховала `sr-only` і показувала на
-        `focus:` — надійніше, але `:focus` спрацьовує не лише від Tab: його
-        дає і клік мишею, і програмний `element.focus()`, який роутер робить
-        після переходу між сторінками. Саме звідси бралося «зʼявляється час
-        від часу»: людина клікала посилання в меню, сторінка мінялася, фокус
-        сідав на перший інтерактивний елемент — а перший елемент тут це воно.
+        `focus:` — надійніше, але `:focus` дає і клік мишею, і програмний
+        `element.focus()`. Третя перейшла на `focus-visible` у переконанні,
+        що програмний фокус його не вмикає.
 
-        `focus-visible` — це рівно та умова, заради якої посилання існує:
-        браузер вмикає його тільки тоді, коли навігація справді клавіатурна.
-        Мишка й програмний фокус його більше не показують.
+        Не вмикає — залежно від браузера. Роутер App Router після переходу
+        між сторінками ставить фокус на ПЕРШИЙ елемент розмітки, і цим
+        першим елементом було саме посилання; чи спалахне воно при цьому,
+        вирішувала внутрішня евристика браузера. У headless Chromium не
+        спалахувало, у звичайному Chrome на маку — спалахувало. Тобто три
+        версії поспіль ми лікували симптом: воно не мусить вирішувати, чи
+        показуватись після програмного фокуса, — воно взагалі не мусить
+        цей фокус отримувати.
+
+        Обгортка й прибирає причину: першим елементом тепер є `div`, роутер
+        ставить фокус на нього, а посилання лишається доступним рівно тим,
+        для кого існує, — тим, хто дійшов до нього клавішею Tab.
       */}
-      <a
-        href="#main"
-        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-pill focus-visible:bg-ink focus-visible:px-5 focus-visible:py-3 focus-visible:text-sm focus-visible:font-semibold focus-visible:text-surface"
-      >
-        До змісту
-      </a>
+      <div>
+        <a
+          href="#main"
+          className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-pill focus-visible:bg-ink focus-visible:px-5 focus-visible:py-3 focus-visible:text-sm focus-visible:font-semibold focus-visible:text-surface"
+        >
+          До змісту
+        </a>
+      </div>
       <div className="flex min-h-screen flex-col">
         <PublicHeader />
         <main id="main" className="flex-1">
