@@ -5,7 +5,7 @@ import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
-import { RETURN_LINE_PRINTED, RETURN_POLICY_TEXT } from '@/config/returns';
+import { CARE_WARNING, buyNotes, paymentText, shippingText } from '@/config/product-copy';
 import { shipWindow } from '../delivery-estimate';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
@@ -325,7 +325,19 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
         {colours.length > 0 && (
           <fieldset className="mt-6">
-            <legend id="colour-label" className="label-eyebrow mb-2">Колір</legend>
+            {/*
+              Назва кольору поруч із міткою, а не лише в підказці свотча:
+              «Смарагдовий» і «Зелений мох» на екрані відрізняються менше,
+              ніж у назві, а з телефона підказки не видно взагалі.
+            */}
+            <legend id="colour-label" className="label-eyebrow mb-2">
+              Колір{' '}
+              {selectedColour && (
+                <span className="text-ink">
+                  {(selectedColour.name ?? selectedColour.supplierCode).toUpperCase()}
+                </span>
+              )}
+            </legend>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="colour-label">
               {colours.map((c) => (
                 <ColourSwatch key={c.id} colour={c} selected={c.id === colourId} onSelect={setColourId} />
@@ -397,8 +409,8 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         )}
 
         {garment && (
-          <Drawer open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} title={`Розміри · ${garment.name}`}>
-            <SizeChart sizes={garment.sizes} highlight={sizeId} />
+          <Drawer open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} title="Таблиця розмірів">
+            <SizeChart garment={garment} highlight={sizeId} />
           </Drawer>
         )}
 
@@ -472,11 +484,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
               жоден не потребує більше рядка.
             */
             <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
-              <li>· Оплата не зараз — спершу підтвердимо наявність і напишемо</li>
-              <li>· {RETURN_LINE_PRINTED}</li>
-              <li>
-                · Доставка від {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ — за наш рахунок
-              </li>
+              {buyNotes(site, true).map((n) => <li key={n}>· {n}</li>)}
             </ul>
           )}
         </div>
@@ -524,30 +532,26 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </Section>
 
           <Section title="Догляд">
+            {/*
+              Догляд за річчю з принтом СУВОРІШИЙ за догляд за базовою, і
+              саме тому текст тут свій, а не спільний з `product-copy`:
+              плівка не переживе ні прасування по принту, ні гарячої сушки.
+              Спільний текст закінчується попередженням «вказано догляд за
+              виробом без принтів» — ось річ, до якої воно відсилає.
+            */}
             <p>
               Прати при 30 °C навиворіт, без відбілювача. Не сушити в машині.
               Прасувати з вивороту або через тканину, не по принту.
             </p>
+            <p>{CARE_WARNING.replace('без принтів!', 'без принтів — цей суворіший.')}</p>
           </Section>
 
           <Section title="Строки й доставка">
-            <p>
-              Виготовлення та відправка: {site.productionDaysMin}–{site.productionDaysMax} робочих
-              днів{selectedSize?.leadTimeDays != null ? `, плюс ${selectedSize.leadTimeDays} днів на пошиття цього розміру` : ''}.
-            </p>
-            <p>
-              Нова Пошта — на відділення, в поштомат або курʼєром. Від{' '}
-              {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ доставка за наш рахунок,
-              менші замовлення — за тарифами перевізника.
-            </p>
+            {shippingText(site).map((p) => <p key={p}>{p}</p>)}
           </Section>
 
           <Section title="Оплата, обмін і повернення">
-            <p>
-              Після оформлення ми звіряємо наявність і надсилаємо рахунок. Картку вводиш на
-              стороні Monobank, не в нас; гроші блокуються й списуються після підтвердження.
-            </p>
-            {RETURN_POLICY_TEXT.map((p) => <p key={p}>{p}</p>)}
+            {paymentText(site, true).map((p) => <p key={p}>{p}</p>)}
           </Section>
         </div>
       </div>

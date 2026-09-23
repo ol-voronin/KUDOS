@@ -13,9 +13,12 @@
  *      «Темно синій» (підтверджено замовником).
  *   3. XXL і 2XL — те саме тіло. Канонічно — 2XL (підтверджено замовником).
  *
- * Ціни виробів — ЗАГЛУШКИ. Вони позначені як такі в `PLACEHOLDER_PRICES` і
- * редагуються в адмінці без деплою; сідер ставить їх лише при створенні
- * запису й ніколи не перетирає вручну виправлену ціну.
+ * Ціни виробів — справжні (прайс від вересня 2026). Сідер ставить їх лише
+ * при створенні запису й ніколи не перетирає вручну виправлену в адмінці
+ * ціну; щоб прокотити зміну прайсу сюди, сідер запускають із `--prices`.
+ *
+ * Розмірні сітки — два заміри, ширина й довжина. Чому без рукава — див.
+ * коментар до `SizeSpec`.
  */
 
 export interface ColourSpec {
@@ -67,18 +70,31 @@ export interface FabricSpec {
 }
 
 export const FABRICS: readonly FabricSpec[] = [
-  { key: 'bavovna-180', name: 'Бавовна 180',  weightGsm: 180, composition: '100% бавовна · ніжна та легка', leadTimeDays: 5 },
-  { key: 'bavovna-220', name: 'Бавовна 220',  weightGsm: 220, composition: '100% бавовна · щільна, добре тримає форму', leadTimeDays: 5 },
-  { key: 'dvonytka-300',name: 'Двонитка 300', weightGsm: 300, composition: '85% бавовна, 15% перероблений поліестер · щільна, добре тримає форму', leadTimeDays: 7 },
-  { key: 'flis-350',    name: 'Фліс 350',     weightGsm: 350, composition: '85% бавовна, 15% перероблений поліестер, утеплений флісом · ніжний і приємний до тіла', leadTimeDays: 7 },
+  { key: 'bavovna-180', name: 'Бавовна 180',  weightGsm: 180, composition: '100% органічна бавовна. Гребінна бавовна.', leadTimeDays: 5 },
+  { key: 'bavovna-220', name: 'Бавовна 220',  weightGsm: 220, composition: '100% органічна бавовна. Гребінна бавовна.', leadTimeDays: 5 },
+  { key: 'dvonytka-300',name: 'Двонитка 300', weightGsm: 300, composition: '85% органічна бавовна, 15% перероблений поліестер. Двонитка.', leadTimeDays: 7 },
+  { key: 'flis-350',    name: 'Фліс 350',     weightGsm: 350, composition: '85% органічна бавовна, 15% перероблений поліестер. З начісом.', leadTimeDays: 7 },
 ];
 
+/**
+ * Рядок розмірної сітки.
+ *
+ * Два заміри, не три. Рукав прибрано свідомо (рішення Даші, вересень 2026):
+ * на сітці він стояв поруч із шириною й довжиною як рівний, але міряють
+ * його інакше — у футболки від плечового шва, у світшота від горловини, —
+ * і сітки самі це показували: 24 см проти 68 у сусідніх рядках. Замір,
+ * який половина людей знімає не так, як ми, гірший за його відсутність:
+ * він не допомагає обрати розмір, зате дає привід сперечатися про нього
+ * при поверненні.
+ *
+ * Сантиметри рядком — у паспортах трапляються дробові й діапазони.
+ */
 export interface SizeSpec {
   readonly label: string;
-  /** Сантиметри, рядком — у паспортах трапляються дробові й діапазони. */
+  /** Довжина (Б) на малюнку сітки. */
   readonly length: string;
+  /** Ширина (А) на малюнку сітки: упоперек під пахвами, половина обхвату. */
   readonly width: string;
-  readonly sleeve: string;
 }
 
 export interface GarmentSpec {
@@ -88,7 +104,10 @@ export interface GarmentSpec {
   readonly fit: 'CLASSIC' | 'OVERSIZE' | 'OVERSIZE_WOMEN' | 'HYBRID';
   readonly description: string;
   readonly fabric: string;
-  /** Заглушка. Редагується в /admin/tsiny; сідер її не перетирає. */
+  /**
+   * Ціна виробу без принта, у копійках. Редагується в /admin/tsiny; сідер
+   * її не перетирає, якщо не сказати йому `--prices`.
+   */
   readonly basePriceMinor: number;
   readonly colours: readonly string[];
   readonly sizes: readonly SizeSpec[];
@@ -99,36 +118,36 @@ export const GARMENTS: readonly GarmentSpec[] = [
     slug: 'futbolka-klasychna',
     name: 'Футболка класична унісекс',
     type: 'TSHIRT', fit: 'CLASSIC',
-    description: 'Модель унісекс, прямий крій.',
+    description: 'Ніжна та легка футболка класичного прямого крою, що підійде і чоловікам, і жінкам.',
     fabric: 'bavovna-180',
-    basePriceMinor: 55_000,
+    basePriceMinor: 59_000,
     colours: [
       'bilyi', 'slonova-kistka', 'ananasovyi', 'derevianyi', 'mandarynovyi',
       'antychna-troianda', 'chervonyi', 'smarahdovyi', 'zelenyi-nefryt', 'zelenyi-mokh',
       'akvamaryn', 'blakytnyi-safir', 'temno-synii', 'stalevyi-siryi', 'chornyi',
     ],
     sizes: [
-      { label: 'XXS', length: '66', width: '43', sleeve: '19.5' },
-      { label: 'XS',  length: '68', width: '46', sleeve: '20.2' },
-      { label: 'S',   length: '70', width: '49', sleeve: '21' },
-      { label: 'M',   length: '72', width: '52', sleeve: '21.8' },
-      { label: 'L',   length: '74', width: '55', sleeve: '22.5' },
-      { label: 'XL',  length: '76', width: '58', sleeve: '23.8' },
-      { label: '2XL', length: '78', width: '61', sleeve: '24' },
+      { label: 'XXS', length: '66', width: '43' },
+      { label: 'XS',  length: '68', width: '46' },
+      { label: 'S',   length: '70', width: '49' },
+      { label: 'M',   length: '72', width: '52' },
+      { label: 'L',   length: '74', width: '55' },
+      { label: 'XL',  length: '76', width: '58' },
+      { label: '2XL', length: '78', width: '61' },
     ],
   },
   {
     slug: 'futbolka-oversayz-zhinocha',
     name: 'Футболка оверсайз жіноча',
     type: 'TSHIRT', fit: 'OVERSIZE_WOMEN',
-    description: 'Крій оверсайз, опущені плечі; широкий, але вкорочений крій, що пасує жінкам.',
+    description: 'Ніжна та легка футболка оверсайз. Має широкий, але вкорочений крій, що пасує жінкам.',
     fabric: 'bavovna-180',
-    basePriceMinor: 60_000,
+    basePriceMinor: 69_000,
     colours: ['bilyi', 'chornyi', 'akvamaryn', 'rozhevyi'],
     sizes: [
-      { label: 'XXS/XS', length: '58', width: '52', sleeve: '17' },
-      { label: 'S/M',    length: '62', width: '58', sleeve: '18' },
-      { label: 'L/XL',   length: '64', width: '61', sleeve: '19' },
+      { label: 'XXS/XS', length: '58', width: '52' },
+      { label: 'S/M',    length: '62', width: '58' },
+      { label: 'L/XL',   length: '64', width: '61' },
     ],
   },
   {
@@ -137,99 +156,99 @@ export const GARMENTS: readonly GarmentSpec[] = [
     // старий свідомо — посилання й фото вже живуть на ньому (рішення Олексія).
     name: 'Футболка оверсайз унісекс',
     type: 'TSHIRT', fit: 'OVERSIZE',
-    description: 'Крій оверсайз, опущені плечі, подовжена і ширша порівняно з класичною. Також підходить жінкам середнього і високого зросту.',
+    description: 'Щільна футболка оверсайз: широкий і подовжений крій, опущені плечі. Пасує чоловікам, а також жінкам середнього й високого зросту.',
     fabric: 'bavovna-220',
-    basePriceMinor: 69_000,
+    basePriceMinor: 89_000,
     colours: ['bilyi', 'chornyi', 'temno-synii', 'stalevyi-siryi', 'derevianyi'],
     sizes: [
-      { label: 'XS',  length: '69', width: '52', sleeve: '21.5' },
-      { label: 'S',   length: '71', width: '55', sleeve: '22' },
-      { label: 'M',   length: '73', width: '58', sleeve: '22.5' },
-      { label: 'L',   length: '75', width: '61', sleeve: '23' },
-      { label: 'XL',  length: '77', width: '64', sleeve: '23.5' },
-      { label: '2XL', length: '79', width: '67', sleeve: '24' },
+      { label: 'XS',  length: '69', width: '52' },
+      { label: 'S',   length: '71', width: '55' },
+      { label: 'M',   length: '73', width: '58' },
+      { label: 'L',   length: '75', width: '61' },
+      { label: 'XL',  length: '77', width: '64' },
+      { label: '2XL', length: '79', width: '67' },
     ],
   },
   {
     slug: 'hibryd-svitshot',
-    name: 'Гібрид світшот-футболка',
+    name: 'Гібрид футболка-світшот унісекс',
     type: 'SWEATSHIRT', fit: 'HYBRID',
-    description: 'Крій оверсайз, опущені плечі, подовжений і ширший порівняно з класичним. Унісекс: ідеально чоловікам, жінкам — середнього і високого зросту.',
+    description: 'Надщільна річ із двонитки — щось середнє між футболкою і світшотом. Широкий і подовжений крій, опущені плечі.',
     fabric: 'dvonytka-300',
-    basePriceMinor: 109_000,
+    basePriceMinor: 112_000,
     // Паспорт у заголовку каже «4 кольори», а перелічує три. Три — правильно.
     colours: ['slonova-kistka', 'chornyi', 'temno-synii'],
     sizes: [
-      { label: 'XS',  length: '69', width: '52', sleeve: '21.5' },
-      { label: 'S',   length: '71', width: '55', sleeve: '22' },
-      { label: 'M',   length: '73', width: '58', sleeve: '22.5' },
-      { label: 'L',   length: '75', width: '61', sleeve: '23' },
-      { label: 'XL',  length: '77', width: '64', sleeve: '23.5' },
-      { label: '2XL', length: '79', width: '67', sleeve: '24' },
+      { label: 'XS',  length: '69', width: '52' },
+      { label: 'S',   length: '71', width: '55' },
+      { label: 'M',   length: '73', width: '58' },
+      { label: 'L',   length: '75', width: '61' },
+      { label: 'XL',  length: '77', width: '64' },
+      { label: '2XL', length: '79', width: '67' },
     ],
   },
   {
     slug: 'hibryd-hudi',
-    name: 'Гібрид худі-футболка',
+    name: 'Гібрид футболка-худі унісекс',
     type: 'HOODIE', fit: 'HYBRID',
-    description: 'Крій оверсайз, опущені плечі. Двошаровий капюшон, плоскі шнурки, мінімалістичні кишені. Унісекс.',
+    description: 'Надщільна річ із двонитки з двошаровим капюшоном і бічними кишенями. Широкий і подовжений крій, опущені плечі.',
     fabric: 'dvonytka-300',
-    basePriceMinor: 125_000,
+    basePriceMinor: 155_000,
     colours: ['slonova-kistka', 'chornyi'],
     sizes: [
-      { label: 'XS',  length: '67', width: '51', sleeve: '21' },
-      { label: 'S',   length: '69', width: '54', sleeve: '22' },
-      { label: 'M',   length: '71', width: '57', sleeve: '23' },
-      { label: 'L',   length: '73', width: '60', sleeve: '23.5' },
-      { label: 'XL',  length: '75', width: '63', sleeve: '24' },
-      { label: '2XL', length: '77', width: '66', sleeve: '25' },
+      { label: 'XS',  length: '67', width: '51' },
+      { label: 'S',   length: '69', width: '54' },
+      { label: 'M',   length: '71', width: '57' },
+      { label: 'L',   length: '73', width: '60' },
+      { label: 'XL',  length: '75', width: '63' },
+      { label: '2XL', length: '77', width: '66' },
     ],
   },
   {
     slug: 'svitshot-klasychnyi',
-    name: 'Світшот класичний унісекс',
+    name: 'Класичний світшот унісекс',
     type: 'SWEATSHIRT', fit: 'CLASSIC',
-    description: 'Модель унісекс, прямий крій, рібана на рукавах і внизу виробу.',
+    description: 'Світшот прямого крою з тонкого флісу: теплий, але не обʼємний. Рібана на рукавах і внизу виробу.',
     fabric: 'flis-350',
-    basePriceMinor: 115_000,
+    basePriceMinor: 140_000,
     colours: [
       'slonova-kistka', 'mokryi-pisok', 'molochnyi-shokolad', 'chornyi', 'khaki', 'stalevyi-siryi',
       'antychna-troianda', 'chervonyi', 'temna-vyshnia', 'svitlyi-buzok', 'ananasovyi', 'svitlo-biriuzovyi',
       'temno-synii', 'blakytnyi-safir', 'akvamaryn', 'zelenyi-marmur', 'smarahdovyi', 'zelenyi-nefryt',
     ],
     sizes: [
-      { label: 'XS',  length: '68', width: '48', sleeve: '63' },
-      { label: 'S',   length: '70', width: '51', sleeve: '64' },
-      { label: 'M',   length: '72', width: '54', sleeve: '65' },
-      { label: 'L',   length: '74', width: '57', sleeve: '66' },
-      { label: 'XL',  length: '76', width: '60', sleeve: '67' },
-      { label: '2XL', length: '78', width: '63', sleeve: '68' },
+      { label: 'XS',  length: '68', width: '48' },
+      { label: 'S',   length: '70', width: '51' },
+      { label: 'M',   length: '72', width: '54' },
+      { label: 'L',   length: '74', width: '57' },
+      { label: 'XL',  length: '76', width: '60' },
+      { label: '2XL', length: '78', width: '63' },
     ],
   },
   {
     slug: 'hudi-klasychnyi',
-    name: 'Худі класичний унісекс',
+    name: 'Класичний худі унісекс',
     type: 'HOODIE', fit: 'CLASSIC',
-    description: 'Модель унісекс, прямий крій, двошаровий капюшон, шнурки в тон виробу, кишеня попереду.',
+    description: 'Худі прямого крою з тонкого флісу: двошаровий капюшон, шнурки в тон виробу, кишеня-кенгуру.',
     fabric: 'flis-350',
-    basePriceMinor: 135_000,
+    basePriceMinor: 170_000,
     colours: [
       'slonova-kistka', 'mokryi-pisok', 'molochnyi-shokolad', 'chornyi', 'khaki', 'stalevyi-siryi',
       'antychna-troianda', 'chervonyi', 'temna-vyshnia', 'svitlyi-buzok', 'ananasovyi', 'svitlo-biriuzovyi',
       'temno-synii', 'blakytnyi-safir', 'akvamaryn', 'zelenyi-marmur', 'smarahdovyi', 'zelenyi-nefryt',
     ],
     sizes: [
-      { label: 'XS',  length: '68', width: '49', sleeve: '63' },
-      { label: 'S',   length: '70', width: '52', sleeve: '64' },
-      { label: 'M',   length: '72', width: '55', sleeve: '65' },
-      { label: 'L',   length: '74', width: '58', sleeve: '66' },
-      { label: 'XL',  length: '76', width: '61', sleeve: '67' },
-      { label: '2XL', length: '78', width: '64', sleeve: '68' },
+      { label: 'XS',  length: '68', width: '49' },
+      { label: 'S',   length: '70', width: '52' },
+      { label: 'M',   length: '72', width: '55' },
+      { label: 'L',   length: '74', width: '58' },
+      { label: 'XL',  length: '76', width: '61' },
+      { label: '2XL', length: '78', width: '64' },
     ],
   },
 ];
 
-/** Ціни друку за розміром макета. Теж заглушки, теж редаговані в адмінці. */
+/** Ціни друку за розміром макета. Редаговані в адмінці. */
 export const PRINT_PRICES: ReadonlyArray<{ tier: 'MINI' | 'MEDIUM' | 'MAXI'; priceMinor: number }> = [
   { tier: 'MINI',   priceMinor: 15_000 },
   { tier: 'MEDIUM', priceMinor: 20_000 },

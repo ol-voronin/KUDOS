@@ -5,8 +5,9 @@ import { minor, formatUAH, type GarmentOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
-import { RETURN_LINE_BASIC } from '@/config/returns';
-import { shipWindow } from '../delivery-estimate';
+import {
+  CARE_LINE, CARE_WARNING, buyNotes, paymentText, shippingText,
+} from '@/config/product-copy';
 import { garmentPhoto } from '../garment-photos';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { useGarmentOffer } from '../hooks/useGarmentOffer';
@@ -23,10 +24,22 @@ import { SizeChart } from './SizeChart';
  * мінус усе, що стосується малюнка.
  *
  * Це навмисно ОКРЕМИЙ компонент, а не PrintOfferView із пропом «без принта».
- * Спільне тут — дрібні цеглинки (свотчі, розміри, шухляда з сіткою), і вони
- * й так спільні. А от каркас різний: у принта дві сутності (малюнок і носій)
- * і галерея макетів, у порожньої речі — одна сутність і фото по кольорах.
- * Один компонент на обидва сценарії перетворився б на ліс if-ів.
+ * Спільне тут — дрібні цеглинки (свотчі, розміри, шухляда з сіткою) і
+ * тексти (`config/product-copy`), і вони й так спільні. А от каркас різний:
+ * у принта дві сутності (малюнок і носій) і галерея макетів, у порожньої
+ * речі — одна сутність і фото по кольорах. Один компонент на обидва
+ * сценарії перетворився б на ліс if-ів.
+ *
+ * ── Розкладка: ліворуч лише візуал, праворуч увесь текст ──────────────
+ *
+ * Раніше довідковий хвіст (склад, догляд, строки, повернення) стояв під
+ * фото, у лівій колонці, а праворуч липла коротка панель покупки. Виглядало
+ * охайно й читалося погано: щоб дізнатися склад тканини, треба було
+ * повернутися очима ліворуч і вниз, під фото, які до того моменту вже
+ * прокрутилися. Тепер поділ проходить по природному шву — картинка проти
+ * слів, — і весь текст читається однією колонкою згори вниз, у тому
+ * порядку, у якому виникають питання: що це → скільки → в якому кольорі →
+ * з чого → якого розміру → як і коли приїде.
  */
 export function GarmentOfferView({ slug, initialData }: { slug: string; initialData?: GarmentOfferDto }) {
   const { data, isLoading, isError } = useGarmentOffer(slug, initialData);
@@ -85,9 +98,19 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
     if (picked) { rememberSize(picked.label); setRememberedLabel(picked.label); }
   }
 
-  const cheapestMinor = useMemo(() => {
+  /*
+   * «Від» ставиться лише тоді, коли ціна справді залежить від вибору.
+   *
+   * На базових речах надбавок за розмір і колір немає: усі варіанти коштують
+   * однаково, і «від 590 ₴» до вибору розміру відрізнялося від 590 ₴ після
+   * нього рівно нічим, крім натяку на дрібний шрифт, якого не існує.
+   * Надбавки в моделі даних можливі (`priceOverrideMinor`), тож питання
+   * вирішується розкидом цін, а не припущенням.
+   */
+  const priceRange = useMemo(() => {
     const prices = (data?.variants ?? []).map((v) => v.priceMinor);
-    return prices.length > 0 ? Math.min(...prices) : undefined;
+    if (prices.length === 0) return null;
+    return { from: Math.min(...prices), to: Math.max(...prices) };
   }, [data]);
 
   const selectedColour = colours.find((c) => c.id === colourId);
@@ -100,7 +123,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
   if (isLoading) {
     return (
       <div className="grid gap-10 md:grid-cols-2">
-        <Skeleton className="aspect-square w-full" />
+        <Skeleton className="aspect-[3/4] w-full" />
         <div className="flex flex-col gap-4">
           <Skeleton className="h-9 w-3/4" />
           <Skeleton className="h-7 w-1/3" />
@@ -114,8 +137,8 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
     return <ErrorBanner>Не вдалося завантажити виріб.</ErrorBanner>;
   }
 
-  const priceIsExact = variant !== null && variant !== undefined;
-  const priceMinor = variant?.priceMinor ?? cheapestMinor ?? garment.basePriceMinor;
+  const priceMinor = variant?.priceMinor ?? priceRange?.from ?? garment.basePriceMinor;
+  const priceIsExact = variant !== undefined || priceRange === null || priceRange.from === priceRange.to;
 
   // Фото — по кольору: складеного «каталожного» кадру без принта в нас
   // рівно один на колір, і саме він тут головний.
@@ -153,25 +176,28 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
   ] : [];
 
   return (
-    /*
-     * Розкладка як у великих магазинів одягу: фото стосом ліворуч, а
-     * праворуч — компактна панель покупки, що ЛИПНЕ до верху. Липне саме
-     * панель, а не фото: стос довший за екран, і липке фото ховало б
-     * решту кадрів. Опис і догляд — під фото в лівій колонці, бо їх
-     * читають після вибору, а не замість нього.
-     */
-    <div className="grid items-start gap-x-10 gap-y-12 md:grid-cols-2">
+    <div className="grid items-start gap-x-10 gap-y-10 md:grid-cols-2">
       <div>
         <MediaStack frames={frames} emptyText="Фото цього кольору готуємо" />
       </div>
 
-      <div className="md:sticky md:top-24">
+      <div>
         <h1 className="font-display text-section font-bold uppercase text-ink">{garment.name}</h1>
-        <div className="mt-3 border-t border-ink pt-3" aria-live="polite">
+
+        <div className="mt-4 border-t border-ink pt-4" aria-live="polite">
           <p className="font-display text-3xl font-bold text-ink">
             {priceIsExact ? '' : 'від '}{formatUAH(minor(priceMinor))}
           </p>
-          <p className="mt-1 text-sm text-ink-subtle">Без принта. Чиста річ — і все.</p>
+          {/*
+            Перший рядок однаковий на всіх семи виробах і стоїть тут
+            навмисно: сторінка базового одягу відкривається з каталогу
+            принтів, і перше питання до неї — «а це взагалі з малюнком чи
+            без». Другий рядок — паспорт конкретного виробу.
+          */}
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+            Без принта. Чиста базова річ — і все.
+            {garment.description !== '' && <><br />{garment.description}</>}
+          </p>
         </div>
 
         {garment.fabrics.length > 1 && (
@@ -198,7 +224,21 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
 
         {colours.length > 0 && (
           <fieldset className="mt-6">
-            <legend id="colour-label" className="label-eyebrow mb-2">Колір</legend>
+            {/*
+              Назва кольору поруч із міткою, а не в підказці свотча.
+              «Смарагдовий» і «Зелений мох» на екрані відрізняються менше,
+              ніж у назві, а кружечок не вміщає підпису; доки назву було
+              видно тільки при наведенні, з телефона вона не була видна
+              взагалі — і в замовленні опинявся не той зелений.
+            */}
+            <legend id="colour-label" className="label-eyebrow mb-2">
+              Колір{' '}
+              {selectedColour && (
+                <span className="text-ink">
+                  {(selectedColour.name ?? selectedColour.supplierCode).toUpperCase()}
+                </span>
+              )}
+            </legend>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="colour-label">
               {colours.map((c) => (
                 <ColourSwatch key={c.id} colour={c} selected={c.id === colourId} onSelect={setColourId} />
@@ -207,11 +247,23 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
           </fieldset>
         )}
 
+        {/*
+          Склад і догляд — одразу під кружками кольорів, а не в розділі
+          внизу. Це не довідка «на потім»: щільність 180 проти 350 г/м²
+          відповідає на питання «це на літо чи на зиму», яке виникає рівно
+          тут, поки людина дивиться на річ.
+        */}
         {selectedFabric && (
-          <p className="mt-4 text-sm text-ink-muted">
-            {selectedFabric.composition} · {selectedFabric.weightGsm} г/м²
+          <p className="mt-5 text-sm leading-relaxed text-ink-muted">
+            <span className="label-eyebrow">Склад:</span>{' '}
+            {selectedFabric.composition.replace(/[.\s]+$/, '')}. Щільність {selectedFabric.weightGsm} г/м².
           </p>
         )}
+        <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+          <span className="label-eyebrow">Догляд:</span> {CARE_LINE}
+          <br />
+          {CARE_WARNING}
+        </p>
 
         {sizes.length > 0 && (
           <fieldset className="mt-6">
@@ -236,6 +288,22 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
                 />
               ))}
             </div>
+            {/*
+              Попередження стоїть ПІД кнопками розмірів, а не над ними:
+              зверху його зчитують як підпис до поля й пропускають. Наші
+              вироби йдуть у розмірах виробу, не тіла, і «зазвичай ношу M» —
+              найчастіша причина обміну.
+            */}
+            <p className="mt-3 text-sm text-ink">
+              Перш ніж обрати розмір, ознайомся із{' '}
+              <button
+                type="button"
+                onClick={() => setSizeChartOpen(true)}
+                className="tap-sm font-medium text-ink underline underline-offset-4 hover:opacity-60"
+              >
+                Таблицею розмірів
+              </button>!
+            </p>
             {rememberedLabel !== null && (
               <p className="mt-2 text-xs text-ink-subtle">
                 Минулого разу тут був розмір {rememberedLabel} — позначено крапкою.
@@ -244,21 +312,13 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
           </fieldset>
         )}
 
-        <Drawer open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} title={`Розміри · ${garment.name}`}>
-          <SizeChart sizes={garment.sizes} highlight={sizeId} />
+        <Drawer open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} title="Таблиця розмірів">
+          <SizeChart garment={garment} highlight={sizeId} />
         </Drawer>
 
         {selectedSize && (
           <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2" aria-live="polite">
             <AvailabilityBadge state={selectedSize.state} leadTimeDays={selectedSize.leadTimeDays} />
-            {selectedSize.state !== 'UNAVAILABLE' && (
-              <span className="text-sm text-ink-muted">
-                Відправимо{' '}
-                <b className="font-medium text-ink">
-                  {shipWindow(site.productionDaysMin, site.productionDaysMax, selectedSize.leadTimeDays).label}
-                </b>
-              </span>
-            )}
           </div>
         )}
 
@@ -279,11 +339,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
             </ButtonLink>
           ) : (
             <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
-              <li>· Оплата не зараз — спершу підтвердимо наявність і напишемо</li>
-              <li>· {RETURN_LINE_BASIC} — {site.returnDays} днів, якщо річ не носили</li>
-              <li>
-                · Доставка від {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ — за наш рахунок
-              </li>
+              {buyNotes(site, false).map((n) => <li key={n}>· {n}</li>)}
             </ul>
           )}
         </div>
@@ -303,56 +359,13 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
             Дивитись принти
           </ButtonLink>
         </div>
-      </div>
 
-      {/* Довгий довідковий хвіст — під фото, щоб липка панель лишалася короткою. */}
-      <div className="md:col-start-1">
-        <div className="divide-y divide-line border-y border-line">
-          <DetailsSection title="Виріб" open>
-            <p>
-              {garment.description !== ''
-                ? garment.description
-                : 'Друкуємо на речах еко-бренду Native Spirit (Франція) та на власних виробах.'}
-            </p>
-            {selectedFabric && (
-              <p>
-                {selectedFabric.name}: {selectedFabric.composition}, {selectedFabric.weightGsm} г/м²
-                {selectedFabric.origin ? ` (${selectedFabric.origin})` : ''}.
-              </p>
-            )}
+        <div className="mt-8 divide-y divide-line border-y border-line">
+          <DetailsSection title="Строки й доставка" open>
+            {shippingText(site).map((p) => <p key={p}>{p}</p>)}
           </DetailsSection>
-
-          <DetailsSection title="Догляд">
-            <p>
-              Прати при 30 °C навиворіт, без відбілювача. Не сушити в машині.
-            </p>
-          </DetailsSection>
-
-          <DetailsSection title="Строки й доставка">
-            <p>
-              Виготовлення та відправка: {site.productionDaysMin}–{site.productionDaysMax} робочих
-              днів{selectedSize?.leadTimeDays != null ? `, плюс ${selectedSize.leadTimeDays} днів на пошиття цього розміру` : ''}.
-            </p>
-            <p>
-              Нова Пошта — на відділення, в поштомат або курʼєром. Від{' '}
-              {Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴ доставка за наш рахунок,
-              менші замовлення — за тарифами перевізника.
-            </p>
-          </DetailsSection>
-
-          <DetailsSection title="Оплата, обмін і повернення">
-            <p>
-              Після оформлення ми звіряємо наявність і надсилаємо рахунок. Картку вводиш на
-              стороні Monobank, не в нас; гроші блокуються й списуються після підтвердження.
-            </p>
-            <p>
-              Це базова річ без принта — її можна обміняти чи повернути протягом{' '}
-              {site.returnDays} днів, якщо річ не носили й збережено вигляд.
-            </p>
-            <p>
-              Одяг із принтами — інша історія: його виготовляємо під конкретне замовлення,
-              тож обмін можливий лише за браку чи нашої помилки.
-            </p>
+          <DetailsSection title="Оплата, обмін і повернення" open>
+            {paymentText(site, false).map((p) => <p key={p}>{p}</p>)}
           </DetailsSection>
         </div>
       </div>
@@ -372,7 +385,7 @@ function DetailsSection({ title, children, open = false }: { title: string; chil
           </svg>
         </span>
       </summary>
-      <div className="mt-3 flex flex-col gap-2 text-sm leading-relaxed text-ink-muted">{children}</div>
+      <div className="mt-3 flex flex-col gap-3 text-sm leading-relaxed text-ink-muted">{children}</div>
     </details>
   );
 }

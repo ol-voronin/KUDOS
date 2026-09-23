@@ -139,7 +139,6 @@ const SIZES = ['S', 'M', 'L', 'XL'].map((label, i) => ({
   measurements: [
     { key: 'LENGTH', value: String(68 + i * 2) },
     { key: 'WIDTH', value: String(48 + i * 3) },
-    { key: 'SLEEVE', value: String(20 + i) },
   ],
 }));
 const fabric = (n, name, gsm, comp) => ({ id: F(n), name, weightGsm: gsm, composition: comp, origin: null });

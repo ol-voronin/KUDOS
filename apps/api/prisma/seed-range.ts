@@ -6,7 +6,8 @@
  *
  *   1. Ціни ставляться ЛИШЕ при створенні запису. Виправлена в адмінці ціна
  *      переживає будь-яку кількість повторних сідів — інакше скрипт мовчки
- *      відкочував би роботу людини.
+ *      відкочував би роботу людини. Прокотити новий прайс із `range.ts`
+ *      можна явно: `--prices`.
  *   2. `availability` варіанта теж ставиться лише при створенні. Позначений
  *      «є в наявності» варіант не має ставати «під замовлення» через те, що
  *      хтось перезалив довідник.
@@ -23,6 +24,17 @@ import { COLOURS, FABRICS, GARMENTS, PRINT_PRICES, garmentPhotoPath } from './ra
 const prisma = new PrismaClient();
 
 const LINE = 'OWN_PRODUCTION' as const;
+
+/**
+ * Прокотити ціни з довідника поверх бази.
+ *
+ * За замовчуванням вимкнено — див. правило 1 у шапці файлу. Вмикають його
+ * тоді, коли прайс змінився саме тут, у `range.ts`, і база має його
+ * наздогнати: `pnpm db:seed:range -- --prices`. Прапорець свідомо не
+ * вмикається сам по собі від того, що числа розійшлися: розходження — це
+ * нормальний стан, коли ціну щойно виправили в адмінці.
+ */
+const OVERWRITE_PRICES = process.argv.includes('--prices');
 
 /** SKU має бути читабельним у накладній, а не лише унікальним у базі. */
 function sku(garmentSlug: string, colourCode: string, sizeLabel: string): string {
@@ -96,6 +108,7 @@ async function main(): Promise<void> {
   // ── вироби ────────────────────────────────────────────────────────────────
   let variantsCreated = 0;
   let variantsKept = 0;
+  let sleevesDropped = 0;
 
   for (const g of GARMENTS) {
     const fabricId = fabricIdByKey.get(g.fabric);
@@ -104,7 +117,10 @@ async function main(): Promise<void> {
 
     const garment = await prisma.garment.upsert({
       where: { line_type_fit: { line: LINE, type: g.type, fit: g.fit } },
-      update: { slug: g.slug, name: g.name, description: g.description, isPublished: true },
+      update: {
+        slug: g.slug, name: g.name, description: g.description, isPublished: true,
+        ...(OVERWRITE_PRICES ? { basePriceMinor: g.basePriceMinor } : {}),
+      },
       create: {
         slug: g.slug, line: LINE, type: g.type, fit: g.fit, name: g.name,
         description: g.description, lengthAdjustable: false,
@@ -165,13 +181,22 @@ async function main(): Promise<void> {
       });
       sizeIdByLabel.set(s.label, size.id);
 
-      for (const [key, value] of [['LENGTH', s.length], ['WIDTH', s.width], ['SLEEVE', s.sleeve]] as const) {
+      for (const [key, value] of [['LENGTH', s.length], ['WIDTH', s.width]] as const) {
         await prisma.measurement.upsert({
           where: { sizeId_key: { sizeId: size.id, key } },
           update: { value },
           create: { sizeId: size.id, key, value },
         });
       }
+
+      // Рукав більше не міряємо (див. `SizeSpec`), але в базі він лишився з
+      // попередніх заливок. Сітка будує колонки з того, що знайшла в
+      // рядках, тож поки цей запис живий — колонка «Рукав» буде на сторінці
+      // незалежно від того, що написано в довіднику.
+      const dropped = await prisma.measurement.deleteMany({
+        where: { sizeId: size.id, key: { notIn: ['LENGTH', 'WIDTH'] } },
+      });
+      sleevesDropped += dropped.count;
     }
 
     const stale = await prisma.size.findMany({
@@ -278,6 +303,7 @@ async function main(): Promise<void> {
   console.info('');
   console.info(`тканин: ${FABRICS.length} · кольорів: ${COLOURS.length} · виробів: ${GARMENTS.length}`);
   console.info(`варіантів створено: ${variantsCreated} · уже було: ${variantsKept}`);
+  if (sleevesDropped > 0) console.info(`прибрано зайвих замірів (рукав): ${sleevesDropped}`);
   console.info('');
   console.info('опубліковані вироби (ціна виробу → з найдешевшим друком):');
   for (const g of published) {
@@ -289,7 +315,9 @@ async function main(): Promise<void> {
   console.info('ціни друку:');
   for (const p of printPrices) console.info(`  ${p.tier.padEnd(7)} ${(p.priceMinor / 100).toFixed(0)} ₴`);
   console.info('');
-  console.warn('⚠ ЦІНИ — ЗАГЛУШКИ. Виправити: /admin/tsiny. Повторний сід їх не перетре.');
+  console.info(OVERWRITE_PRICES
+    ? 'ціни виробів прокочено з range.ts (--prices)'
+    : 'ціни виробів у базі не чіпав. Прокотити прайс із range.ts: --prices');
   for (const n of notes) console.warn(`  · ${n}`);
 }
 

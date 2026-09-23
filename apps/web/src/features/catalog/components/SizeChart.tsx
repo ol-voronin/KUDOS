@@ -1,6 +1,6 @@
 'use client';
 
-import type { MeasurementKey, SizeDto } from '@dt/contracts';
+import type { GarmentDto, MeasurementKey, SizeDto } from '@dt/contracts';
 
 /**
  * Розмірна сітка виробу.
@@ -11,36 +11,45 @@ import type { MeasurementKey, SizeDto } from '@dt/contracts';
  * не купує. Сітка тут ЗАВЖДИ повна: не «розмір M», а всі розміри поряд, бо
  * обирають порівнянням, а не читанням одного рядка.
  *
- * Замір показуємо лише той, що справді є в даних, — колонки будуються з
- * рядків. Порожня колонка «рукав» на виробі без рукавів гірша за її
- * відсутність.
- *
  * ── Чому це панель, а не розгортання на місці ─────────────────────────
  *
- * Таблиця на сім колонок розсовувала картку товару вдвічі, і кнопка
- * купівлі їхала за екран рівно тоді, коли розмір нарешті обрано. Панель
- * показує сітку поверх сторінки й повертає людину точно туди, звідки вона
- * її відкрила.
+ * Таблиця розсовувала картку товару вдвічі, і кнопка купівлі їхала за екран
+ * рівно тоді, коли розмір нарешті обрано. Панель показує сітку поверх
+ * сторінки й повертає людину точно туди, звідки вона її відкрила.
  *
- * ── Малюнок замірів ───────────────────────────────────────────────────
+ * ── Два заміри, не три ────────────────────────────────────────────────
  *
- * Без нього таблиця чисел неповна: «ширина 52» нічого не каже, доки
- * незрозуміло, що це половина обхвату під пахвами, а не по грудях. Це
- * найчастіша причина повернень «не той розмір» — і найдешевша для
- * усунення.
+ * Рукав прибрано (вересень 2026). Він стояв у сітці як рівний ширині й
+ * довжині, але міряється інакше на різних виробах — у футболці від
+ * плечового шва, у світшоті від горловини, — і самі числа це видавали:
+ * 24 см поруч із 68 у сусідньому рядку. Замір, який половина людей знімає
+ * не так, як ми, не допомагає обрати розмір, зате дає привід сперечатися
+ * про нього при поверненні.
+ *
+ * Колонки все одно будуються з того, що реально є в рядках: у базі можуть
+ * лишитися старі заміри, і порожня колонка гірша за її відсутність.
+ *
+ * ── Рядки, а не колонки ───────────────────────────────────────────────
+ *
+ * Розміри йдуть згори вниз, заміри — впоперек. Так у всіх магазинів одягу
+ * і так у нашому паспорті виробу: людина шукає СВІЙ рядок, а не свою
+ * колонку. Попередня орієнтація (розміри в шапці) на телефоні давала
+ * горизонтальну прокрутку в таблиці з семи колонок.
  */
 
 const LABELS: Record<MeasurementKey, string> = {
-  WIDTH: 'Ширина',
-  LENGTH: 'Довжина',
-  SLEEVE: 'Рукав',
-  WAIST: 'Талія',
-  HIP: 'Стегна',
+  WIDTH: 'Ширина (А), см',
+  LENGTH: 'Довжина (Б), см',
+  SLEEVE: 'Рукав, см',
+  WAIST: 'Талія, см',
+  HIP: 'Стегна, см',
 };
 
-const ORDER: readonly MeasurementKey[] = ['LENGTH', 'WIDTH', 'SLEEVE', 'WAIST', 'HIP'];
+/** Ширина попереду: на малюнку стрілка А стоїть вище за Б. */
+const ORDER: readonly MeasurementKey[] = ['WIDTH', 'LENGTH', 'SLEEVE', 'WAIST', 'HIP'];
 
-export function SizeChart({ sizes, highlight }: { sizes: readonly SizeDto[]; highlight?: string | null }) {
+export function SizeChart({ garment, highlight }: { garment: GarmentDto; highlight?: string | null }) {
+  const sizes = garment.sizes;
   const present = new Set<MeasurementKey>();
   for (const s of sizes) for (const m of s.measurements) present.add(m.key);
   const keys = ORDER.filter((k) => present.has(k));
@@ -48,115 +57,174 @@ export function SizeChart({ sizes, highlight }: { sizes: readonly SizeDto[]; hig
   if (sizes.length === 0 || keys.length === 0) return null;
 
   return (
-    <div>
-      <HowToMeasure keys={keys} />
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-max border-collapse text-sm tabular-nums">
-          <caption className="pb-2 text-left text-xs text-ink-subtle">
-            Сантиметри. Заміри виробу, не тіла. Можливе відхилення в допустимих межах.{' '}
-            <a href="/vyroby" className="underline hover:text-ink">Сітки всіх виробів</a>
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col" className="border-b border-line py-2 pr-4 text-left font-medium text-ink-muted">
-                Розмір
+    <div className="flex flex-col gap-6">
+      <HowToMeasure garment={garment} />
+      <Table sizes={sizes} keys={keys} highlight={highlight ?? null} />
+      <p className="text-xs text-ink-subtle">
+        <a href="/vyroby" className="underline underline-offset-4 hover:text-ink">
+          Сітки всіх виробів
+        </a>
+      </p>
+    </div>
+  );
+}
+
+function Table({
+  sizes, keys, highlight,
+}: { sizes: readonly SizeDto[]; keys: readonly MeasurementKey[]; highlight: string | null }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-max border-collapse border border-ink text-sm tabular-nums">
+        <thead>
+          <tr className="bg-ink text-surface">
+            <th scope="col" className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-label">
+              Розмір
+            </th>
+            {keys.map((k) => (
+              <th key={k} scope="col" className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-label">
+                {LABELS[k]}
               </th>
-              {sizes.map((s) => (
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sizes.map((s) => {
+            const picked = s.id === highlight;
+            return (
+              <tr
+                key={s.id}
+                aria-current={picked ? 'true' : undefined}
+                className={picked ? 'bg-accent-soft' : undefined}
+              >
                 <th
-                  key={s.id}
-                  scope="col"
-                  aria-current={s.id === highlight ? 'true' : undefined}
+                  scope="row"
                   className={[
-                    'border-b border-line px-3 py-2 text-center font-semibold',
-                    s.id === highlight ? 'text-accent' : 'text-ink',
+                    'border border-ink px-4 py-3 text-center text-sm font-semibold',
+                    picked ? 'text-accent-ink' : 'text-ink',
                   ].join(' ')}
                 >
                   {s.label}
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((key) => (
-              <tr key={key}>
-                <th scope="row" className="border-b border-line py-2 pr-4 text-left font-normal text-ink-muted">
-                  {LABELS[key]}
-                </th>
-                {sizes.map((s) => (
+                {keys.map((k) => (
                   <td
-                    key={s.id}
+                    key={k}
                     className={[
-                      'border-b border-line px-3 py-2 text-center',
-                      s.id === highlight ? 'font-semibold text-accent' : 'text-ink',
+                      'border border-ink px-4 py-3 text-center',
+                      picked ? 'font-semibold text-accent-ink' : 'text-ink',
                     ].join(' ')}
                   >
-                    {s.measurements.find((m) => m.key === key)?.value ?? '—'}
+                    {s.measurements.find((m) => m.key === k)?.value ?? '—'}
                   </td>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 /**
- * Як знімати заміри.
+ * Як обрати розмір.
  *
- * Малюнок один на всі вироби: контур футболки з трьома стрілками. Він
- * навмисно схематичний — точний силует худі проти футболки нічого не
- * додає до відповіді «звідки й куди міряти», а окремий малюнок на кожен
- * виріб довелося б малювати ще шість разів і підтримувати.
+ * Три кроки, а не абзац: інструкція «візьми свою річ і заміряй» працює
+ * тільки тоді, коли її видно як послідовність дій. І головне — вона знімає
+ * найчастішу помилку: люди міряють СЕБЕ, а в таблиці стоять заміри РЕЧІ.
  */
-function HowToMeasure({ keys }: { keys: readonly MeasurementKey[] }) {
-  const rows: Array<{ key: MeasurementKey; text: string }> = [
-    { key: 'LENGTH', text: 'Від найвищої точки плеча біля коміра — рівно вниз до нижнього краю.' },
-    { key: 'WIDTH', text: 'Упоперек, від шва до шва під пахвами. Це половина обхвату, а не весь обхват.' },
-    { key: 'SLEEVE', text: 'Від плечового шва до краю рукава.' },
-    { key: 'WAIST', text: 'Упоперек у найвужчому місці, від краю до краю.' },
-    { key: 'HIP', text: 'Упоперек у найширшому місці, від краю до краю.' },
-  ];
-  const shown = rows.filter((r) => keys.includes(r.key));
-  if (shown.length === 0) return null;
-
+function HowToMeasure({ garment }: { garment: GarmentDto }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-[9rem_1fr] sm:items-start">
-      <svg viewBox="0 0 120 150" className="w-32 text-ink" fill="none" aria-hidden="true">
-        {/* Контур футболки */}
-        <path
-          d="M38 14 L24 20 L10 40 L24 50 L30 42 V136 H90 V42 L96 50 L110 40 L96 20 L82 14 Q60 26 38 14 Z"
-          stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="text-line-strong"
-        />
-        {/* Довжина */}
-        <path d="M18 20 V136" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 3" />
-        <path d="M14 24 L18 18 L22 24 M14 132 L18 138 L22 132" stroke="currentColor" strokeWidth="1.2" />
-        <text x="6" y="82" fontSize="9" fill="currentColor" transform="rotate(-90 6 82)">A</text>
-        {/* Ширина */}
-        <path d="M30 60 H90" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 3" />
-        <path d="M34 56 L28 60 L34 64 M86 56 L92 60 L86 64" stroke="currentColor" strokeWidth="1.2" />
-        <text x="57" y="55" fontSize="9" fill="currentColor">B</text>
-        {/* Рукав */}
-        <path d="M30 42 L104 44" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 3" />
-        <text x="66" y="38" fontSize="9" fill="currentColor">C</text>
-      </svg>
-
-      <ol className="flex flex-col gap-3 text-sm leading-relaxed text-ink-muted">
-        {shown.map((r, i) => (
-          <li key={r.key} className="flex gap-3">
-            <span
-              aria-hidden
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-pill border border-line-strong text-xs font-semibold text-ink"
-            >
-              {String.fromCharCode(65 + i)}
-            </span>
-            <span>
-              <b className="font-medium text-ink">{LABELS[r.key]}.</b> {r.text}
-            </span>
-          </li>
-        ))}
+    <div>
+      <h3 className="text-sm font-semibold text-ink">Як обрати необхідний розмір?</h3>
+      <ol className="mt-3 flex flex-col gap-2 text-sm leading-relaxed text-ink-muted">
+        <li><b className="font-semibold text-ink">Крок 1</b> Візьми власну аналогічну річ і розклади на рівній поверхні</li>
+        <li><b className="font-semibold text-ink">Крок 2</b> Заміряй ширину (А) та довжину (Б), як вказано на малюнку</li>
+        <li><b className="font-semibold text-ink">Крок 3</b> Порівняй свої цифри із вказаними у таблиці та обери розмір</li>
       </ol>
+      <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+        У таблиці вказані заміри виробу, а не тіла.
+        <br />
+        Можливе відхилення у допустимих межах 1–3 см.
+      </p>
+      <GarmentDiagram garment={garment} />
     </div>
+  );
+}
+
+/**
+ * Малюнок замірів — свій на кожен крій.
+ *
+ * Раніше тут стояла одна футболка на всі сім виробів, і на сторінці худі
+ * вона працювала проти нас: стрілка «довжина» на футболці йде від плеча,
+ * а на худі людина бачить капюшон і не знає, рахувати його чи ні. Малюнок
+ * існує рівно для того, щоб зняти це питання, — отже, він має показувати
+ * ту річ, яку зараз обирають.
+ *
+ * Чотири силуети, а не сім: гібрид-світшот міряється як футболка, а три
+ * футболки різняться кроєм, але не тим, звідки й куди тягнути стрічку.
+ */
+type Shape = 'tee' | 'hoodie-short' | 'crew' | 'hoodie';
+
+function shapeOf(garment: GarmentDto): Shape {
+  if (garment.type === 'HOODIE') return garment.fit === 'HYBRID' ? 'hoodie-short' : 'hoodie';
+  if (garment.type === 'SWEATSHIRT' && garment.fit !== 'HYBRID') return 'crew';
+  return 'tee';
+}
+
+/** Контур тіла й рукавів. Координати — у полі 200×200. */
+const BODY: Record<Shape, string> = {
+  // Короткий рукав, пряме тіло.
+  tee: 'M74 34 L46 44 L28 78 L52 92 L64 72 V168 H136 V72 L148 92 L172 78 L154 44 L126 34 Q100 50 74 34 Z',
+  // Те саме тіло плюс капюшон за плечима.
+  'hoodie-short': 'M74 34 L46 44 L28 78 L52 92 L64 72 V168 H136 V72 L148 92 L172 78 L154 44 L126 34 Q100 50 74 34 Z',
+  // Довгий рукав, манжети.
+  crew: 'M76 34 L46 46 L30 128 L58 136 L68 84 V168 H132 V84 L142 136 L170 128 L154 46 L124 34 Q100 50 76 34 Z',
+  hoodie: 'M76 34 L46 46 L30 128 L58 136 L68 84 V168 H132 V84 L142 136 L170 128 L154 46 L124 34 Q100 50 76 34 Z',
+};
+
+/** Капюшон малюється ПІД тілом, тому окремим контуром. */
+const HOOD: Partial<Record<Shape, string>> = {
+  'hoodie-short': 'M74 36 Q76 8 100 8 Q124 8 126 36 Q100 50 74 36 Z',
+  hoodie: 'M76 36 Q78 6 100 6 Q122 6 124 36 Q100 50 76 36 Z',
+};
+
+function GarmentDiagram({ garment }: { garment: GarmentDto }) {
+  const shape = shapeOf(garment);
+  const hood = HOOD[shape];
+
+  /*
+   * Стрілки навмисно йдуть по тканині, а не по краю.
+   *
+   * Вони білі — і це єдиний спосіб зробити їх помітними на темному
+   * силуеті. Але щойно стрілка виходить за контур, вона стає білим на
+   * білому й зникає; найпростіше на це натрапити вістрям угорі, бо виріз
+   * горловини — це виїмка рівно посередині, там, де хочеться поставити
+   * лінію довжини. Тому лінія зміщена ліворуч від центру, у суцільну
+   * тканину.
+   */
+  return (
+    <svg
+      viewBox="0 0 200 200"
+      className="mt-5 w-44 max-w-full"
+      role="img"
+      aria-label={`${garment.name}: А — ширина впоперек під пахвами, Б — довжина від плеча до низу`}
+    >
+      {hood !== undefined && <path d={hood} className="fill-ink-muted" />}
+      <path d={BODY[shape]} className="fill-ink-muted" />
+
+      <g className="stroke-surface" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {/* Б — довжина, від плеча до низу */}
+        <path d="M90 46 V162" />
+        <path d="M84 53 L90 45 L96 53" />
+        <path d="M84 155 L90 163 L96 155" />
+        {/* А — ширина, впоперек під пахвами */}
+        <path d="M70 104 H130" />
+        <path d="M77 97 L69 104 L77 111" />
+        <path d="M123 97 L131 104 L123 111" />
+      </g>
+
+      <text x="96" y="58" className="fill-surface" fontSize="15" fontWeight="700">Б</text>
+      <text x="74" y="97" className="fill-surface" fontSize="15" fontWeight="700">А</text>
+    </svg>
   );
 }

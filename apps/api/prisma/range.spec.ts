@@ -90,7 +90,7 @@ describe('довідник виробів', () => {
   it('усі виміри заповнені числом або діапазоном', () => {
     for (const g of GARMENTS) {
       for (const s of g.sizes) {
-        for (const v of [s.length, s.width, s.sleeve]) {
+        for (const v of [s.length, s.width]) {
           expect(v, `${g.slug}/${s.label}`).toMatch(/^\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?$/);
         }
       }
@@ -107,6 +107,31 @@ describe('довідник виробів', () => {
         expect(widths[i], `${g.slug}: ${g.sizes[i]?.label}`).toBeGreaterThan(widths[i - 1] as number);
       }
     }
+  });
+
+  /*
+   * Сітки переписані з макетів Даші (screenshot 5, вересень 2026) руками, з
+   * картинки. Помилка в одній цифрі тут коштує повернення: людина заміряє
+   * свою річ, повірить таблиці й отримає не той розмір. Тому числа
+   * продубльовані тут окремим списком — не для перевірки коду, а для
+   * перевірки переписування: розійтися двом незалежним копіям тієї самої
+   * таблиці нема як, крім як через помилку в одній із них.
+   */
+  it('розмірні сітки збігаються з макетами', () => {
+    const CHARTS: Record<string, string> = {
+      'futbolka-klasychna': 'XXS 43/66 XS 46/68 S 49/70 M 52/72 L 55/74 XL 58/76 2XL 61/78',
+      'futbolka-oversayz-zhinocha': 'XXS/XS 52/58 S/M 58/62 L/XL 61/64',
+      'futbolka-oversayz-cholovicha': 'XS 52/69 S 55/71 M 58/73 L 61/75 XL 64/77 2XL 67/79',
+      'hibryd-svitshot': 'XS 52/69 S 55/71 M 58/73 L 61/75 XL 64/77 2XL 67/79',
+      'hibryd-hudi': 'XS 51/67 S 54/69 M 57/71 L 60/73 XL 63/75 2XL 66/77',
+      'svitshot-klasychnyi': 'XS 48/68 S 51/70 M 54/72 L 57/74 XL 60/76 2XL 63/78',
+      'hudi-klasychnyi': 'XS 49/68 S 52/70 M 55/72 L 58/74 XL 61/76 2XL 64/78',
+    };
+    for (const g of GARMENTS) {
+      const actual = g.sizes.map((s) => `${s.label} ${s.width}/${s.length}`).join(' ');
+      expect(actual, g.slug).toBe(CHARTS[g.slug]);
+    }
+    expect(Object.keys(CHARTS).sort()).toEqual(GARMENTS.map((g) => g.slug).sort());
   });
 
   it('XXL не використовується — канонічна мітка 2XL', () => {
