@@ -35,56 +35,20 @@ export async function generateMetadata(): Promise<Metadata> {
  * сторінки.
  */
 /**
- * Секції за типом виробу + липкі якорі.
+ * Сітка виробів без поділу на типи.
  *
- * Тип виводиться зі слага (futbolka-, svitshot-, hudi-, hibryd-), а не з
- * нового поля в базі: слаги в нас і є номенклатурою, дублювати її колонкою
- * заради навігації — плодити другу правду. Гібриди — окремою секцією «2-в-1»:
- * це фішка асортименту, а не підвид світшота (рішення Олексія).
+ * Розділи «футболки / світшоти / худі / 2-в-1» з описами звідси прибрані на
+ * прохання Даші. Виробів сім — рівно стільки, скільки людина охоплює одним
+ * поглядом, і будь-яке групування тут лише додає заголовків між тим, що вона
+ * й так бачить цілком. Тип крою читається з назви й фотографії.
  */
-const RANGE_GROUPS = [
-  { id: 'futbolky', label: 'Футболки', match: (slug: string) => slug.startsWith('futbolka-'),
-    blurb: 'Класична й оверсайз. Щільна бавовна, виготовляємо самі.' },
-  { id: 'svitshoty', label: 'Світшоти', match: (slug: string) => slug.startsWith('svitshot-'),
-    blurb: 'Тепла тринитка з начосом. Вільний крій, манжети тримають форму.' },
-  { id: 'khudi', label: 'Худі', match: (slug: string) => slug.startsWith('hudi-'),
-    blurb: 'Капюшон, кишеня-кенгуру і вісімнадцять кольорів — від молочного шоколаду до бузку.' },
-  { id: 'dva-v-odnomu', label: '2-в-1', match: (slug: string) => slug.startsWith('hibryd-'),
-    blurb: 'Світшот-футболка та худі-футболка: короткий рукав, тепле тіло. Таке мало хто робить.' },
-] as const;
-
-function RangeSections({ garments, cheapestPrint }: {
-  garments: RangeDto['garments'];
-  cheapestPrint: number | null;
-}) {
-  const grouped = RANGE_GROUPS
-    .map((group) => ({ ...group, items: garments.filter((g) => group.match(g.slug)) }))
-    .filter((group) => group.items.length > 0);
-  const leftovers = garments.filter((g) => !RANGE_GROUPS.some((group) => group.match(g.slug)));
-  const sections = [
-    ...grouped,
-    ...(leftovers.length > 0
-      ? [{ id: 'inshe', label: 'Інше', blurb: '', items: leftovers } as const]
-      : []),
-  ];
-
+function RangeGrid({ garments }: { garments: RangeDto['garments'] }) {
   return (
-    <>
-      {sections.map((s) => (
-        <Section key={s.id}>
-          {/* scroll-mt: під липку шапку сайту; стрічки якорів тут більше немає. */}
-          <div id={s.id} className="scroll-mt-24">
-            <h2 className="font-display text-2xl font-bold text-ink">{s.label}</h2>
-            {s.blurb !== '' && <p className="mt-2 max-w-2xl text-ink-muted">{s.blurb}</p>}
-            <div className="mt-6 flex flex-col gap-6">
-              {s.items.map((g) => (
-                <RangeCard key={g.id} garment={g} cheapestPrintMinor={cheapestPrint} />
-              ))}
-            </div>
-          </div>
-        </Section>
-      ))}
-    </>
+    <Section>
+      <div className="grid gap-4 md:grid-cols-2">
+        {garments.map((g) => <RangeCard key={g.id} garment={g} />)}
+      </div>
+    </Section>
   );
 }
 
@@ -92,9 +56,6 @@ export default async function RangePage() {
   const site = await getSettings();
   const range = await serverFetchOrNull('/catalog/range', RangeDto, 300);
   const garments = range?.garments ?? [];
-  const cheapestPrint = range && range.printPrices.length > 0
-    ? Math.min(...range.printPrices.map((p) => p.priceMinor))
-    : null;
 
   return (
     <PublicShell>
@@ -121,7 +82,7 @@ export default async function RangePage() {
           <p className="text-ink-muted">Асортимент тимчасово недоступний. Спробуй оновити сторінку.</p>
         </Section>
       ) : (
-        <RangeSections garments={garments} cheapestPrint={cheapestPrint} />
+        <RangeGrid garments={garments} />
       )}
 
       <Section tone="teal">

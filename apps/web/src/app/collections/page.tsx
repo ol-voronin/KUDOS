@@ -33,9 +33,9 @@ export default async function CollectionsPage() {
         </nav>
 
         <h1 className="mt-3 font-display text-hero font-bold text-ink">Колекції</h1>
-        <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
-          Друга вісь каталогу: не за породою, а за настроєм. Один і той самий пес
-          може бути і в портреті, і на обкладинці журналу.
+        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-muted">
+          Наші колекції — це Бабаки в різних стилях. Той випадок, коли береш щось
+          з Вестіком собі, з Доберманом другу, а сусіду з Коргі кажеш де таке замовити.
         </p>
 
         <div className="mt-10">

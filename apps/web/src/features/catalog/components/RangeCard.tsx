@@ -1,130 +1,24 @@
-'use client';
-
 import Link from 'next/link';
-import { useState } from 'react';
 import { formatUAH, minor, type RangeGarmentDto } from '@dt/contracts';
-import { ButtonLink } from '@/components/ui';
 import { garmentCardPhoto } from '../garment-photos';
-import { SizeChart } from './SizeChart';
 
 /**
- * Один виріб у вітрині асортименту.
+ * Виріб у вітрині асортименту — коротка картка.
  *
- * Інтерактив тут рівно один: перемикання кольору міняє кадр. Це не прикраса —
- * це і є відповідь на питання, з яким приходять на цю сторінку («покажіть,
- * як воно виглядає в темно синьому»). Усе інше — статичний текст, і воно
- * рендериться на сервері, бо саме за цими словами сторінку знаходять.
+ * Раніше тут жила вся довідка одразу: перемикач кольорів, склад, щільність,
+ * розмірна сітка. Сторінка від цього перетворювалась на сім розгорнутих
+ * паспортів, крізь які треба прогортати, щоб дістатися сьомого виробу.
+ *
+ * Тепер картка відповідає рівно на те, з чим на цю сторінку приходять: як
+ * воно виглядає, скільки коштує, у скількох кольорах буває і які є розміри.
+ * Решта — за клацанням, на сторінці виробу, де для неї є місце.
+ *
+ * Кадр свідомо світлий (білий або слонова кістка): вітрина порівнює крої,
+ * а не відтінки, і сім різних кольорів у ряд заважали б це робити.
  */
-export function RangeCard({ garment, cheapestPrintMinor }: {
-  garment: RangeGarmentDto;
-  cheapestPrintMinor: number | null;
-}) {
-  const withPhoto = garment.colours.filter((c) => garmentCardPhoto(garment.slug, c.supplierCode) !== null);
-  const gallery = withPhoto.length > 0 ? withPhoto : garment.colours;
-  const [activeId, setActiveId] = useState(gallery[0]?.id ?? null);
-  const active = gallery.find((c) => c.id === activeId) ?? gallery[0];
-  // Знімальний кадр, якщо є: вітрина продає виглядом, а не схемою крою.
-  const src = active ? garmentCardPhoto(garment.slug, active.supplierCode) : null;
-  const fabric = garment.fabrics[0];
 
-  return (
-    <article className="grid gap-6 rounded-card border border-line bg-surface p-6 md:grid-cols-[minmax(0,15rem)_1fr]">
-      <div>
-        <div className="flex aspect-square items-center justify-center overflow-hidden rounded-card bg-surface-sunken">
-          {src && active ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src}
-              alt={`${garment.name}, ${active.name ?? active.supplierCode}`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="text-sm text-ink-subtle">Фото готуємо</span>
-          )}
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label={`Кольори: ${garment.name}`}>
-          {gallery.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              role="radio"
-              aria-checked={c.id === active?.id}
-              aria-label={c.name ?? c.supplierCode}
-              title={c.name ?? c.supplierCode}
-              onClick={() => setActiveId(c.id)}
-              className={[
-                'h-7 w-7 rounded-full border-2 transition',
-                c.id === active?.id ? 'border-ink' : 'border-line hover:border-ink-subtle',
-              ].join(' ')}
-              style={c.hex ? { backgroundColor: c.hex } : undefined}
-            />
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-ink-subtle" aria-live="polite">
-          {active?.name ?? '—'} · {garment.colours.length} {plural(garment.colours.length, 'колір', 'кольори', 'кольорів')}
-        </p>
-      </div>
-
-      <div>
-        <h2 className="font-display text-xl font-bold text-ink">
-          {/* Заголовок веде на сторінку покупки: картка — це вітрина, купують на PDP. */}
-          <Link href={`/vyroby/${garment.slug}`} className="hover:underline">{garment.name}</Link>
-        </h2>
-        {garment.description && <p className="mt-2 text-sm text-ink-muted">{garment.description}</p>}
-
-        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          {fabric && (
-            <>
-              <dt className="text-ink-subtle">Тканина</dt>
-              <dd className="text-ink">{fabric.composition}</dd>
-              <dt className="text-ink-subtle">Щільність</dt>
-              <dd className="text-ink tabular-nums">{fabric.weightGsm} г/м²</dd>
-            </>
-          )}
-          <dt className="text-ink-subtle">Розміри</dt>
-          <dd className="text-ink">{garment.sizes.map((s) => s.label).join(' · ')}</dd>
-          {garment.leadTimeDays !== null && (
-            <>
-              <dt className="text-ink-subtle">Виготовляємо</dt>
-              <dd className="text-ink">
-                {garment.leadTimeDays} {plural(garment.leadTimeDays, 'робочий день', 'робочі дні', 'робочих днів')}
-              </dd>
-            </>
-          )}
-        </dl>
-
-        <p className="mt-4 text-lg font-semibold text-ink">
-          {formatUAH(minor(garment.basePriceMinor))}
-          <span className="ml-2 text-sm font-normal text-ink-subtle">
-            без принта
-            {cheapestPrintMinor !== null && (
-              /* Без «від»: друк коштує однаково на будь-якому принті, тож це
-                 не діапазон, а точна ціна цієї ж речі з малюнком. */
-              <> · з принтом {formatUAH(minor(garment.basePriceMinor + cheapestPrintMinor))}</>
-            )}
-          </span>
-        </p>
-
-        {/*
-          Дві дії, бо в людини два наміри: купити чисту річ або піти
-          обирати малюнок. Раніше сторінка була довідником без жодної
-          кнопки — тепер базовий одяг купується (прохання Даші).
-        */}
-        <div className="mt-4 flex flex-wrap gap-3">
-          <ButtonLink href={`/vyroby/${garment.slug}`} variant="primary" size="md">
-            Купити без принта
-          </ButtonLink>
-          <ButtonLink href="/prints" variant="outline" size="md">
-            Обрати принт
-          </ButtonLink>
-        </div>
-
-        <SizeChart sizes={garment.sizes} />
-      </div>
-    </article>
-  );
-}
+/** Порядок, у якому шукаємо «нейтральний» кадр для вітрини. */
+const NEUTRAL = ['bilyi', 'slonova-kistka', 'mokryi-pisok'];
 
 /** Українська множина: 1 колір, 2 кольори, 5 кольорів. */
 function plural(n: number, one: string, few: string, many: string): string {
@@ -134,4 +28,82 @@ function plural(n: number, one: string, few: string, many: string): string {
   if (mod10 === 1) return one;
   if (mod10 >= 2 && mod10 <= 4) return few;
   return many;
+}
+
+function cardPhoto(garment: RangeGarmentDto): { src: string; colourName: string } | null {
+  const ordered = [
+    ...NEUTRAL.map((code) => garment.colours.find((c) => c.supplierCode === code)),
+    ...garment.colours,
+  ];
+  for (const colour of ordered) {
+    if (!colour) continue;
+    const src = garmentCardPhoto(garment.slug, colour.supplierCode);
+    if (src !== null) return { src, colourName: colour.name ?? colour.supplierCode };
+  }
+  return null;
+}
+
+export function RangeCard({ garment }: { garment: RangeGarmentDto }) {
+  const photo = cardPhoto(garment);
+  const sizes = garment.sizes;
+  const first = sizes[0]?.label;
+  const last = sizes[sizes.length - 1]?.label;
+  const sizeRange = first === undefined ? null : first === last ? first : `${first}–${last}`;
+
+  return (
+    <Link
+      href={`/vyroby/${garment.slug}`}
+      className="group flex gap-5 rounded-card border border-line bg-surface p-4 transition hover:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:p-5"
+    >
+      <div className="w-28 shrink-0 overflow-hidden rounded-card bg-surface-sunken sm:w-36">
+        {photo !== null ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo.src}
+            alt={`${garment.name}, ${photo.colourName}`}
+            loading="lazy"
+            className="aspect-[3/4] w-full object-cover"
+          />
+        ) : (
+          <span className="flex aspect-[3/4] items-center justify-center px-2 text-center text-xs text-ink-subtle">
+            Фото готуємо
+          </span>
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-col">
+        <h2 className="font-display text-lg font-bold uppercase leading-tight text-ink group-hover:underline">
+          {garment.name}
+        </h2>
+        {/*
+          Ціна точна, без «від». Надбавок за розмір на базових речах немає,
+          тож «від» не попереджало б ні про що — лише натякало на дрібний
+          шрифт, якого не існує.
+        */}
+        <p className="mt-1 font-display text-xl font-bold text-ink">
+          {formatUAH(minor(garment.basePriceMinor))}
+        </p>
+
+        <dl className="mt-3 space-y-0.5 text-sm text-ink-muted">
+          <dt className="sr-only">Кольори</dt>
+          <dd>
+            {garment.colours.length}{' '}
+            {plural(garment.colours.length, 'колір', 'кольори', 'кольорів')}
+          </dd>
+          {sizeRange !== null && (
+            <>
+              <dt className="sr-only">Розміри</dt>
+              <dd>Розміри: <span className="text-ink">{sizeRange}</span></dd>
+            </>
+          )}
+        </dl>
+
+        <span className="mt-auto pt-4">
+          <span className="inline-flex min-h-9 items-center rounded-pill bg-ink px-4 text-sm font-medium text-surface transition group-hover:opacity-85">
+            Детальніше
+          </span>
+        </span>
+      </div>
+    </Link>
+  );
 }

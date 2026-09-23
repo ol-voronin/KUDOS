@@ -128,12 +128,21 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
           href={`/collections/${collection.slug}`}
           className="group reveal flex flex-col rounded-card bg-surface-sunken p-3 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ghost motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
+          {/*
+            Превʼю показуються КРУПНІШЕ за кадр: обкладинка знята на повний
+            зріст, і в смужці завширшки з третину картки людина займала майже
+            все, а принт — кілька пікселів. `scale-150` з центром угорі
+            наближає рівно те, заради чого сюди дивляться, не чіпаючи розмір
+            самої плитки.
+          */}
           <div className="flex gap-2">
             {(collection.previewUrls.length > 0 ? collection.previewUrls : [null, null, null])
               .slice(0, 3)
               .map((url, i) => (
-                <div key={i} className="w-1/3">
-                  <PrintThumb src={url} alt="" />
+                <div key={i} className="w-1/3 overflow-hidden rounded-card">
+                  <div className="origin-[50%_22%] scale-150">
+                    <PrintThumb src={url} alt="" />
+                  </div>
                 </div>
               ))}
           </div>
@@ -143,9 +152,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
           {collection.description && (
             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-muted">{collection.description}</p>
           )}
-          <p className="mt-auto pt-2 text-sm text-ink-subtle">
-            {collection.printCount} {plural(collection.printCount, 'принт', 'принти', 'принтів')}
-          </p>
+
         </Link>
       ))}
     </div>

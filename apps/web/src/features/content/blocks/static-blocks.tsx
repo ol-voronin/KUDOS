@@ -45,11 +45,12 @@ function HeroHeading({ text, onDark = false }: { text: string; onDark?: boolean 
         // замінити одну надто гучну помилку на іншу.
         const short = part.trim().split(/\s+/).length <= GHOST_MAX_WORDS;
         if (!short) return <Fragment key={i}>{part}</Fragment>;
-        // На фотографії привида немає зовсім. Напівпрозорий білий на
-        // строкатому знімку не читається як прийом — читається як погано
-        // видно. Прийом лишається там, де під ним рівне тло.
+        // На фотографії привида немає зовсім: напівпрозорий білий на
+        // строкатому знімку читається не як прийом, а як «погано видно».
+        // Замість нього — хвиляста лінія: вона тримає той самий наголос,
+        // але не чіпає контраст самого слова.
         return onDark
-          ? <Fragment key={i}>{part}</Fragment>
+          ? <span key={i} className="wave-underline">{part}</span>
           : <span key={i} className="ghost-word">{part}</span>;
       })}
     </>
@@ -93,40 +94,48 @@ function HeroPlain({ block, onDark = false }: { block: HeroBlock } & Dark) {
  */
 function HeroFull({ block }: { block: HeroBlock }) {
   return (
-    <section className="relative -mt-px flex min-h-[calc(100svh-4.4rem)] items-center justify-center overflow-hidden">
+    <section className="relative -mt-px flex min-h-[calc(100svh-4.4rem)] items-center overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={block.image.url}
         alt={block.image.alt}
-        className="absolute inset-0 h-full w-full object-cover object-[50%_28%]"
+        className="absolute inset-0 h-full w-full object-cover object-[62%_28%] md:object-[70%_30%]"
       />
+      {/*
+        Затемнення тепер СПРЯМОВАНЕ: густе ліворуч, де лежить текст, і
+        прозоре праворуч, де на знімку принт і собака. Рівна плівка на весь
+        кадр гасила саме те, заради чого знімок тут і стоїть.
+
+        На телефоні колонки немає — текст іде поверх усього кадру, тож там
+        градієнт знову вертикальний.
+      */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/25 to-ink/45"
+        className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/35 to-ink/15 md:bg-gradient-to-r md:from-ink/80 md:via-ink/45 md:via-35% md:to-transparent"
       />
-      <div className="relative z-10 flex max-w-4xl flex-col items-center px-4 py-20 text-center sm:px-6">
-        {block.eyebrow.trim() !== '' && (
-          <p className="reveal label-eyebrow mb-4 text-white/70">{block.eyebrow}</p>
-        )}
-        {/*
-          На фотографії заголовок навмисно на щабель менший за той, що на
-          світлому: там він єдиний елемент і може бути скільки завгодно
-          великим, а тут конкурує зі знімком і мусить лишити його видимим.
-          `balance` тримає рядки приблизно рівними — довга українська фраза
-          інакше ламається як «чотири слова / одне».
-        */}
-        <h1 className="reveal reveal-1 max-w-3xl text-balance font-display text-[clamp(1.9rem,4.4vw,3.6rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm">
-          <HeroHeading text={block.heading} onDark />
-        </h1>
-        <InlineParagraph
-          text={block.lead}
-          className="reveal reveal-2 mt-5 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg"
-        />
-        {block.footnote.trim() !== '' && (
-          <p className="reveal reveal-2 mt-3 text-sm text-white/60">{block.footnote}</p>
-        )}
-        <div className="reveal reveal-3">
-          <BlockLinks links={block.links} className="mt-9 justify-center" onDark />
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-20 sm:px-6">
+        <div className="flex max-w-xl flex-col items-start text-left">
+          {block.eyebrow.trim() !== '' && (
+            <p className="reveal label-eyebrow mb-4 text-white/75">{block.eyebrow}</p>
+          )}
+          {/*
+            Заголовок на фотографії на щабель менший за той, що на світлому:
+            там він єдиний елемент і може бути скільки завгодно великим, а
+            тут конкурує зі знімком і мусить лишити його видимим.
+          */}
+          <h1 className="reveal reveal-1 font-display text-[clamp(2rem,4.6vw,3.8rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm">
+            <HeroHeading text={block.heading} onDark />
+          </h1>
+          <InlineParagraph
+            text={block.lead}
+            className="reveal reveal-2 mt-5 max-w-md text-base leading-relaxed text-white/85 sm:text-lg"
+          />
+          {block.footnote.trim() !== '' && (
+            <p className="reveal reveal-2 mt-3 text-sm text-white/65">{block.footnote}</p>
+          )}
+          <div className="reveal reveal-3">
+            <BlockLinks links={block.links} className="mt-9" onDark />
+          </div>
         </div>
       </div>
 
