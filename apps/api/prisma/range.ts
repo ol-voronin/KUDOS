@@ -70,8 +70,8 @@ export interface FabricSpec {
 }
 
 export const FABRICS: readonly FabricSpec[] = [
-  { key: 'bavovna-180', name: 'Бавовна 180',  weightGsm: 180, composition: '100% органічна бавовна. Гребінна бавовна.', leadTimeDays: 5 },
-  { key: 'bavovna-220', name: 'Бавовна 220',  weightGsm: 220, composition: '100% органічна бавовна. Гребінна бавовна.', leadTimeDays: 5 },
+  { key: 'bavovna-180', name: 'Бавовна 180',  weightGsm: 180, composition: '100% органічна бавовна.', leadTimeDays: 5 },
+  { key: 'bavovna-220', name: 'Бавовна 220',  weightGsm: 220, composition: '100% органічна бавовна.', leadTimeDays: 5 },
   { key: 'dvonytka-300',name: 'Двонитка 300', weightGsm: 300, composition: '85% органічна бавовна, 15% перероблений поліестер. Двонитка.', leadTimeDays: 7 },
   { key: 'flis-350',    name: 'Фліс 350',     weightGsm: 350, composition: '85% органічна бавовна, 15% перероблений поліестер. З начісом.', leadTimeDays: 7 },
 ];

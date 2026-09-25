@@ -88,16 +88,30 @@
     position: relative;
     white-space: nowrap;
   }
+  /*
+   * Лінія — намальований від руки штрих із макета (`/wave-underline.png`),
+   * а не згенерована синусоїда.
+   *
+   * Синусоїда була рівна: однакова амплітуда, однаковий крок, машинна.
+   * Поруч із рукописним логотипом вона читалася як службова підкреслювалка
+   * з текстового редактора, а не як позначка рукою. Штрих із макета живий —
+   * у нього різна товщина по довжині й затесані кінці, і саме це відрізняє
+   * «наголосили» від «підкреслили автоматично».
+   *
+   * Розтягується на всю ширину слова (`100% 100%`), а не повторюється:
+   * у штриха є початок і кінець, і зшивати його в стрічку не можна — на
+   * стику видно шов.
+   */
   .wave-underline::after {
     content: '';
     position: absolute;
-    left: -0.02em;
-    right: -0.02em;
-    bottom: -0.02em;
-    height: 0.16em;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 8' preserveAspectRatio='none'%3E%3Cpath d='M0 5.2c5-4.4 10-4.4 15 0s10 4.4 15 0 7-3.2 10-1.4' fill='none' stroke='%23df2a35' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: repeat-x;
-    background-size: 2.2em 100%;
+    left: -0.04em;
+    right: -0.04em;
+    bottom: -0.06em;
+    height: 0.2em;
+    background-image: url('/wave-underline.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
     pointer-events: none;
   }
 

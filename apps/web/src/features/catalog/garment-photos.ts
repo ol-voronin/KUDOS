@@ -37,6 +37,7 @@ const VIEWS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>
     'smarahdovyi': ['manfront', 'ladyfront'],
     'stalevyi-siryi': ['manfront', 'ladyfront'],
     'temno-synii': ['manfront', 'ladyfront'],
+    'zelenyi-mokh': ['manfront', 'ladyfront'],
     'zelenyi-nefryt': ['manfront', 'ladyfront'],
   },
   'futbolka-oversayz-cholovicha': {

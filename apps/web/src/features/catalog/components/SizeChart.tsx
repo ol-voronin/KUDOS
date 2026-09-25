@@ -160,7 +160,12 @@ function HowToMeasure({ garment }: { garment: GarmentDto }) {
  * існує рівно для того, щоб зняти це питання, — отже, він має показувати
  * ту річ, яку зараз обирають.
  *
- * Чотири силуети, а не сім: гібрид-світшот міряється як футболка, а три
+ * Знімки з макета, а не мальований контур. Схема, накреслена в коді,
+ * відповідала на питання «звідки й куди міряти», але виглядала як
+ * креслення з інструкції до пилососа поруч зі справжніми фотографіями
+ * виробу — і тим підказувала, що сторінку складали нашвидкуруч.
+ *
+ * Чотири файли, а не сім: гібрид-світшот міряється як футболка, а три
  * футболки різняться кроєм, але не тим, звідки й куди тягнути стрічку.
  */
 type Shape = 'tee' | 'hoodie-short' | 'crew' | 'hoodie';
@@ -171,60 +176,14 @@ function shapeOf(garment: GarmentDto): Shape {
   return 'tee';
 }
 
-/** Контур тіла й рукавів. Координати — у полі 200×200. */
-const BODY: Record<Shape, string> = {
-  // Короткий рукав, пряме тіло.
-  tee: 'M74 34 L46 44 L28 78 L52 92 L64 72 V168 H136 V72 L148 92 L172 78 L154 44 L126 34 Q100 50 74 34 Z',
-  // Те саме тіло плюс капюшон за плечима.
-  'hoodie-short': 'M74 34 L46 44 L28 78 L52 92 L64 72 V168 H136 V72 L148 92 L172 78 L154 44 L126 34 Q100 50 74 34 Z',
-  // Довгий рукав, манжети.
-  crew: 'M76 34 L46 46 L30 128 L58 136 L68 84 V168 H132 V84 L142 136 L170 128 L154 46 L124 34 Q100 50 76 34 Z',
-  hoodie: 'M76 34 L46 46 L30 128 L58 136 L68 84 V168 H132 V84 L142 136 L170 128 L154 46 L124 34 Q100 50 76 34 Z',
-};
-
-/** Капюшон малюється ПІД тілом, тому окремим контуром. */
-const HOOD: Partial<Record<Shape, string>> = {
-  'hoodie-short': 'M74 36 Q76 8 100 8 Q124 8 126 36 Q100 50 74 36 Z',
-  hoodie: 'M76 36 Q78 6 100 6 Q122 6 124 36 Q100 50 76 36 Z',
-};
-
 function GarmentDiagram({ garment }: { garment: GarmentDto }) {
-  const shape = shapeOf(garment);
-  const hood = HOOD[shape];
-
-  /*
-   * Стрілки навмисно йдуть по тканині, а не по краю.
-   *
-   * Вони білі — і це єдиний спосіб зробити їх помітними на темному
-   * силуеті. Але щойно стрілка виходить за контур, вона стає білим на
-   * білому й зникає; найпростіше на це натрапити вістрям угорі, бо виріз
-   * горловини — це виїмка рівно посередині, там, де хочеться поставити
-   * лінію довжини. Тому лінія зміщена ліворуч від центру, у суцільну
-   * тканину.
-   */
   return (
-    <svg
-      viewBox="0 0 200 200"
-      className="mt-5 w-44 max-w-full"
-      role="img"
-      aria-label={`${garment.name}: А — ширина впоперек під пахвами, Б — довжина від плеча до низу`}
-    >
-      {hood !== undefined && <path d={hood} className="fill-ink-muted" />}
-      <path d={BODY[shape]} className="fill-ink-muted" />
-
-      <g className="stroke-surface" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-        {/* Б — довжина, від плеча до низу */}
-        <path d="M90 46 V162" />
-        <path d="M84 53 L90 45 L96 53" />
-        <path d="M84 155 L90 163 L96 155" />
-        {/* А — ширина, впоперек під пахвами */}
-        <path d="M70 104 H130" />
-        <path d="M77 97 L69 104 L77 111" />
-        <path d="M123 97 L131 104 L123 111" />
-      </g>
-
-      <text x="96" y="58" className="fill-surface" fontSize="15" fontWeight="700">Б</text>
-      <text x="74" y="97" className="fill-surface" fontSize="15" fontWeight="700">А</text>
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/size-guide/${shapeOf(garment)}.webp`}
+      alt={`${garment.name}: А — ширина впоперек під пахвами, Б — довжина від плеча до низу`}
+      loading="lazy"
+      className="mt-5 h-44 w-auto max-w-full"
+    />
   );
 }
