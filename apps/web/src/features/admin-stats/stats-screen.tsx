@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AdminStatsDto, formatUAH, minor } from '@dt/contracts';
 import { apiFetch } from '@/lib/api-client';
 import { DailyChart } from './daily-chart';
+import { SalesSection } from './sales-section';
 import { TableSkeleton } from '@/components/ui';
 
 const RANGES = [7, 30, 90] as const;
@@ -79,6 +80,8 @@ export function StatsScreen() {
               ariaTotalLabel={`${data.totals.leads} заявок за ${days} днів`}
             />
           </div>
+
+          <SalesSection days={days} />
 
           <section>
             <h2 className="font-display text-lg font-bold text-ink">Звідки приходять</h2>

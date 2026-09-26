@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { AdminStatsDto, AttributionDto, TrackEventDto } from '@dt/contracts';
+import type { AdminStatsDto, AttributionDto, SalesStatsDto, TrackEventDto } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { requireSiteId } from '../common/site-context';
+import { summariseSales, type SoldRow } from './sales.domain';
 import { dailySeries, rankPages, rankSources, type EventRow, type OutcomeRow } from './stats.domain';
 
 /**
@@ -77,6 +78,67 @@ export class AnalyticsService {
       landingPath: '',
       valueMinor: order.totalMinor,
     });
+  }
+
+  /**
+   * Що саме купують — із замовлень, не з подій.
+   *
+   * Період і набір статусів ті самі, що й у `stats`, свідомо: два блоки на
+   * одному екрані, які рахують «замовлення» по-різному, — це гарантоване
+   * питання «а чому тут 12, а там 9» і година на з'ясування, що обидва
+   * праві.
+   *
+   * `lineTotalMinor` — знімок ціни на момент покупки, після знижки.
+   * Перерахувати старе замовлення за сьогоднішнім прайсом означало б, що
+   * звіт за вересень міняється щоразу, як ми правимо ціну.
+   */
+  async sales(days: number): Promise<SalesStatsDto> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const items = await this.prisma.db.orderItem.findMany({
+      where: {
+        order: { placedAt: { gte: since }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } },
+      },
+      select: {
+        orderId: true,
+        quantity: true,
+        lineTotalMinor: true,
+        print: {
+          select: {
+            slug: true, title: true,
+            breeds: { select: { breed: { select: { slug: true, name: true } } } },
+            collections: { select: { collection: { select: { slug: true, title: true } } } },
+          },
+        },
+        variant: {
+          select: {
+            garment: { select: { slug: true, name: true } },
+            colour: { select: { name: true, supplierCode: true } },
+            size: { select: { label: true } },
+          },
+        },
+      },
+    });
+
+    const sold: SoldRow[] = items.map((i) => ({
+      orderId: i.orderId,
+      quantity: i.quantity,
+      lineTotalMinor: i.lineTotalMinor,
+      print: i.print === null ? null : { key: i.print.slug, label: i.print.title },
+      breeds: (i.print?.breeds ?? []).map((b) => ({ key: b.breed.slug, label: b.breed.name })),
+      collections: (i.print?.collections ?? []).map(
+        (c) => ({ key: c.collection.slug, label: c.collection.title })),
+      garment: { key: i.variant.garment.slug, label: i.variant.garment.name },
+      // Колір без назви показуємо кодом постачальника: «не вказано» в звіті
+      // про те, що купують, не допомагає нікому.
+      colour: (() => {
+        const label = i.variant.colour.name ?? i.variant.colour.supplierCode;
+        return { key: label, label };
+      })(),
+      size: { key: i.variant.size.label, label: i.variant.size.label },
+    }));
+
+    return summariseSales(days, sold);
   }
 
   async stats(days: number): Promise<AdminStatsDto> {

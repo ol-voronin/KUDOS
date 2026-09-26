@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
 import {
   ConversionActionCreateDto, ConversionActionUpdateDto, StatsRangeDto, TrackEventDto,
-  type AdminStatsDto, type ConversionActionDto, type TrackingConfigDto,
+  type AdminStatsDto, type ConversionActionDto, type SalesStatsDto, type TrackingConfigDto,
 } from '@dt/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -51,6 +51,11 @@ export class AnalyticsAdminController {
   @Get('stats')
   stats(@Query(new ZodValidationPipe(StatsRangeDto)) query: StatsRangeDto): Promise<AdminStatsDto> {
     return this.analytics.stats(query.days);
+  }
+
+  @Get('sales')
+  sales(@Query(new ZodValidationPipe(StatsRangeDto)) query: StatsRangeDto): Promise<SalesStatsDto> {
+    return this.analytics.sales(query.days);
   }
 
   @Get('conversions')

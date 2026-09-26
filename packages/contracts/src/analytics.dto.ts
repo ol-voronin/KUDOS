@@ -173,3 +173,48 @@ export const TrackingConfigDto = z.object({
   conversions: z.array(ConversionActionDto),
 });
 export type TrackingConfigDto = z.infer<typeof TrackingConfigDto>;
+
+// ---------------------------------------------------------------------------
+// Продажі: правда з бази, а не з подій
+// ---------------------------------------------------------------------------
+
+/**
+ * Що саме купують.
+ *
+ * Це єдиний звіт, який рахується з **замовлень**, а не з подій на сайті.
+ * Різниця принципова. Подія покупки може не дійти: людина закрила вкладку до
+ * того, як завантажився скрипт, відмовилась від cookie, сиділа через блокер.
+ * Замовлення в базі є завжди — воно й оплачене.
+ *
+ * Тому в GA4 ми питаємо «звідки прийшли й де загубились», а тут — «скільки
+ * заробили й на чому». Змішувати ці два джерела в одному числі не можна:
+ * вони ніколи не збіжаться, і спроба звести їх з'їдає більше часу, ніж дає.
+ */
+export const SoldRowDto = z.object({
+  key: z.string(),
+  label: z.string(),
+  quantity: z.number().int().nonnegative(),
+  revenueMinor: z.number().int().nonnegative(),
+});
+export type SoldRowDto = z.infer<typeof SoldRowDto>;
+
+export const SalesStatsDto = z.object({
+  days: z.number().int().positive(),
+  totals: z.object({
+    orders: z.number().int().nonnegative(),
+    /** Штук, а не рядків: два однакові худі в одному замовленні — це два. */
+    items: z.number().int().nonnegative(),
+    revenueMinor: z.number().int().nonnegative(),
+    /** Дохід поділений на кількість замовлень. */
+    averageOrderMinor: z.number().int().nonnegative(),
+    /** Частка штук із принтом, у сотих відсотка. Решта — базовий одяг. */
+    printedHundredths: z.number().int().nonnegative(),
+  }),
+  prints: z.array(SoldRowDto),
+  breeds: z.array(SoldRowDto),
+  collections: z.array(SoldRowDto),
+  garments: z.array(SoldRowDto),
+  sizes: z.array(SoldRowDto),
+  colours: z.array(SoldRowDto),
+});
+export type SalesStatsDto = z.infer<typeof SalesStatsDto>;
