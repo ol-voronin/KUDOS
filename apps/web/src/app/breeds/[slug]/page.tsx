@@ -153,7 +153,7 @@ export default async function BreedPage({ params }: Params) {
 
         <div className="mt-10">
           {prints.length > 0
-            ? <PrintGrid prints={prints} list={LIST.breed} />
+            ? <PrintGrid prints={prints} list={LIST.breed} listId={breed.slug} />
             : <EmptyBreed name={breed.name} collections={collections} />}
         </div>
 

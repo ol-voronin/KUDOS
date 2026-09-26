@@ -65,6 +65,8 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
       item_id: slug,
       item_name: data.garment.name,
       item_category: 'Базовий одяг',
+      item_category2: data.garment.name,
+      garment: data.garment.name,
       price: hryvnia(data.garment.basePriceMinor),
       quantity: 1,
     });
@@ -169,6 +171,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
     item_name: garment.name,
     item_category: 'Базовий одяг',
     item_category2: garment.name,
+    garment: garment.name,
     item_variant: [selectedColour?.name ?? selectedColour?.supplierCode, selectedSize?.label]
       .filter((part) => part !== undefined && part !== '')
       .join(' · '),

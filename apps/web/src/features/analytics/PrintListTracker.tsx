@@ -31,18 +31,24 @@ export interface ListedPrint {
 }
 
 export function PrintListTracker({
-  list, prints, children,
-}: { list: ListName; prints: readonly ListedPrint[]; children: ReactNode }) {
+  list, listId, prints, children,
+}: {
+  list: ListName;
+  /** Слаг конкретної вітрини: `taksa`, `pab`. Вид списку без нього німий. */
+  listId?: string;
+  prints: readonly ListedPrint[];
+  children: ReactNode;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const sent = useRef<string | null>(null);
 
-  const key = `${list}:${prints.map((p) => p.slug).join(',')}`;
+  const key = `${list}:${listId ?? ''}:${prints.map((p) => p.slug).join(',')}`;
 
   useEffect(() => {
     if (prints.length === 0 || sent.current === key) return;
     sent.current = key;
-    ga4ViewItemList(list, prints.map(toItem));
-  }, [key, list, prints]);
+    ga4ViewItemList(list, prints.map(toItem), listId);
+  }, [key, list, listId, prints]);
 
   useEffect(() => {
     const node = box.current;
@@ -54,12 +60,12 @@ export function PrintListTracker({
       const slug = link.getAttribute('href')?.slice('/prints/'.length) ?? '';
       const index = prints.findIndex((p) => p.slug === slug);
       if (index === -1) return;
-      ga4SelectItem(list, toItem(prints[index] as ListedPrint), index);
+      ga4SelectItem(list, toItem(prints[index] as ListedPrint), index, listId);
     };
 
     node.addEventListener('click', onClick, { capture: true });
     return () => node.removeEventListener('click', onClick, { capture: true });
-  }, [list, prints]);
+  }, [list, listId, prints]);
 
   return <div ref={box}>{children}</div>;
 }

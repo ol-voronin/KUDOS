@@ -44,6 +44,20 @@ export interface PricedCartLine {
   readonly printId: string | null;
   readonly printSlug: string | null;
   readonly printTitle: string;
+  /**
+   * Колекції й породи принта — виключно для звітів.
+   *
+   * Ціни вони не змінюють і на сторінці кошика не показуються. Вони тут
+   * тому, що інакше в GA4 обривається єдина ниточка, заради якої вся ця
+   * аналітика й ставилась: до кошика ми знаємо, що людина дивилась таксу,
+   * а після оплати вже ні. Питання «яка порода приносить гроші» без цих
+   * двох полів не має відповіді взагалі, а породні сторінки — це вся наша
+   * SEO-архітектура.
+   *
+   * Дописати заднім числом не можна: подія покупки не переписується.
+   */
+  readonly collectionSlugs: readonly string[];
+  readonly breedSlugs: readonly string[];
   readonly previewUrl: string;
   readonly variantId: string;
   readonly garmentId: string;
@@ -142,7 +156,8 @@ export class CartPricingService {
         where: { slug: { in: printSlugs }, isPublished: true },
         select: {
           id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
-          collections: { select: { collectionId: true } },
+          collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
+          breeds: { select: { breed: { select: { slug: true } } } },
           colourExclusions: { select: { colourId: true } },
         },
       }),
@@ -254,6 +269,10 @@ export class CartPricingService {
         printSlug: print?.slug ?? null,
         // Для базового одягу заголовком рядка стає сам виріб.
         printTitle: print?.title ?? variant.garment.name,
+        collectionSlugs: print?.collections.map(
+          (c: { collection: { slug: string } }) => c.collection.slug) ?? [],
+        breedSlugs: print?.breeds.map(
+          (b: { breed: { slug: string } }) => b.breed.slug) ?? [],
         previewUrl: print?.previewUrl ?? variant.colour.imageUrl ?? '',
         variantId: variant.id,
         garmentId: variant.garmentId,
@@ -334,6 +353,7 @@ function missingLine(item: CartItemDto): PricedCartLine {
   return {
     printId: null, printSlug: item.printSlug, printTitle: 'Товар більше недоступний',
     previewUrl: '', variantId: item.variantId, garmentId: '',
+    collectionSlugs: [], breedSlugs: [],
     garmentName: '', colourName: '', sizeLabel: '',
     quantity: item.quantity, printMethod: item.printMethod,
     garmentPriceMinor: 0, printPriceMinor: 0, unitMinor: 0, lineSubtotalMinor: 0,
@@ -351,6 +371,8 @@ export function toCartQuote(cart: PricedCart): CartQuoteDto {
       variantId: l.variantId,
       quantity: l.quantity,
       title: l.printTitle,
+      collectionSlugs: [...l.collectionSlugs],
+      breedSlugs: [...l.breedSlugs],
       garmentName: l.garmentName,
       garmentSlug: l.garmentSlug,
       colourName: l.colourName,

@@ -132,6 +132,24 @@ export interface Ga4Item {
   readonly item_category2?: string;
   /** Виріб, колір і розмір одним рядком. */
   readonly item_variant?: string;
+  /*
+   * Три параметри нижче — не словник GA4, а наші власні. У звітах вони
+   * зʼявляються лише після того, як їх зареєструють як виміри рівня товару
+   * в адмінці, і лише для подій, що прийшли ПІСЛЯ реєстрації. Заднім числом
+   * жоден із них не наповнюється — тому вони й додані до першого трафіку.
+   *
+   * `breed` відповідає на головне питання цього бізнесу: яка порода приносить
+   * гроші. Породних сторінок у нас більше, ніж будь-яких інших, і вся
+   * пошукова архітектура тримається на них.
+   *
+   * Принт із двома породами («такса і йорк») не розкладається на дві — виміри
+   * GA4 скалярні. Такі принти склеюються через `+` і читаються як окремий вид
+   * товару, яким вони по суті й є.
+   */
+  readonly breed?: string;
+  readonly collection?: string;
+  /** Тип виробу окремо від кольору й розміру — щоб можна було групувати. */
+  readonly garment?: string;
   /** Гривні, не копійки. */
   readonly price?: number;
   /** Знижка на одиницю, гривні. */
@@ -143,14 +161,28 @@ export interface Ga4Item {
   readonly item_list_name?: string;
 }
 
+/**
+ * Кілька слагів в одне значення виміру.
+ *
+ * Порожньо — `undefined`, а не порожній рядок: GA4 показує порожній рядок як
+ * повноцінне значення «», і в звіті зʼявляється рядок-привид.
+ */
+function joinSlugs(slugs: readonly string[]): string | undefined {
+  return slugs.length === 0 ? undefined : [...slugs].sort().join('+');
+}
+
 /** Рядок кошика → позиція GA4. Одне місце на кошик, касу й покупку. */
 export function itemFromCartLine(line: CartLineDto, index: number): Ga4Item {
+  const isPrint = line.printSlug !== null;
   return {
     item_id: line.printSlug ?? line.garmentSlug,
     item_name: line.title,
     item_brand: BRAND,
-    item_category: line.printSlug === null ? 'Базовий одяг' : 'Принт',
-    item_category2: line.garmentName,
+    item_category: isPrint ? 'Принт' : 'Базовий одяг',
+    item_category2: isPrint ? joinSlugs(line.collectionSlugs) : line.garmentName,
+    breed: isPrint ? joinSlugs(line.breedSlugs) : undefined,
+    collection: isPrint ? joinSlugs(line.collectionSlugs) : undefined,
+    garment: line.garmentName,
     item_variant: [line.garmentName, line.colourName, line.sizeLabel]
       .filter((part) => part !== '').join(' · '),
     price: hryvnia(line.unitMinor),
@@ -207,18 +239,33 @@ export function ga4ConsentGranted(): void {
 // Події
 // ---------------------------------------------------------------------------
 
-export function ga4ViewItemList(listName: ListName, items: readonly Ga4Item[]): void {
+/*
+ * `item_list_name` каже ВИД вітрини — «Порода», «Колекція». Сам по собі він не
+ * каже, ЯКА саме порода, а це і є питання, заради якого породні сторінки
+ * писалися. Тому поруч їде `item_list_id` зі слагом конкретної сторінки:
+ * це стандартний вимір GA4, його не треба нічого реєструвати, і він одразу
+ * розкладає список на рядки «taksa», «korhi», «mops».
+ */
+export function ga4ViewItemList(
+  listName: ListName, items: readonly Ga4Item[], listId?: string,
+): void {
   if (items.length === 0) return;
   send('view_item_list', {
     item_list_name: listName,
-    items: items.map((i, index) => ({ ...withBrand(i), index, item_list_name: listName })),
+    item_list_id: listId,
+    items: items.map((i, index) => ({
+      ...withBrand(i), index, item_list_name: listName, item_list_id: listId,
+    })),
   });
 }
 
-export function ga4SelectItem(listName: ListName, item: Ga4Item, index: number): void {
+export function ga4SelectItem(
+  listName: ListName, item: Ga4Item, index: number, listId?: string,
+): void {
   send('select_item', {
     item_list_name: listName,
-    items: [{ ...withBrand(item), index, item_list_name: listName }],
+    item_list_id: listId,
+    items: [{ ...withBrand(item), index, item_list_name: listName, item_list_id: listId }],
   });
 }
 

@@ -121,6 +121,14 @@ export const CartLineDto = z.object({
   variantId: z.string().uuid(),
   quantity: z.number().int().positive(),
   title: z.string(),
+  /**
+   * Колекції й породи принта. Сторінка кошика їх не показує — вони їдуть
+   * сюди тільки заради подій GA4: без них дохід неможливо розкласти за
+   * породою, а саме на породах тримається вся SEO-архітектура сайту.
+   * Для базового одягу обидва списки порожні.
+   */
+  collectionSlugs: z.array(Slug),
+  breedSlugs: z.array(Slug),
   garmentName: z.string(),
   /** Куди вести рядок без принта: сторінка виробу. */
   garmentSlug: z.string(),

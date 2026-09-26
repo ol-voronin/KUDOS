@@ -19,6 +19,11 @@ import { canMockup, PrintOnGarment } from './PrintOnGarment';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
+/** Слаги в одне значення виміру — тією самою логікою, що й у кошику. */
+function joinSlugs(slugs: readonly string[]): string | undefined {
+  return slugs.length === 0 ? undefined : [...slugs].sort().join('+');
+}
+
 export function PrintOfferView({ slug, initialData }: { slug: string; initialData?: PrintOfferDto }) {
   const { data, isLoading, isError } = usePrintOffer(slug, initialData);
   const { add } = useCart();
@@ -53,6 +58,9 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       item_id: slug,
       item_name: data.print.title,
       item_category: 'Принт',
+      item_category2: joinSlugs(data.print.collectionSlugs),
+      breed: joinSlugs(data.print.breedSlugs),
+      collection: joinSlugs(data.print.collectionSlugs),
       price: hryvnia(cheapestGarment + data.printPriceMinor),
       quantity: 1,
     });
@@ -220,7 +228,10 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     item_id: slug,
     item_name: data?.print.title ?? slug,
     item_category: 'Принт',
-    item_category2: garment.name,
+    item_category2: joinSlugs(data?.print.collectionSlugs ?? []),
+    breed: joinSlugs(data?.print.breedSlugs ?? []),
+    collection: joinSlugs(data?.print.collectionSlugs ?? []),
+    garment: garment.name,
     item_variant: [garment.name, selectedColour?.name ?? selectedColour?.supplierCode, selectedSize?.label]
       .filter((part) => part !== undefined && part !== '')
       .join(' · '),

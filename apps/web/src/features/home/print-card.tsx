@@ -62,7 +62,10 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
  * комірок: у сітці з незаповненим останнім рядком фон-роздільник
  * перетворився б на сірі плями там, де товарів забракло.
  */
-export function PrintGrid({ prints, list }: { prints: readonly PrintCardDto[]; list?: ListName }) {
+export function PrintGrid(
+  { prints, list, listId }:
+  { prints: readonly PrintCardDto[]; list?: ListName; listId?: string },
+) {
   const grid = (
     <div
       className={[
@@ -83,6 +86,7 @@ export function PrintGrid({ prints, list }: { prints: readonly PrintCardDto[]; l
   return (
     <PrintListTracker
       list={list}
+      listId={listId}
       prints={prints.map((p) => ({ slug: p.slug, title: p.title, fromPriceMinor: p.fromPriceMinor }))}
     >
       {grid}
