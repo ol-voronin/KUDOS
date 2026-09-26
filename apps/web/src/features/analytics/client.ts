@@ -3,6 +3,7 @@
 import type { AnalyticsEventName, AttributionDto, TrackingConfigDto } from '@dt/contracts';
 import { EMPTY_ATTRIBUTION } from '@dt/contracts';
 import { BROWSER_API_URL } from '@/lib/api-origin';
+import { sendGtag } from './ga4';
 
 /**
  * Статистика на боці браузера.
@@ -157,15 +158,20 @@ export function track(
  * нашу базу з вебхука Monobank, і другий запис із браузера подвоїв би дохід
  * у звіті. А от Google про неї інакше не дізнається — тег живе тільки в
  * браузері.
+ *
+ * Надсилається через чергу з `ga4`, а не прямим викликом: скрипт Google
+ * вантажиться після гідрації, а сторінку оплаченого замовлення найчастіше
+ * відкривають посиланням — тобто холодним заходом, коли `gtag` ще не
+ * існує. Прямий виклик у цей момент мовчки не робив нічого, і конверсія
+ * губилася саме там, де вона найдорожча.
  */
 export function fireConversion(name: AnalyticsEventName, valueMinor?: number): void {
   const action = config?.conversions.find((c) => c.event === name && c.isActive);
   const adsId = config?.googleAdsId ?? '';
-  const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
 
-  if (action === undefined || adsId === '' || typeof gtag !== 'function') return;
+  if (action === undefined || adsId === '') return;
 
-  gtag('event', 'conversion', {
+  sendGtag('event', 'conversion', {
     send_to: `${adsId}/${action.label}`,
     ...(action.sendValue && valueMinor !== undefined
       ? { value: valueMinor / 100, currency: 'UAH' }

@@ -15,11 +15,25 @@
  * Тому дві системи лишаються паралельними: наша рахує воронку в нашій базі
  * й не залежить від згоди, GA4 — свою й вантажиться лише після згоди.
  *
+ * ── Черга, і чому без неї половини подій не було ──────────────────────
+ *
+ * Скрипт Google вантажиться `afterInteractive`, тобто вже ПІСЛЯ гідрації.
+ * А перегляд товару надсилається з ефекту, який спрацьовує саме в мить
+ * гідрації. На звичайному заході — з пошуку, з реклами, з посилання в
+ * Instagram — `gtag` у цей момент ще не існує, і подія йшла в нікуди.
+ * Помітили це не одразу: при переходах усередині сайту все працювало, бо
+ * там скрипт давно завантажений, і перевірка «клац-клац по меню» нічого не
+ * показувала. Втрачалися рівно ті заходи, заради яких аналітику й ставлять.
+ *
+ * Тому подія, що не має куди піти, лягає в чергу, а черга виливається,
+ * щойно `gtag` зʼявиться. Чекаємо обмежений час і потім забуваємо: якщо
+ * людина не дала згоди, скрипт не зʼявиться ніколи, і накопичене має
+ * зникнути разом зі сторінкою. Вилити чергу через хвилину, коли згоду
+ * нарешті натиснули, було б тихим обходом самої згоди.
+ *
  * ── Мовчазна відмова ──────────────────────────────────────────────────
  *
- * Якщо `gtag` не завантажений — а це нормальний стан сайту без згоди або
- * без ідентифікатора, — усі функції нижче нічого не роблять. Не кидають, не
- * логують, не чекають. Статистика не та річ, заради якої можна зламати
+ * Ні кидків, ні логів. Статистика не та річ, заради якої можна зламати
  * кнопку «Додати в кошик».
  *
  * ── Гроші ─────────────────────────────────────────────────────────────
@@ -46,16 +60,61 @@ type Gtag = (...args: readonly unknown[]) => void;
 
 const CURRENCY = 'UAH';
 
+/** Скільки чекаємо на появу `gtag`, перш ніж забути накопичене. */
+const WAIT_MS = 10_000;
+/** Стеля черги: без згоди вона не виллється ніколи й не має рости вічно. */
+const QUEUE_MAX = 20;
+
+const pending: unknown[][] = [];
+let waiting: ReturnType<typeof setInterval> | null = null;
+let giveUpAt = 0;
+
+function gtagNow(): Gtag | null {
+  if (typeof window === 'undefined') return null;
+  const fn = (window as unknown as { gtag?: Gtag }).gtag;
+  return typeof fn === 'function' ? fn : null;
+}
+
+function stopWaiting(): void {
+  if (waiting !== null) { clearInterval(waiting); waiting = null; }
+  pending.length = 0;
+}
+
+/**
+ * Надіслати виклик у gtag або відкласти до його появи.
+ *
+ * Експортується, бо конверсії Google Ads (`analytics/client`) чекають на той
+ * самий скрипт і губилися так само — найчастіше на сторінці оплаченого
+ * замовлення, яку відкривають переходом за посиланням, а не з каси.
+ */
+export function sendGtag(...args: readonly unknown[]): void {
+  const fn = gtagNow();
+  if (fn !== null) { fn(...args); return; }
+  if (typeof window === 'undefined') return;
+
+  if (pending.length < QUEUE_MAX) pending.push([...args]);
+  giveUpAt = Date.now() + WAIT_MS;
+  if (waiting !== null) return;
+
+  waiting = setInterval(() => {
+    const ready = gtagNow();
+    if (ready !== null) {
+      const queued = [...pending];
+      stopWaiting();
+      for (const call of queued) ready(...call);
+      return;
+    }
+    if (Date.now() > giveUpAt) stopWaiting();
+  }, 250);
+}
+
 /** Копійки → гривні. Єдине місце, де це перетворення взагалі відбувається. */
 export function hryvnia(minorAmount: number): number {
   return Math.round(minorAmount) / 100;
 }
 
 function send(name: string, params: Record<string, unknown>): void {
-  if (typeof window === 'undefined') return;
-  const gtag = (window as unknown as { gtag?: Gtag }).gtag;
-  if (typeof gtag !== 'function') return;
-  gtag('event', name, params);
+  sendGtag('event', name, params);
 }
 
 function sum(items: readonly Ga4Item[]): number {
