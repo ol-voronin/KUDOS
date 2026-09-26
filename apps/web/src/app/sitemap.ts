@@ -63,6 +63,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE}/breeds/${b.slug}`, lastModified: b.updatedAt,
       changeFrequency: 'weekly' as const, priority: 0.8,
     })),
+    /*
+     * Сторінки виробів. Запит «оверсайз футболка жіноча» — комерційний і не
+     * про принт; відповідає на нього рівно ця сторінка. Пріоритет на рівні
+     * колекцій: виробів сім, вони не застарівають і не залежать від дропів.
+     */
+    ...data.garments.map((g) => ({
+      url: `${BASE}/vyroby/${g.slug}`, lastModified: g.updatedAt,
+      changeFrequency: 'monthly' as const, priority: 0.7,
+    })),
     ...data.collections.map((c) => ({
       url: `${BASE}/collections/${c.slug}`, lastModified: c.updatedAt,
       changeFrequency: 'weekly' as const, priority: 0.7,

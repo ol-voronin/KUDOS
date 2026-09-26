@@ -100,6 +100,13 @@ export const SitemapDto = z.object({
   prints: z.array(SitemapEntryDto),
   breeds: z.array(SitemapEntryDto),
   collections: z.array(SitemapEntryDto),
+  /**
+   * Сторінки виробів. Довго їх тут не було, і сім сторінок, які єдині
+   * відповідають на «футболка оверсайз жіноча» чи «худі 350 розмірна
+   * сітка», просто не існували для пошуку: у карті стояв тільки розділ
+   * `/vyroby`, а самі вироби — ні.
+   */
+  garments: z.array(SitemapEntryDto),
 });
 export type SitemapDto = z.infer<typeof SitemapDto>;
 

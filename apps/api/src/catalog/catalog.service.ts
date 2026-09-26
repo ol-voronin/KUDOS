@@ -899,11 +899,12 @@ export class CatalogService {
 
   /** Плоскі списки для sitemap.xml. Породи віддаємо всі — навіть порожні мають сторінку. */
   async getSitemap(): Promise<SitemapDto> {
-    const [prints, breeds, collections] = await this.prisma.db.$transaction([
+    const [prints, breeds, collections, garments] = await this.prisma.db.$transaction([
       this.prisma.db.print.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
       this.prisma.db.breed.findMany({ select: { slug: true, updatedAt: true } }),
       this.prisma.db.collection.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
+      this.prisma.db.garment.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
     ]);
-    return { prints, breeds, collections };
+    return { prints, breeds, collections, garments };
   }
 }
