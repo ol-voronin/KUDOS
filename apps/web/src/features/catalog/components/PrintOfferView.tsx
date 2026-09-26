@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
 import { CARE_WARNING, buyNotes, paymentText, shippingText } from '@/config/product-copy';
+import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
 import { shipWindow } from '../delivery-estimate';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
@@ -36,6 +37,26 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
    */
   const [rememberedLabel, setRememberedLabel] = useState<string | null>(null);
   useEffect(() => { setRememberedLabel(readRememberedSize()); }, []);
+
+  /*
+   * Перегляд товару — один раз на принт, не на кожну зміну виробу чи кольору.
+   * Ціна тут та сама, що людина бачить до вибору: найдешевший носій плюс
+   * друк. Інакше «перегляд за 1290» і «перегляд за 2190» були б двома
+   * різними подіями про один і той самий малюнок.
+   */
+  const viewedSlug = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data || viewedSlug.current === slug) return;
+    viewedSlug.current = slug;
+    const cheapestGarment = Math.min(...data.garments.map((g) => g.basePriceMinor));
+    ga4ViewItem({
+      item_id: slug,
+      item_name: data.print.title,
+      item_category: 'Принт',
+      price: hryvnia(cheapestGarment + data.printPriceMinor),
+      quantity: 1,
+    });
+  }, [data, slug]);
 
   /*
    * «У кошику ✓» тримається, доки людина не змінила вибір.
@@ -190,8 +211,25 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   const printTitle = data.print.title;
   const printPreviewUrl = data.print.previewUrl;
 
+  /*
+   * Позиція для GA4. Товаром тут вважається ПРИНТ, а виріб, колір і розмір —
+   * його варіант: у звіті потрібно бачити, який малюнок продається, а не те,
+   * що «футболок продано 40». Виріб нікуди не дівається — він у `item_variant`.
+   */
+  const ga4Item: Ga4Item | null = garment === undefined ? null : {
+    item_id: slug,
+    item_name: data?.print.title ?? slug,
+    item_category: 'Принт',
+    item_variant: [garment.name, selectedColour?.name ?? selectedColour?.supplierCode, selectedSize?.label]
+      .filter((part) => part !== undefined && part !== '')
+      .join(' · '),
+    price: hryvnia(totalMinor),
+    quantity: 1,
+  };
+
   function handleAddToCart(): void {
     if (!variant) return;
+    if (ga4Item !== null) ga4AddToCart(ga4Item);
     add({
       printSlug: slug,
       variantId: variant.id,

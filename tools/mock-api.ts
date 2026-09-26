@@ -322,7 +322,13 @@ http.createServer(async (req,res)=>{
   } else if (url.pathname === '/checkout/order') {
     body = { orderId: uuid(700), orderNumber: 42, totalMinor: 258000 };
   } else if (url.pathname.startsWith('/orders/') && url.pathname.endsWith('/status')) {
-    body = { orderNumber: 42, status: 'NEW', totalMinor: 258000 };
+    // /order/paid дає оплачене замовлення — інакше локально нема як
+    // перевірити подію покупки: справжній статус ставить вебхук Monobank.
+    body = {
+      orderNumber: 42,
+      status: url.pathname.includes('/paid/') ? 'PAID' : 'NEW',
+      totalMinor: 258000,
+    };
   }
   // ── адмінські маршрути (в памʼяті) ──────────────────────────────────
   else if (url.pathname === '/admin/prints' && req.method === 'GET') {

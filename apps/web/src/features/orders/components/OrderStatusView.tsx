@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { formatUAH, minor } from '@dt/contracts';
 import { fireConversion } from '@/features/analytics/client';
+import { ga4Purchase } from '@/features/analytics/ga4';
 import { useOrderStatus } from '../hooks/useOrderStatus';
 import { Skeleton } from '@/components/ui';
 
@@ -29,12 +30,15 @@ const STATUS_TONE: Record<string, string> = {
 export function OrderStatusView({ orderId }: { orderId: string }) {
   const { data, isLoading, isError } = useOrderStatus(orderId);
 
-  // Конверсія в Google Ads — тільки тег, без запису в нашу базу: оплату вже
-  // записав вебхук Monobank, і другий запис подвоїв би дохід у звіті. А от
-  // Google інакше про неї не дізнається — його тег живе тільки в браузері.
+  // Оплата — тільки в теги, без запису в нашу базу: її вже записав вебхук
+  // Monobank, і другий запис подвоїв би дохід у звіті. А от Google — і
+  // Analytics, і Ads — інакше про неї не дізнається: обидва теги живуть
+  // тільки в браузері, а вебхук приходить на сервер.
   //
   // Оберіг від повторів у `sessionStorage`: людина цілком може оновити
-  // сторінку статусу, і кожне оновлення інакше було б новою конверсією.
+  // сторінку статусу, і кожне оновлення інакше було б новою покупкою. Для
+  // GA4 є ще друга лінія — `transaction_id`, за яким він відкидає дублі
+  // сам, навіть якщо сховище недоступне.
   useEffect(() => {
     if (data?.status !== 'PAID') return;
     const key = `dt.conv.${orderId}`;
@@ -43,7 +47,8 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
       window.sessionStorage.setItem(key, '1');
     } catch { /* сховище недоступне — тоді просто спрацює один раз за візит */ }
     fireConversion('purchase', data.totalMinor);
-  }, [data?.status, data?.totalMinor, orderId]);
+    ga4Purchase(String(data.orderNumber), data.totalMinor);
+  }, [data?.status, data?.totalMinor, data?.orderNumber, orderId]);
 
   if (isLoading) {
     return <Skeleton className="h-24 w-full" />;

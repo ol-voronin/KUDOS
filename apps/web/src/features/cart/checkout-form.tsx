@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   OrderDraftResponseDto, formatUAH, minor, type DeliveryMethod,
 } from '@dt/contracts';
 import { Button, ErrorBanner, FieldShell, Skeleton, inputClass } from '@/components/ui';
-import { attribution } from '@/features/analytics/client';
+import { attribution, track } from '@/features/analytics/client';
+import { ga4BeginCheckout, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { toCartItems, useCart } from './cart-store';
 import { useCartQuote } from './use-cart-quote';
@@ -55,6 +56,36 @@ export function CheckoutForm() {
 
   const option = DELIVERY_OPTIONS.find((o) => o.value === method);
   const needsAddress = method !== 'PICKUP';
+
+  /*
+   * Початок оформлення.
+   *
+   * Подія `checkout_started` існувала в переліку від самого початку, але її
+   * ніхто не надсилав — і воронка обривалася рівно перед касою: ми бачили,
+   * скільки людей поклали річ у кошик, і скільки заплатили, але не бачили,
+   * скільки дійшло до форми й пішло з неї. Саме цей відрізок і показує, чи
+   * проблема в товарі, чи у формі.
+   *
+   * Момент — поява розрахунку, а не монтування форми: до нього невідома
+   * сума, а подія без суми не дає порівняти кинуті оформлення з оплаченими.
+   * Один раз за візит на сторінку: перерахунок кошика не є новим
+   * оформленням.
+   */
+  const checkoutSent = useRef(false);
+  useEffect(() => {
+    if (quote === undefined || checkoutSent.current) return;
+    checkoutSent.current = true;
+    track('checkout_started', { valueMinor: quote.totalMinor });
+    const items: Ga4Item[] = quote.lines.map((line) => ({
+      item_id: line.printSlug ?? line.garmentSlug,
+      item_name: line.title,
+      item_category: line.printSlug === null ? 'Базовий одяг' : 'Принт',
+      item_variant: [line.garmentName, line.colourName, line.sizeLabel].filter((p) => p !== '').join(' · '),
+      price: hryvnia(line.unitMinor),
+      quantity: line.quantity,
+    }));
+    ga4BeginCheckout(quote.totalMinor, items);
+  }, [quote]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();

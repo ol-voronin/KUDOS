@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { minor, formatUAH, type GarmentOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
@@ -8,6 +8,7 @@ import { useSiteSettings } from '@/app/providers';
 import {
   CARE_LINE, CARE_WARNING, buyNotes, paymentText, shippingText,
 } from '@/config/product-copy';
+import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
 import { garmentPhoto } from '../garment-photos';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { useGarmentOffer } from '../hooks/useGarmentOffer';
@@ -53,6 +54,21 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
 
   const [rememberedLabel, setRememberedLabel] = useState<string | null>(null);
   useEffect(() => { setRememberedLabel(readRememberedSize()); }, []);
+
+  // Перегляд виробу — один раз на виріб. Тут товаром є сама річ, а не принт,
+  // тож окрема категорія: інакше базовий одяг і принти злипнуться в звіті.
+  const viewedSlug = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data || viewedSlug.current === slug) return;
+    viewedSlug.current = slug;
+    ga4ViewItem({
+      item_id: slug,
+      item_name: data.garment.name,
+      item_category: 'Базовий одяг',
+      price: hryvnia(data.garment.basePriceMinor),
+      quantity: 1,
+    });
+  }, [data, slug]);
 
   const [added, setAdded] = useState(false);
   useEffect(() => { setAdded(false); }, [fabricId, colourId, sizeId]);
@@ -148,8 +164,20 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
 
   const garmentName = garment.name;
 
+  const ga4Item: Ga4Item = {
+    item_id: garment.slug,
+    item_name: garment.name,
+    item_category: 'Базовий одяг',
+    item_variant: [selectedColour?.name ?? selectedColour?.supplierCode, selectedSize?.label]
+      .filter((part) => part !== undefined && part !== '')
+      .join(' · '),
+    price: hryvnia(priceMinor),
+    quantity: 1,
+  };
+
   function handleAddToCart(): void {
     if (!variant) return;
+    ga4AddToCart(ga4Item);
     add({
       printSlug: null,
       variantId: variant.id,
