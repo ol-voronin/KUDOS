@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { formatUAH, minor } from '@dt/contracts';
 import { fireConversion } from '@/features/analytics/client';
 import { ga4Purchase } from '@/features/analytics/ga4';
+import { readOrder } from '@/features/analytics/order-snapshot';
 import { useOrderStatus } from '../hooks/useOrderStatus';
 import { Skeleton } from '@/components/ui';
 
@@ -46,8 +47,26 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
       if (window.sessionStorage.getItem(key) !== null) return;
       window.sessionStorage.setItem(key, '1');
     } catch { /* сховище недоступне — тоді просто спрацює один раз за візит */ }
-    fireConversion('purchase', data.totalMinor);
-    ga4Purchase(String(data.orderNumber), data.totalMinor);
+    /*
+     * Дві різні суми, і плутати їх дорого.
+     *
+     * У GA4 йде повна сума замовлення разом із доставкою — так того чекає
+     * сам GA4, а доставка додається окремим полем, щоб її було видно.
+     * У Google Ads як цінність конверсії йде сума БЕЗ доставки: ставки
+     * рахуються від неї, і платити за клік, вважаючи маржею чужу
+     * пересилку, — найшвидший спосіб зробити прибуткову кампанію
+     * збитковою.
+     */
+    const snapshot = readOrder(orderId);
+    const shippingMinor = snapshot?.shippingMinor ?? 0;
+
+    fireConversion('purchase', data.totalMinor - shippingMinor);
+    ga4Purchase({
+      transactionId: String(data.orderNumber),
+      valueMinor: data.totalMinor,
+      shippingMinor,
+      items: snapshot?.items ?? [],
+    });
   }, [data?.status, data?.totalMinor, data?.orderNumber, orderId]);
 
   if (isLoading) {

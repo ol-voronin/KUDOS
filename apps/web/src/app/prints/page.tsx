@@ -9,6 +9,7 @@ import { SearchFilters, type FilterOption } from '@/features/search/search-filte
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink, EmptyState } from '@/components/ui';
+import { LIST } from '@/features/analytics/lists';
 
 /** Ті самі ключі, що й на сторінці пошуку: фільтр один на весь сайт. */
 const FILTER_KEYS = ['breed', 'collection', 'garmentType', 'sizeTier', 'inStock', 'sort'] as const;
@@ -98,7 +99,7 @@ export default async function PrintsPage({ searchParams }: Search) {
 
         <div className="mt-10">
           {data && data.items.length > 0 ? (
-            <PrintGrid prints={data.items} />
+            <PrintGrid prints={data.items} list={LIST.catalog} />
           ) : (
             <EmptyState
               title="Каталог ще наповнюється"

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { type PrintCardDto } from '@dt/contracts';
 import { PrintThumb } from '@/components/print-thumb';
+import { PrintListTracker } from '@/features/analytics/PrintListTracker';
+import type { ListName } from '@/features/analytics/lists';
 
 /**
  * Плитка принта. Одна на всі сітки — головна, породна, колекція.
@@ -60,8 +62,8 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
  * комірок: у сітці з незаповненим останнім рядком фон-роздільник
  * перетворився б на сірі плями там, де товарів забракло.
  */
-export function PrintGrid({ prints }: { prints: readonly PrintCardDto[] }) {
-  return (
+export function PrintGrid({ prints, list }: { prints: readonly PrintCardDto[]; list?: ListName }) {
+  const grid = (
     <div
       className={[
         'grid grid-cols-2 border-t border-line sm:grid-cols-3 lg:grid-cols-4',
@@ -73,6 +75,18 @@ export function PrintGrid({ prints }: { prints: readonly PrintCardDto[] }) {
     >
       {prints.map((print) => <PrintCard key={print.id} print={print} />)}
     </div>
+  );
+
+  // Без `list` сітка лишається чистим сервером: обгортка й слухач додаються
+  // тільки там, де вітрину справді треба відрізнити від інших у звіті.
+  if (list === undefined) return grid;
+  return (
+    <PrintListTracker
+      list={list}
+      prints={prints.map((p) => ({ slug: p.slug, title: p.title, fromPriceMinor: p.fromPriceMinor }))}
+    >
+      {grid}
+    </PrintListTracker>
   );
 }
 

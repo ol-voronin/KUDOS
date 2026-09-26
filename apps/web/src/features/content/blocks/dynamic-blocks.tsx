@@ -11,6 +11,7 @@ import { BreedStrip, CollectionStrip } from '@/features/home/blocks';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { InlineParagraph } from '../inline';
+import { LIST } from '@/features/analytics/lists';
 
 /**
  * Динамічні блоки: вміст беруть із каталогу в момент рендеру.
@@ -61,7 +62,7 @@ export async function PrintGridBlockView({ block, onDark = false }: { block: Pri
           {...(block.moreHref !== '' ? { href: block.moreHref } : {})}
         />
       )}
-      <PrintGrid prints={prints} />
+      <PrintGrid prints={prints} list={LIST.home} />
     </>
   );
 }

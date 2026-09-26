@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { TrackingConfigDto } from '@dt/contracts';
 import { setTrackingConfig, track } from './client';
+import { ga4ConsentGranted } from './ga4';
 
 const CONSENT_KEY = 'dt.consent';
 
@@ -72,7 +73,15 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
   const decide = (value: Consent) => {
     try { window.localStorage.setItem(CONSENT_KEY, value); } catch { /* нічого */ }
     setConsent(value);
+    // Явні сигнали Consent Mode v2. Без `ad_user_data` розширені конверсії
+    // не спрацьовують узагалі — а в інтерфейсі Google при цьому все
+    // виглядає ввімкненим. Це найтихіша з відомих поломок вимірювання.
+    if (value === 'granted') ga4ConsentGranted();
   };
+
+  // Той самий сигнал для тих, хто дав згоду раніше: він живе у сховищі, а
+  // не в теґу, і при кожному новому візиті його треба проставити знову.
+  useEffect(() => { if (consent === 'granted') ga4ConsentGranted(); }, [consent]);
 
   const wanted = config.ga4MeasurementId !== '' || config.googleAdsId !== '';
   const tagId = config.ga4MeasurementId !== '' ? config.ga4MeasurementId : config.googleAdsId;

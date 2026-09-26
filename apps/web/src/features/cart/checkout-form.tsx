@@ -7,7 +7,10 @@ import {
 } from '@dt/contracts';
 import { Button, ErrorBanner, FieldShell, Skeleton, inputClass } from '@/components/ui';
 import { attribution, track } from '@/features/analytics/client';
-import { ga4BeginCheckout, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
+import {
+  ga4AddPaymentInfo, ga4AddShippingInfo, ga4BeginCheckout, itemFromCartLine, type Ga4Item,
+} from '@/features/analytics/ga4';
+import { rememberOrder } from '@/features/analytics/order-snapshot';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { toCartItems, useCart } from './cart-store';
 import { useCartQuote } from './use-cart-quote';
@@ -71,21 +74,33 @@ export function CheckoutForm() {
    * Один раз за візит на сторінку: перерахунок кошика не є новим
    * оформленням.
    */
+  const items: Ga4Item[] = (quote?.lines ?? []).map(itemFromCartLine);
+
   const checkoutSent = useRef(false);
   useEffect(() => {
     if (quote === undefined || checkoutSent.current) return;
     checkoutSent.current = true;
     track('checkout_started', { valueMinor: quote.totalMinor });
-    const items: Ga4Item[] = quote.lines.map((line) => ({
-      item_id: line.printSlug ?? line.garmentSlug,
-      item_name: line.title,
-      item_category: line.printSlug === null ? 'Базовий одяг' : 'Принт',
-      item_variant: [line.garmentName, line.colourName, line.sizeLabel].filter((p) => p !== '').join(' · '),
-      price: hryvnia(line.unitMinor),
-      quantity: line.quantity,
-    }));
-    ga4BeginCheckout(quote.totalMinor, items);
-  }, [quote]);
+    ga4BeginCheckout(items);
+  }, [quote, items]);
+
+  /*
+   * Спосіб доставки — окрема подія, і саме вона робить воронку корисною.
+   * Між «почав оформлення» і «заплатив» є два кроки, на яких люди зникають
+   * по-різному: один спіткнувся об доставку, другий — об оплату. Без цих
+   * двох подій обидва виглядають однаково, як «не купив».
+   *
+   * Надсилаємо при ЗМІНІ способу, а не при кожному кліку: значення за
+   * замовчуванням людина не обирала, і рахувати його вибором — брехня.
+   */
+  const shippingSent = useRef(false);
+  function chooseMethod(next: DeliveryMethod): void {
+    setMethod(next);
+    if (shippingSent.current && next === method) return;
+    shippingSent.current = true;
+    const label = DELIVERY_OPTIONS.find((o) => o.value === next)?.label ?? next;
+    ga4AddShippingInfo(label, items);
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -122,6 +137,30 @@ export function CheckoutForm() {
           attribution: attribution(),
         }),
       });
+      /*
+       * Оплата в нас відкладена: рахунок виставляє людина після звірки
+       * наявності. Тому `add_payment_info` надсилається тут, у мить
+       * підтвердження замовлення, — це останній крок, який робить покупець,
+       * і саме його треба порівнювати з оплатою.
+       */
+      ga4AddPaymentInfo('Monobank (рахунок після підтвердження)', items);
+
+      /*
+       * Знімок замовлення для події покупки.
+       *
+       * Сторінка статусу знає суму й номер, але не знає, ЩО купили:
+       * публічний ендпоінт статусу складу замовлення не віддає, і
+       * розширювати його не можна — ключем там є самий лише ідентифікатор
+       * замовлення. Тому перелік товарів лишається в браузері того, хто
+       * замовив, і живе рівно до оплати.
+       */
+      rememberOrder(result.orderId, {
+        items,
+        valueMinor: result.totalMinor,
+        shippingMinor: quote?.shippingMinor ?? 0,
+        discountMinor: quote?.discountMinor ?? 0,
+      });
+
       // Кошик чистимо тільки після того, як сервер підтвердив замовлення:
       // помилка мережі не має коштувати людині зібраного кошика.
       clear();
@@ -178,7 +217,7 @@ export function CheckoutForm() {
                 <input
                   type="radio" name="delivery" value={o.value}
                   checked={method === o.value}
-                  onChange={() => setMethod(o.value)}
+                  onChange={() => chooseMethod(o.value)}
                   className="h-4 w-4 accent-ink"
                 />
                 <span className="text-ink">{o.label}</span>

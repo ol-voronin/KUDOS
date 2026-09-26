@@ -168,6 +168,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
     item_id: garment.slug,
     item_name: garment.name,
     item_category: 'Базовий одяг',
+    item_category2: garment.name,
     item_variant: [selectedColour?.name ?? selectedColour?.supplierCode, selectedSize?.label]
       .filter((part) => part !== undefined && part !== '')
       .join(' · '),

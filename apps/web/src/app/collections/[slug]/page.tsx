@@ -11,6 +11,7 @@ import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
+import { LIST } from '@/features/analytics/lists';
 
 interface Params { params: { slug: string } }
 
@@ -91,7 +92,7 @@ export default async function CollectionPage({ params }: Params) {
 
         <div className="mt-10">
           {prints.length > 0 ? (
-            <PrintGrid prints={prints} />
+            <PrintGrid prints={prints} list={LIST.collection} />
           ) : (
             <div className="space-y-10">
               <div className="border-t border-ink pt-6">

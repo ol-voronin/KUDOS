@@ -3,6 +3,7 @@ import { formatUAH, minor, PrintListDto, type RangeGarmentDto } from '@dt/contra
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { garmentCardPhoto } from '../garment-photos';
+import { LIST } from '@/features/analytics/lists';
 
 /**
  * «Вам також може сподобатись» — рейка з чотирьох карток унизу картки товару.
@@ -36,7 +37,7 @@ export async function RelatedPrints({ excludeSlug, collectionSlug }: {
   return (
     <section className="mt-16" aria-label="Схожі принти">
       <SectionHead title="Вам також" ghost="може сподобатись" href="/prints" hrefLabel="Весь каталог" />
-      <PrintGrid prints={four} />
+      <PrintGrid prints={four} list={LIST.related} />
     </section>
   );
 }

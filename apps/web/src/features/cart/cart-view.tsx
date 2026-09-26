@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { formatUAH, minor } from '@dt/contracts';
+import { ga4RemoveFromCart, ga4ViewCart, itemFromCartLine } from '@/features/analytics/ga4';
 import { ButtonLink, EmptyState, ErrorBanner, Skeleton } from '@/components/ui';
 import { PrintThumb } from '@/components/print-thumb';
 import { useCart } from './cart-store';
@@ -21,6 +23,28 @@ import { useCartQuote } from './use-cart-quote';
 export function CartView() {
   const { lines, setQuantity, remove, ready } = useCart();
   const { data, isLoading, isError } = useCartQuote();
+
+  /*
+   * Перегляд кошика — один раз за візит на сторінку. Це перший крок, де
+   * людину видно з наміром купити, і різниця між ним і початком оформлення
+   * показує, скільки коштує сама сторінка кошика.
+   */
+  const cartSeen = useRef(false);
+  useEffect(() => {
+    if (data === undefined || cartSeen.current) return;
+    cartSeen.current = true;
+    ga4ViewCart(data.lines.map(itemFromCartLine));
+  }, [data]);
+
+  /*
+   * Видалення з кошика надсилаємо ДО того, як рядок зникне: після виклику
+   * `remove` дані про нього вже нема де взяти.
+   */
+  function removeLine(variantId: string, printSlug: string | null): void {
+    const quoted = data?.lines.find((l) => l.variantId === variantId && l.printSlug === printSlug);
+    if (quoted !== undefined) ga4RemoveFromCart(itemFromCartLine(quoted, 0));
+    remove(variantId, printSlug);
+  }
 
   if (ready && lines.length === 0) {
     return (
@@ -80,7 +104,7 @@ export function CartView() {
                   />
                   <button
                     type="button"
-                    onClick={() => remove(line.variantId, line.printSlug)}
+                    onClick={() => removeLine(line.variantId, line.printSlug)}
                     className="tap-sm text-sm text-ink-subtle underline-offset-4 hover:text-danger hover:underline"
                   >
                     Прибрати

@@ -220,6 +220,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     item_id: slug,
     item_name: data?.print.title ?? slug,
     item_category: 'Принт',
+    item_category2: garment.name,
     item_variant: [garment.name, selectedColour?.name ?? selectedColour?.supplierCode, selectedSize?.label]
       .filter((part) => part !== undefined && part !== '')
       .join(' · '),

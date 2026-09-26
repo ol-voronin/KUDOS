@@ -9,6 +9,8 @@ import { SearchFilters, type FilterOption } from '@/features/search/search-filte
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
+import { LIST } from '@/features/analytics/lists';
+import { SearchTracker } from '@/features/analytics/SearchTracker';
 
 /** Параметри фільтрів, які сторінка передає в API без змін. */
 const FILTER_KEYS = ['breed', 'collection', 'garmentType', 'sizeTier', 'inStock', 'sort'] as const;
@@ -92,6 +94,8 @@ export default async function SearchPage({ searchParams }: Search) {
           </Suspense>
         </div>
 
+        {q.length >= 2 && <SearchTracker term={q} />}
+
         {q.length > 0 && q.length < 2 && (
           <p className="mt-8 text-ink-muted">Введи хоча б дві літери.</p>
         )}
@@ -129,7 +133,7 @@ export default async function SearchPage({ searchParams }: Search) {
               title="Принти"
               subtitle={`${data.prints.length} ${plural(data.prints.length, 'принт', 'принти', 'принтів')}`}
             />
-            <PrintGrid prints={data.prints} />
+            <PrintGrid prints={data.prints} list={LIST.search} />
           </section>
         )}
 
