@@ -13,3 +13,4 @@ coverage
 vercel-api-env.txt
 vercel-web-env.txt
 admin-credentials.txt
+__pycache__/

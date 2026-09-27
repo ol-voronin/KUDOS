@@ -15,7 +15,7 @@ import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
 import { GarmentPreview } from './GarmentPreview';
 import { MediaStack, type MediaFrame } from './MediaStack';
-import { canMockup, PrintOnGarment } from './PrintOnGarment';
+import { canMockup, isFlatPreview, PrintOnGarment } from './PrintOnGarment';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
@@ -270,16 +270,20 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       key: 'mockup',
       alt: `${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode} — орієнтовний вигляд`,
       node: (
-        <figure className="p-3">
+        // Плоске фото класичної футболки — з полями, як і раніше; сцени
+        // інших виробів — на всю ширину, як звичайні фото в галереї.
+        <figure className={isFlatPreview(garment.slug, selectedColour.supplierCode) ? 'p-3' : ''}>
           <PrintOnGarment
+            printSlug={slug}
+            collectionSlugs={data.print.collectionSlugs}
             garmentSlug={garment.slug}
             colourCode={selectedColour.supplierCode}
             mockupUrl={data.print.mockupUrl}
             sizeTier={data.print.sizeTier}
             alt={`${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode}`}
-            className="mx-auto max-w-md"
+            className={isFlatPreview(garment.slug, selectedColour.supplierCode) ? 'mx-auto max-w-md' : 'w-full'}
           />
-          <figcaption className="mt-2 text-center text-xs text-ink-subtle">
+          <figcaption className="px-3 py-2 text-center text-xs text-ink-subtle">
             Орієнтовний вигляд · {garment.name}, {selectedColour.name ?? selectedColour.supplierCode}
           </figcaption>
         </figure>
