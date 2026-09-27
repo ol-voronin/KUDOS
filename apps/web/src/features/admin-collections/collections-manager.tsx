@@ -14,8 +14,6 @@ import {
   removePrintFromCollection, reorderCollections, updateCollection,
 } from './api';
 import { PrintPicker } from './print-picker';
-import { ColourRulesPicker } from '@/features/admin-prints/colour-rules-picker';
-import { getPrintOptions } from '@/features/admin-prints/api';
 
 /**
  * Розділ «Колекції»: список + картка обраної на одному екрані.
@@ -228,26 +226,13 @@ function CollectionCard({
   const [title, setTitle] = useState(collection.title);
   const [slug, setSlug] = useState(collection.slug);
   const [description, setDescription] = useState(collection.description);
-  const [excludedColourIds, setExcludedColourIds] = useState<string[]>(collection.excludedColourIds);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { data: options } = useQuery({ queryKey: ['admin-print-options'], queryFn: getPrintOptions, staleTime: 60_000 });
 
-  const coloursDirty = [...excludedColourIds].sort().join() !== [...collection.excludedColourIds].sort().join();
-  const dirty = title !== collection.title || slug !== collection.slug || description !== collection.description
-    || coloursDirty;
+  const dirty = title !== collection.title || slug !== collection.slug || description !== collection.description;
 
   const save = useMutation({
-    mutationFn: () => updateCollection(collection.id, {
-      title, slug, description,
-      ...(coloursDirty ? { excludedColourIds } : {}),
-    }),
-    onSuccess: async (next) => {
-      toast('Збережено');
-      onChanged(next);
-      // Форма принта показує заборони колекції як успадковані — хай бачить свіжі.
-      await queryClient.invalidateQueries({ queryKey: ['admin-print-options'] });
-    },
+    mutationFn: () => updateCollection(collection.id, { title, slug, description }),
+    onSuccess: (next) => { toast('Збережено'); onChanged(next); },
     onError: (e) => toast(e instanceof ApiError ? e.message : 'Не вдалося зберегти'),
   });
 
@@ -335,15 +320,6 @@ function CollectionCard({
         <AdminTextArea
           label="Опис" id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
           hint="Один-два рядки: видно на плитці колекції та в пошуку."
-        />
-      </div>
-      <div className="mt-5">
-        <ColourRulesPicker
-          legend="Кольори виробів для всієї колекції"
-          note={`Позначені кольори зникнуть з усіх ${collection.prints.length} принтів колекції. Окремий принт можна скоригувати в його формі.`}
-          colours={options?.colours ?? []}
-          excluded={excludedColourIds}
-          onChange={({ excluded }) => setExcludedColourIds(excluded)}
         />
       </div>
       {dirty && (

@@ -17,7 +17,6 @@ const COLLECTION_SELECT = {
     },
     orderBy: { print: { createdAt: 'desc' as const } },
   },
-  colourExclusions: { select: { colourId: true } },
 } as const satisfies Prisma.CollectionSelect;
 
 type CollectionRow = Prisma.CollectionGetPayload<{ select: typeof COLLECTION_SELECT }>;
@@ -31,7 +30,6 @@ function toDto(row: CollectionRow): AdminCollectionDto {
     position: row.position,
     isPublished: row.isPublished,
     prints: row.prints.map((p) => p.print),
-    excludedColourIds: row.colourExclusions.map((e) => e.colourId),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -81,7 +79,6 @@ export class CollectionsAdminService {
         description: dto.description,
         isPublished: dto.isPublished,
         position: (last?.position ?? 0) + 10,
-        colourExclusions: { create: dto.excludedColourIds.map((colourId) => ({ colourId })) },
       },
       select: COLLECTION_SELECT,
     });
@@ -94,25 +91,15 @@ export class CollectionsAdminService {
     const exists = await this.prisma.db.collection.findUnique({ where: { id }, select: { id: true } });
     if (!exists) throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Колекцію не знайдено' });
 
-    const row = await this.prisma.db.$transaction(async (tx) => {
-      // Заборони кольорів — повний список: приводимо таблицю до нього.
-      if (dto.excludedColourIds !== undefined) {
-        await tx.collectionColourExclusion.deleteMany({ where: { collectionId: id } });
-        await tx.collectionColourExclusion.createMany({
-          data: dto.excludedColourIds.map((colourId) => ({ collectionId: id, colourId })),
-          skipDuplicates: true,
-        });
-      }
-      return tx.collection.update({
-        where: { id },
-        data: {
-          ...(dto.title !== undefined ? { title: dto.title } : {}),
-          ...(dto.slug !== undefined ? { slug: dto.slug } : {}),
-          ...(dto.description !== undefined ? { description: dto.description } : {}),
-          ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
-        },
-        select: COLLECTION_SELECT,
-      });
+    const row = await this.prisma.db.collection.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.slug !== undefined ? { slug: dto.slug } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
+      },
+      select: COLLECTION_SELECT,
     });
     this.logger.log(`collection.updated id=${id}`);
     return toDto(row);

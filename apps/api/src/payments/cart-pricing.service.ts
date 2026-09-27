@@ -2,7 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { CartItemDto, CartQuoteDto, PrintMethod } from '@dt/contracts';
 import { ErrorCode, minor, mulMinor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
-import { excludedColoursOf } from '../catalog/colour-rules';
 import { PriceBookService } from '../pricing/price-book.service';
 import { bestDiscount } from '../pricing/price-rules';
 import {
@@ -157,15 +156,9 @@ export class CartPricingService {
         where: { slug: { in: printSlugs }, isPublished: true },
         select: {
           id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
-          collections: {
-            select: {
-              collectionId: true,
-              collection: { select: { slug: true, colourExclusions: { select: { colourId: true } } } },
-            },
-          },
+          collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
           breeds: { select: { breed: { select: { slug: true } } } },
           colourExclusions: { select: { colourId: true } },
-          colourAllowances: { select: { colourId: true } },
         },
       }),
       this.prisma.db.variant.findMany({
@@ -253,7 +246,7 @@ export class CartPricingService {
         const offered = {
           onGarment: !excluded.has(`${print.id}|${variant.garmentId}`)
             && (restricting.length === 0 || restricting.some((r) => r.garmentId === variant.garmentId)),
-          onColour: !excludedColoursOf(print).has(variant.colourId),
+          onColour: !print.colourExclusions.some((e: { colourId: string }) => e.colourId === variant.colourId),
         };
         const pricingPrint: PricingPrint = {
           id: print.id, sizeTier: print.sizeTier, isPublished: print.isPublished,

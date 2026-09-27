@@ -214,8 +214,6 @@ model Colour {
   variants  Variant[]
   modifiers PriceModifier[]
   printExclusions PrintColourExclusion[]
-  printAllowances PrintColourAllowance[]
-  collectionExclusions CollectionColourExclusion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -366,7 +364,6 @@ model Collection {
   rules     PrintGarmentRule[]
   discounts Discount[]
   articles  PageCollection[]
-  colourExclusions CollectionColourExclusion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -420,7 +417,6 @@ model Print {
   images      PrintImage[]
   exclusions  PrintGarmentExclusion[]
   colourExclusions PrintColourExclusion[]
-  colourAllowances PrintColourAllowance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -529,46 +525,6 @@ model PrintColourExclusion {
   colourId String @db.Uuid
   /// Для адмінки: чому заборонено. Порожній рядок припустимий.
   reason   String @default("")
-
-  print  Print  @relation(fields: [printId], references: [id], onDelete: Cascade)
-  colour Colour @relation(fields: [colourId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@id([printId, colourId])
-  @@index([colourId])
-}
-
-/// Заборона кольору для ВСІЄЇ колекції.
-///
-/// «Бабаки в пабі» — темні фото, і на яскравих кольорах вони тонуть однаково
-/// в усіх двадцяти трьох принтів. Ставити ту саму заборону двадцять три
-/// рази — гарантія, що в одного її забудуть (так і сталося: правильні
-/// кольори стояли лише у «Шпіца»). Тому правило живе на колекції, а принт
-/// успадковує його.
-///
-/// Підсумок для принта:
-///   (заборони всіх його колекцій − його дозволи) ∪ його власні заборони.
-model CollectionColourExclusion {
-  collectionId String @db.Uuid
-  colourId     String @db.Uuid
-  reason       String @default("")
-
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  colour     Colour     @relation(fields: [colourId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@id([collectionId, colourId])
-  @@index([colourId])
-}
-
-/// Виняток із заборони колекції для одного принта: «колекція не друкує на
-/// червоному, а цей — можна». Без цього коригувати окремий принт можна було
-/// б лише в бік суворішого.
-model PrintColourAllowance {
-  printId  String @db.Uuid
-  colourId String @db.Uuid
 
   print  Print  @relation(fields: [printId], references: [id], onDelete: Cascade)
   colour Colour @relation(fields: [colourId], references: [id], onDelete: Cascade)

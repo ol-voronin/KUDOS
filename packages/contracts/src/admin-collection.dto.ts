@@ -40,11 +40,6 @@ export const AdminCollectionDto = z.object({
   position: z.number().int(),
   isPublished: z.boolean(),
   prints: z.array(AdminCollectionPrintDto),
-  /**
-   * Кольори, на яких принти цієї колекції НЕ друкуються. Діє на кожен
-   * принт колекції; окремий принт може це скоригувати у своїй формі.
-   */
-  excludedColourIds: z.array(z.string().uuid()),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -60,8 +55,6 @@ export const AdminCollectionCreateDto = z.object({
   slug: slugField,
   description: z.string().trim().max(500).default(''),
   isPublished: z.boolean().default(false),
-  /** Повний список, а не дельта — як і в принта. */
-  excludedColourIds: z.array(z.string().uuid()).max(60).default([]),
 });
 export type AdminCollectionCreateDto = z.infer<typeof AdminCollectionCreateDto>;
 export type AdminCollectionCreateInput = z.input<typeof AdminCollectionCreateDto>;

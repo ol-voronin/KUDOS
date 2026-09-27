@@ -35,19 +35,6 @@ export const ColourOptionDto = z.object({
 export type ColourOptionDto = z.infer<typeof ColourOptionDto>;
 
 /**
- * Довідники для форми принта. `collectionColourExclusions` — заборони
- * кольорів кожної колекції: форма показує їх як успадковані й перераховує
- * одразу, щойно в принта змінили набір колекцій.
- */
-export const AdminPrintOptionsDto = z.object({
-  breeds: z.array(z.object({ id: z.string().uuid(), slug: z.string(), name: z.string() })),
-  collections: z.array(z.object({ id: z.string().uuid(), slug: z.string(), name: z.string() })),
-  colours: z.array(ColourOptionDto),
-  collectionColourExclusions: z.record(z.string().uuid(), z.array(z.string().uuid())),
-});
-export type AdminPrintOptionsDto = z.infer<typeof AdminPrintOptionsDto>;
-
-/**
  * Скільки фото можна повісити на один принт.
  *
  * Пʼять — це не технічна межа, а межа уваги: далі покупець не гортає, а
@@ -120,10 +107,8 @@ export const AdminPrintDto = z.object({
   images: z.array(PrintImageDto),
   breeds: z.array(CatalogOptionDto),
   collections: z.array(CatalogOptionDto),
-  /** Власні заборони принта — понад заборони його колекцій. */
+  /** Кольори, на яких цей принт НЕ друкується. Порожньо — друкується на всіх. */
   excludedColourIds: z.array(z.string().uuid()),
-  /** Кольори, які колекція забороняє, а цей принт — дозволяє. */
-  allowedColourIds: z.array(z.string().uuid()),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -179,8 +164,6 @@ export const AdminPrintCreateDto = z.object({
    * бачить, сервер приводить таблицю заборон до цього списку.
    */
   excludedColourIds: z.array(z.string().uuid()).max(60).default([]),
-  /** Винятки із заборон колекції. Теж повний список. */
-  allowedColourIds: z.array(z.string().uuid()).max(60).default([]),
 });
 export type AdminPrintCreateDto = z.infer<typeof AdminPrintCreateDto>;
 /**

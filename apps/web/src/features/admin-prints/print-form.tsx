@@ -12,7 +12,6 @@ import { PrintImageUploader } from './image-uploader';
 import { compressImage } from './compress-image';
 import { createBreed, createPrint, deletePrint, getPrintOptions, updatePrint, uploadPrintPhoto } from './api';
 import { ConfirmButton, useToast, ErrorBanner } from '@/components/ui';
-import { ColourRulesPicker } from './colour-rules-picker';
 
 const SIZE_TIERS: ReadonlyArray<{ value: PrintSizeTier; label: string }> = [
   { value: 'MINI', label: 'MINI — до 15×20 см · 500 ₴' },
@@ -59,7 +58,6 @@ export function PrintForm({ initial, presetCollectionIds }: {
     initial?.collections.map((c) => c.id) ?? presetCollectionIds ?? [],
   );
   const [excludedColourIds, setExcludedColourIds] = useState<string[]>(initial?.excludedColourIds ?? []);
-  const [allowedColourIds, setAllowedColourIds] = useState<string[]>(initial?.allowedColourIds ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -79,15 +77,6 @@ export function PrintForm({ initial, presetCollectionIds }: {
 
   const { data: options } = useQuery({ queryKey: ['admin-print-options'], queryFn: getPrintOptions, staleTime: 60_000 });
 
-  /** Заборони кольорів від колекцій, у які принт входить ЗАРАЗ (з урахуванням незбережених змін). */
-  const inheritedColourIds = useMemo(() => {
-    const out = new Set<string>();
-    for (const id of collectionIds) {
-      for (const colourId of options?.collectionColourExclusions[id] ?? []) out.add(colourId);
-    }
-    return [...out];
-  }, [collectionIds, options]);
-
   const save = useMutation({
     mutationFn: async () => {
       const dto = {
@@ -101,9 +90,6 @@ export function PrintForm({ initial, presetCollectionIds }: {
         breedIds,
         collectionIds,
         excludedColourIds,
-        // Дозвіл має сенс лише проти заборони колекції: коли принт вийшов з
-        // колекції, її правило на нього більше не діє, і дозвіл — мертвий рядок.
-        allowedColourIds: allowedColourIds.filter((id) => inheritedColourIds.includes(id)),
       };
       return initial ? updatePrint(initial.id, dto) : createPrint(dto);
     },
@@ -263,17 +249,13 @@ export function PrintForm({ initial, presetCollectionIds }: {
           legend="Колекції"
           options={options?.collections ?? []} selected={collectionIds} onChange={setCollectionIds}
           emptyHint="Колекцій ще немає. Принт працюватиме й без них."
-          note="Колекція вирішує, на яких виробах і в яких кольорах можна друкувати цей принт."
+          note="Колекція вирішує, на яких виробах можна друкувати цей принт."
         />
 
-        <ColourRulesPicker
-          legend="Не друкувати на кольорах"
-          note="Позначені кольори зникнуть зі сторінки цього принта. Заборони колекції діють самі — тут їх можна лише скоригувати для цього принта."
+        <ColourExclusionPicker
           colours={options?.colours ?? []}
           excluded={excludedColourIds}
-          allowed={allowedColourIds}
-          inherited={inheritedColourIds}
-          onChange={({ excluded, allowed }) => { setExcludedColourIds(excluded); setAllowedColourIds(allowed); }}
+          onChange={setExcludedColourIds}
         />
       </div>
 
@@ -339,6 +321,60 @@ export function PrintForm({ initial, presetCollectionIds }: {
         )}
       </aside>
     </form>
+  );
+}
+
+/**
+ * Заборонені кольори: «песи в барі не на оранжевому».
+ *
+ * Логіка навпаки від решти чипів: позначений колір — це колір, на якому
+ * принт НЕ друкується. Тому позначені — червоним перекресленням, а не
+ * чорною заливкою «вибрано»: заливка тут читалася б як «доступно».
+ */
+function ColourExclusionPicker({
+  colours, excluded, onChange,
+}: {
+  colours: ReadonlyArray<{ id: string; name: string; hex: string | null }>;
+  excluded: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  if (colours.length === 0) return null;
+
+  function toggle(id: string) {
+    onChange(excluded.includes(id) ? excluded.filter((x) => x !== id) : [...excluded, id]);
+  }
+
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-sm font-medium text-ink">Не друкувати на кольорах</legend>
+      <p className="mb-2 text-sm text-ink-muted">
+        Позначені кольори зникнуть зі сторінки цього принта. Порожньо — друкуємо на всіх.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {colours.map((c) => {
+          const banned = excluded.includes(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={banned}
+              onClick={() => toggle(c.id)}
+              className={[
+                'inline-flex min-h-10 items-center gap-2 rounded-pill border-2 px-3.5 text-sm font-medium transition',
+                banned ? 'border-danger text-danger' : 'border-line text-ink-muted hover:border-ink-subtle',
+              ].join(' ')}
+            >
+              <span
+                aria-hidden
+                className="h-4 w-4 shrink-0 rounded-full border border-line"
+                {...(c.hex ? { style: { backgroundColor: c.hex } } : {})}
+              />
+              <span className={banned ? 'line-through' : ''}>{c.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
