@@ -1,5 +1,5 @@
 import {
-  AdminPrintDto, AdminPrintListDto, CatalogOptionDto, ColourOptionDto,
+  AdminPrintDto, AdminPrintListDto, AdminPrintOptionsDto, CatalogOptionDto,
   type AdminPrintCreateInput, type AdminPrintImageCreateDto, type AdminPrintUpdateInput,
   type AdminBreedCreateDto,
 } from '@dt/contracts';
@@ -38,14 +38,8 @@ export function deletePrint(id: string): Promise<{ ok: true }> {
   return apiFetch(`/admin/prints/${id}`, z.object({ ok: z.literal(true) }), { method: 'DELETE' });
 }
 
-const OptionsDto = z.object({
-  breeds: z.array(CatalogOptionDto),
-  collections: z.array(CatalogOptionDto),
-  colours: z.array(ColourOptionDto),
-});
-
-export function getPrintOptions() {
-  return apiFetch('/admin/prints/options', OptionsDto);
+export function getPrintOptions(): Promise<AdminPrintOptionsDto> {
+  return apiFetch('/admin/prints/options', AdminPrintOptionsDto);
 }
 
 export function createBreed(dto: AdminBreedCreateDto): Promise<CatalogOptionDto> {

@@ -7,6 +7,7 @@ import type {
 } from '@dt/contracts';
 import { ErrorCode, minor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { excludedColoursOf } from './colour-rules';
 import { PriceBookService } from '../pricing/price-book.service';
 import { blockReasonFor, garmentPriceFor, printPriceFor, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
 import {
@@ -131,10 +132,16 @@ export class CatalogService {
           select: { url: true, alt: true },
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
         },
-        collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
+        collections: {
+          select: {
+            collectionId: true,
+            collection: { select: { slug: true, colourExclusions: { select: { colourId: true } } } },
+          },
+        },
         breeds: { select: { breed: { select: { slug: true } } } },
         exclusions: { select: { garmentId: true } },
         colourExclusions: { select: { colourId: true } },
+        colourAllowances: { select: { colourId: true } },
       },
     });
     if (!print) {
@@ -204,7 +211,8 @@ export class CatalogService {
 
     // Кольори — з варіантів, що лишаться після фільтра заборон: колір, у
     // якому цей принт не існує, не має зʼявлятися навіть сірим квадратиком.
-    const excludedColourIds = new Set(print.colourExclusions.map((e: { colourId: string }) => e.colourId));
+    // Заборони складаються з колекційних і власних — див. `colour-rules.ts`.
+    const excludedColourIds = excludedColoursOf(print);
     const colourIds = [...new Set(
       variants.map((v: { colourId: string }) => v.colourId).filter((id) => !excludedColourIds.has(id)),
     )];

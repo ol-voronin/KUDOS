@@ -196,14 +196,20 @@ const ADMIN_PRINTS = PRINTS.map((p, i) => ({
   // Контракт вимагає СПРАВЖНІЙ URL у фото (z.string().url()) — відносний
   // шлях тихо валив схему, і пікер вічно крутив скелетони.
   images: [{ id: uuid(800 + i), url: `http://localhost:3010${p.previewUrl}`, pathname: `mock/${i}`, alt: p.title, position: 0 }],
-  breeds: [], collections: [], excludedColourIds: [],
+  breeds: [], collections: [], excludedColourIds: [], allowedColourIds: [],
   createdAt: NOW, updatedAt: NOW,
 }));
+const ADMIN_COLOURS = [
+  ['Чорний', '#1A1A1A'], ['Білий', '#ECECF0'], ['Слонова кістка', '#E6E2D6'], ['Мокрий пісок', '#C2AB93'],
+  ['Рожевий', '#E4789C'], ['Червоний', '#96141F'], ['Смарагдовий', '#00786C'], ['Ананасовий', '#EEC96C'],
+].map(([name, hex], i) => ({ id: uuid(4000 + i), name, hex }));
 const printRef = (p) => ({ id: p.id, slug: p.slug, title: p.title, previewUrl: p.previewUrl, isPublished: p.isPublished });
 let ADMIN_COLLECTIONS = COLLECTIONS.map((c, i) => ({
   id: c.id, slug: c.slug, title: c.title, description: c.description,
   position: (i + 1) * 10, isPublished: i < 2,
   prints: ADMIN_PRINTS.slice(i * 3, i * 3 + 3).map(printRef),
+  // Перша колекція вже не друкує на яскравому — як «Бабаки в пабі».
+  excludedColourIds: i === 0 ? [uuid(4004), uuid(4005), uuid(4007)] : [],
   createdAt: NOW, updatedAt: NOW,
 }));
 const collectionsSorted = () => [...ADMIN_COLLECTIONS].sort((a, b) => a.position - b.position);
@@ -337,8 +343,21 @@ http.createServer(async (req,res)=>{
     const all = ADMIN_PRINTS.filter((p) => !q || p.title.toLowerCase().includes(q) || p.slug.includes(q));
     body = { items: all.slice(0, perPage), total: all.length, page: 1, perPage };
   }
+  else if (/^\/admin\/prints\/[0-9a-f-]{36}$/.test(url.pathname) && req.method === 'GET') {
+    const p = ADMIN_PRINTS.find((x) => x.id === url.pathname.split('/').pop());
+    if (p) {
+      const collections = ADMIN_COLLECTIONS.filter((c) => c.prints.some((x) => x.id === p.id))
+        .map((c) => ({ id: c.id, slug: c.slug, name: c.title }));
+      body = { ...p, collections };
+    }
+  }
   else if (url.pathname === '/admin/prints/options') {
-    body = { breeds: [], collections: ADMIN_COLLECTIONS.map((c) => ({ id: c.id, slug: c.slug, name: c.title })), colours: [] };
+    body = {
+      breeds: [],
+      collections: ADMIN_COLLECTIONS.map((c) => ({ id: c.id, slug: c.slug, name: c.title })),
+      colours: ADMIN_COLOURS,
+      collectionColourExclusions: Object.fromEntries(ADMIN_COLLECTIONS.map((c) => [c.id, c.excludedColourIds])),
+    };
   }
   else if (url.pathname === '/admin/collections/reorder' && req.method === 'PATCH') {
     (json?.ids ?? []).forEach((id, i) => {
@@ -352,7 +371,7 @@ http.createServer(async (req,res)=>{
       id: uuid(3000 + ADMIN_COLLECTIONS.length), slug: json?.slug ?? 'nova', title: json?.title ?? 'Нова',
       description: json?.description ?? '', isPublished: json?.isPublished ?? false,
       position: Math.max(0, ...ADMIN_COLLECTIONS.map((x) => x.position)) + 10,
-      prints: [], createdAt: ADMIN_NOW(), updatedAt: ADMIN_NOW(),
+      prints: [], excludedColourIds: json?.excludedColourIds ?? [], createdAt: ADMIN_NOW(), updatedAt: ADMIN_NOW(),
     };
     ADMIN_COLLECTIONS.push(c);
     body = c;
@@ -385,7 +404,7 @@ http.createServer(async (req,res)=>{
     const id = url.pathname.split('/').pop();
     const c = ADMIN_COLLECTIONS.find((x) => x.id === id);
     if (c && req.method === 'PATCH') {
-      for (const k of ['title', 'slug', 'description', 'isPublished']) {
+      for (const k of ['title', 'slug', 'description', 'isPublished', 'excludedColourIds']) {
         if (json?.[k] !== undefined) c[k] = json[k];
       }
       c.updatedAt = ADMIN_NOW();
