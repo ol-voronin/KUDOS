@@ -3,23 +3,14 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
-import type { CookieOptions, Response } from 'express';
+import type { Response } from 'express';
 import { ADMIN_SESSION_COOKIE, AdminSessionDto, AuthOkDto, LoginRequestDto } from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { AuthService } from './auth.service';
 import { CurrentAdmin } from './current-admin.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { AdminJwtPayload } from './auth.service';
-
-function cookieOptions(): CookieOptions {
-  return {
-    httpOnly: true,
-    secure: process.env['NODE_ENV'] === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: Number(process.env['JWT_ACCESS_TTL'] ?? 900) * 1000,
-  };
-}
+import { sessionCookieOptions } from './session-cookie';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
@@ -35,7 +26,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthOkDto> {
     const { token } = await this.auth.login(dto.email, dto.password);
-    res.cookie(ADMIN_SESSION_COOKIE, token, cookieOptions());
+    res.cookie(ADMIN_SESSION_COOKIE, token, sessionCookieOptions());
     return { ok: true };
   }
 

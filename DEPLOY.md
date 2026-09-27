@@ -131,7 +131,7 @@ OIDC. Якщо сховище не підключене, адмінка скаж
 | `DIRECT_DATABASE_URL` | direct-рядок Neon |
 | `JWT_ACCESS_SECRET` | **новий** секрет, не той, що локально |
 | `JWT_REFRESH_SECRET` | **новий** секрет, інший |
-| `JWT_ACCESS_TTL` | `900` |
+| `ADMIN_SESSION_TTL` | `43200` — 12 год без дій до виходу з адмінки; активна сесія продовжується сама (до 30 днів від входу). Необов'язкова. `JWT_ACCESS_TTL` більше нічого не керує |
 | `JWT_REFRESH_TTL` | `2592000` |
 | `CORS_ORIGINS` | `https://<WEB>` |
 | `TELEGRAM_BOT_TOKEN` | токен бота |

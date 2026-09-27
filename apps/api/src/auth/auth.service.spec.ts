@@ -129,3 +129,28 @@ describe('AuthService.verify', () => {
     await expect(service.verify('not-json')).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
+
+describe('AuthService.renew', () => {
+  const service = new AuthService(fakePrisma(null) as never, fakeJwt() as never);
+  const now = 2_000_000_000;
+  const base = { sub: 'a1', email: 'a@b.c' };
+
+  it('не чіпає свіжий токен — менше 10 хвилин', async () => {
+    expect(await service.renew({ ...base, iat: now - 60, authAt: now - 60 }, now)).toBeNull();
+  });
+
+  it('перевидає токен після 10 хвилин і зберігає момент входу', async () => {
+    const token = await service.renew({ ...base, iat: now - 700, authAt: now - 5000 }, now);
+    expect(token).not.toBeNull();
+    expect(JSON.parse(token!)).toEqual({ ...base, authAt: now - 5000 });
+  });
+
+  it('не продовжує сесію, старшу за 30 днів від входу', async () => {
+    expect(await service.renew({ ...base, iat: now - 700, authAt: now - 30 * 24 * 3600 }, now)).toBeNull();
+  });
+
+  it('старі токени без authAt рахує від iat', async () => {
+    const token = await service.renew({ ...base, iat: now - 700 }, now);
+    expect(JSON.parse(token!)).toEqual({ ...base, authAt: now - 700 });
+  });
+});

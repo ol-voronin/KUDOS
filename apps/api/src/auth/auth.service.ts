@@ -5,11 +5,18 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { ErrorCode } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
-import { LOGIN_LOCKOUT_MS, LOGIN_MAX_ATTEMPTS } from './auth.constants';
+import {
+  ADMIN_SESSION_MAX_AGE_S, ADMIN_SESSION_RENEW_AFTER_S, LOGIN_LOCKOUT_MS, LOGIN_MAX_ATTEMPTS,
+} from './auth.constants';
 
 export interface AdminJwtPayload {
   sub: string;
   email: string;
+  /** Коли вводили пароль (секунди). Не змінюється при продовженні сесії. */
+  authAt?: number;
+  /** Ставить сам jwt: коли видано цей конкретний токен. */
+  iat?: number;
+  exp?: number;
 }
 
 function invalidCredentials(): UnauthorizedException {
@@ -71,8 +78,23 @@ export class AuthService {
       data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
     });
 
-    const token = await this.jwt.signAsync({ sub: admin.id, email: admin.email } satisfies AdminJwtPayload);
+    const token = await this.jwt.signAsync({
+      sub: admin.id, email: admin.email, authAt: Math.floor(Date.now() / 1000),
+    } satisfies AdminJwtPayload);
     return { token, email: admin.email };
+  }
+
+  /**
+   * Свіжий токен для ковзної сесії, або null — якщо продовжувати ще рано
+   * або вже не можна (минуло 30 днів від входу з паролем).
+   */
+  async renew(payload: AdminJwtPayload, nowS = Math.floor(Date.now() / 1000)): Promise<string | null> {
+    const issuedAt = payload.iat ?? nowS;
+    // Старі токени, видані до ковзних сесій, не мають authAt — рахуємо від видачі.
+    const authAt = payload.authAt ?? issuedAt;
+    if (nowS - issuedAt < ADMIN_SESSION_RENEW_AFTER_S) return null;
+    if (nowS - authAt >= ADMIN_SESSION_MAX_AGE_S) return null;
+    return this.jwt.signAsync({ sub: payload.sub, email: payload.email, authAt } satisfies AdminJwtPayload);
   }
 
   async verify(token: string): Promise<AdminJwtPayload> {
