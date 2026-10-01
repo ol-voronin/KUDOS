@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatUAH, minor, PrintListDto, type RangeGarmentDto } from '@dt/contracts';
+import { formatUAH, minor, PrintListDto, type PrintCardDto, type RangeGarmentDto } from '@dt/contracts';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { garmentCardPhoto } from '../garment-photos';
@@ -8,25 +8,27 @@ import { LIST } from '@/features/analytics/lists';
 /**
  * «Вам також може сподобатись» — рейка з чотирьох карток унизу картки товару.
  *
- * Це не рекомендаційний движок, і чесно ним не прикидається: для принта —
- * сусіди по колекції (той самий жанр, який людину вже зачепив), добиті
- * свіжими з каталогу; для базової речі — решта асортименту. Рахує сервер
- * разом зі сторінкою — жодного другого запиту з браузера.
+ * Це не рекомендаційний движок, і чесно ним не прикидається. Порядок
+ * (відгук 01.10): спершу інші принти з тією самою породою — людина прийшла
+ * зі своїм псом; не вистачило — сусіди по колекції; і лише потім свіжі з
+ * каталогу. Рахує сервер разом зі сторінкою — жодного запиту з браузера.
  */
-export async function RelatedPrints({ excludeSlug, collectionSlug }: {
+export async function RelatedPrints({ excludeSlug, breedSlugs = [], collectionSlug }: {
   excludeSlug: string;
+  breedSlugs?: readonly string[];
   collectionSlug?: string;
 }) {
-  const filter = collectionSlug !== undefined ? `&collection=${collectionSlug}` : '';
-  const list = await serverFetchOrNull(`/catalog/prints?page=1&perPage=8${filter}`, PrintListDto, 300);
-  const items = (list?.items ?? []).filter((p) => p.slug !== excludeSlug);
-
-  // Колекція мала — добиваємо картки з загального каталогу, без дублів.
-  if (items.length < 4 && collectionSlug !== undefined) {
-    const extra = await serverFetchOrNull('/catalog/prints?page=1&perPage=8', PrintListDto, 300);
-    const seen = new Set(items.map((p) => p.slug));
-    seen.add(excludeSlug);
-    for (const p of extra?.items ?? []) {
+  const filters = [
+    ...breedSlugs.map((slug) => `&breed=${encodeURIComponent(slug)}`),
+    ...(collectionSlug !== undefined ? [`&collection=${encodeURIComponent(collectionSlug)}`] : []),
+    '',
+  ];
+  const items: PrintCardDto[] = [];
+  const seen = new Set<string>([excludeSlug]);
+  for (const filter of filters) {
+    if (items.length >= 4) break;
+    const list = await serverFetchOrNull(`/catalog/prints?page=1&perPage=8${filter}`, PrintListDto, 300);
+    for (const p of list?.items ?? []) {
       if (!seen.has(p.slug)) { items.push(p); seen.add(p.slug); }
     }
   }

@@ -19,6 +19,7 @@ import { canMockup, isFlatPreview, PrintOnGarment } from './PrintOnGarment';
 import { garmentPhoto } from '../garment-photos';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
+import { plural } from '@/features/home/blocks';
 
 /** Слаги в одне значення виміру — тією самою логікою, що й у кошику. */
 function joinSlugs(slugs: readonly string[]): string | undefined {
@@ -128,14 +129,35 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     showUpdatedPhoto();
   }
 
+  /*
+   * Вироби від найдешевшого (відгук 01.10: «обирай принт, а далі виріб»).
+   * Першим стоїть і обраний за замовчуванням той виріб, чия ціна стоїть на
+   * плитці принта в каталозі: відкрив картку за 1 190 ₴ — бачиш 1 190 ₴,
+   * а не 1 490 ₴ за оверсайз, який хтось поставив першим в адмінці.
+   */
+  const priceRangeByGarment = useMemo(() => {
+    const map = new Map<string, { min: number; max: number }>();
+    for (const v of data?.variants ?? []) {
+      const r = map.get(v.garmentId);
+      if (r === undefined) map.set(v.garmentId, { min: v.priceMinor, max: v.priceMinor });
+      else { r.min = Math.min(r.min, v.priceMinor); r.max = Math.max(r.max, v.priceMinor); }
+    }
+    return map;
+  }, [data]);
+
+  const garments = useMemo(() => {
+    const price = (g: { id: string; basePriceMinor: number }) => priceRangeByGarment.get(g.id)?.min ?? g.basePriceMinor;
+    return [...(data?.garments ?? [])].sort((a, b) => price(a) - price(b));
+  }, [data, priceRangeByGarment]);
+
   // Re-anchor the selection on the first garment/fabric whenever fresh data
   // arrives — a stale id from a previous slug must never leak into this one.
   useEffect(() => {
-    if (!data || data.garments.length === 0) return;
-    setGarmentId((current) => current ?? data.garments[0]?.id ?? null);
-  }, [data]);
+    if (garments.length === 0) return;
+    setGarmentId((current) => current ?? garments[0]?.id ?? null);
+  }, [garments]);
 
-  const garment = data?.garments.find((g) => g.id === garmentId) ?? data?.garments[0];
+  const garment = garments.find((g) => g.id === garmentId) ?? garments[0];
 
   useEffect(() => {
     if (!garment) return;
@@ -195,18 +217,6 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     if (picked) { rememberSize(picked.label); setRememberedLabel(picked.label); }
   }
 
-  // Найдешевший варіант кожного виробу — для кнопок вибору. Рахується з
-  // цін, які прислав сервер, а не з базової: після надбавок «база + друк»
-  // може не збігтися з жодним реальним варіантом.
-  const cheapestByGarment = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const v of data?.variants ?? []) {
-      const current = map.get(v.garmentId);
-      if (current === undefined || v.priceMinor < current) map.set(v.garmentId, v.priceMinor);
-    }
-    return map;
-  }, [data]);
-
   const selectedColour = colours.find((c) => c.id === colourId);
   const selectedFabric = garment?.fabrics.find((f) => f.id === fabricId);
   const selectedSize = sizes.find((s) => s.id === sizeId);
@@ -233,7 +243,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   if (isError || !data) {
     return <ErrorBanner>Не вдалося завантажити принт.</ErrorBanner>;
   }
-  if (data.garments.length === 0) {
+  if (garments.length === 0) {
     return (
       <div>
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
@@ -249,13 +259,14 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   // тканину й колір. Складати її тут із бази означало б тримати в браузері
   // другу реалізацію ціноутворення — і колись розійтися з касою.
   //
-  // Поки розмір не обрано, варіанта немає — і точної ціни теж: надбавка за
-  // розмір може її змінити. Тому до вибору показуємо «від найдешевшого
-  // варіанта цього виробу», а не базу, якої може не існувати в природі.
-  const cheapestForGarment = garment ? cheapestByGarment.get(garment.id) : undefined;
-  const garmentPriceMinor = variant?.priceMinor ?? cheapestForGarment ?? garment?.basePriceMinor ?? 0;
+  // Ціна залежить від виробу (і розміру принта, який для принта один), тож
+  // для виробу вона точна й до вибору розміру: «від» лишається тільки якщо
+  // колись у виробу зʼявляться різні ціни за розміром (відгук 01.10: «всюди
+  // прибрати „від“, у нас чіткі ціни»).
+  const garmentRange = garment ? priceRangeByGarment.get(garment.id) : undefined;
+  const garmentPriceMinor = variant?.priceMinor ?? garmentRange?.min ?? garment?.basePriceMinor ?? 0;
   const totalMinor = garmentPriceMinor + data.printPriceMinor;
-  const priceIsExact = variant !== null && variant !== undefined;
+  const priceIsExact = variant !== undefined || garmentRange === undefined || garmentRange.min === garmentRange.max;
 
   /*
    * Назву й обкладинку кладемо в кошик знімком.
@@ -423,43 +434,41 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </p>
         </div>
 
-        {data.garments.length > 1 && (
-          /* `min-w-0`: у fieldset за замовчуванням min-width: min-content, і ряд
-             виробів без цього розпирав сторінку до ~2000 px. */
+        {garments.length > 1 && (
+          /* `min-w-0`: у fieldset за замовчуванням min-width: min-content. */
           <fieldset className="mt-5 min-w-0">
             <legend className="label-eyebrow mb-2">
-              Виріб{garment && <span className="text-ink"> {garment.name}</span>}
+              Обери виріб <span className="text-ink-subtle">· {garments.length} {plural(garments.length, 'варіант', 'варіанти', 'варіантів')}</span>
             </legend>
             {/*
-              Сім виробів на телефоні — горизонтальний ряд, а не стовпчик із
-              семи пігулок на пів екрана: колір і розмір піднімаються ближче
-              до фото. Ряд свідомо виходить у бічні поля (-mx-4), щоб було
-              видно, що він гортається. На десктопі — як раніше, з переносом.
+              Усі вироби видно одразу — сіткою, а не горизонтальною стрічкою
+              (відгук 01.10: «одразу має бути видно, скільки варіантів і які»).
+              У стрічці на телефоні вміщалося півтора варіанти, решта ховалася
+              за краєм, і вибір виглядав як «футболка чи… щось іще».
             */}
-            <div className="-mx-4 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:-mx-6 sm:px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0" style={{ scrollbarWidth: 'none' }}>
-              {data.garments.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  aria-pressed={g.id === garment?.id}
-                  onClick={() => chooseGarment(g.id)}
-                  className={[
-                    'min-h-11 shrink-0 snap-start whitespace-nowrap rounded-pill border px-4 text-sm font-medium transition',
-                    g.id === garment?.id ? 'border-ink bg-ink text-surface' : 'border-line text-ink hover:border-ink',
-                  ].join(' ')}
-                >
-                  {g.name}
-                  {/* Ціна поруч із назвою, бо саме вона робить вибір виробом,
-                      а не вгадуванням: різниця між футболкою й худі тут у
-                      два з половиною рази. */}
-                  <span className={g.id === garment?.id ? 'ml-2 opacity-70' : 'ml-2 text-ink-subtle'}>
-                    {/* Найдешевший варіант цього виробу: з надбавками ціна
-                        залежить від розміру, тож «база + друк» показувала б
-                        суму, якої може не бути в жодному варіанті. */}
-                    {formatUAH(minor((cheapestByGarment.get(g.id) ?? g.basePriceMinor) + data.printPriceMinor))}
-                  </span>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {garments.map((g) => {
+                const selected = g.id === garment?.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => chooseGarment(g.id)}
+                    className={[
+                      'flex min-h-14 flex-col items-start justify-center rounded-card border px-3 py-2 text-left transition',
+                      selected ? 'border-ink bg-ink text-surface' : 'border-line text-ink hover:border-ink',
+                    ].join(' ')}
+                  >
+                    <span className="text-sm font-medium leading-snug">{g.name}</span>
+                    {/* Ціна під назвою: саме вона робить вибір виробом, а не
+                        вгадуванням — футболка й худі різняться в рази. */}
+                    <span className={selected ? 'mt-0.5 text-sm opacity-75' : 'mt-0.5 text-sm text-ink-subtle'}>
+                      {formatUAH(minor((priceRangeByGarment.get(g.id)?.min ?? g.basePriceMinor) + data.printPriceMinor))}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </fieldset>
         )}
@@ -660,23 +669,6 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           ) : null}
         </div>
 
-        {/*
-          Другий шлях, про який просив замовник: людині сподобався принт,
-          але пес не той. Без цієї кнопки вона або купує «схоже», або йде.
-          Вторинна дія й нижче основної — вона потрібна меншості, але саме
-          тій меншості, яка інакше не купить нічого.
-        */}
-        <div className="mt-6 rounded-card border border-line p-4">
-          <p className="text-sm font-medium text-ink">Подобається принт, але пес не той?</p>
-          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-            Надішли 2–3 фото свого хвостика — зробимо цей самий принт із його мордочкою.
-            Доплата 200 ₴, строк той самий.
-          </p>
-          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-3">
-            Хочу такий, але зі своїм песом
-          </ButtonLink>
-        </div>
-
       </div>
 
       {/*
@@ -694,7 +686,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
             <p>
               {garment?.description !== undefined && garment.description !== ''
                 ? garment.description
-                : 'Друкуємо на власних виробах і на готових від еко-бренду Native Spirit (Франція).'}
+                : 'Друкуємо на базових футболках, світшотах і худі та на речах еко-бренду Native Spirit (Франція).'}
             </p>
             <p>
               Друк DTF або DTG на промисловому обладнанні. Принт не тріскається й не злазить
@@ -724,6 +716,23 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           <Section title="Оплата, обмін і повернення">
             {paymentText(site, true).map((p) => <p key={p}>{p}</p>)}
           </Section>
+        </div>
+        {/*
+          Другий шлях, про який просив замовник: людині сподобався принт,
+          але пес не той. Без цієї кнопки вона або купує «схоже», або йде.
+          Вторинна дія й нижче основної — вона потрібна меншості, але саме
+          тій меншості, яка інакше не купить нічого. Стоїть ПІСЛЯ опису
+          виробу (відгук 01.10): спершу «що я купую», потім «а можна інакше».
+        */}
+        <div className="mt-6 rounded-card border border-line p-4">
+          <p className="text-sm font-medium text-ink">Подобається принт, але пес не той?</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+            Надішли 2–3 фото свого хвостика — зробимо цей самий принт із його мордочкою.
+            Доплата 200 ₴, строк той самий.
+          </p>
+          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-3">
+            Хочу такий, але зі своїм песом
+          </ButtonLink>
         </div>
       </div>
     </div>

@@ -31,8 +31,13 @@ import { PrintThumb } from '@/components/print-thumb';
  * Порода без принтів лишається з лапою замість превʼю. Це не «порожньо», а
  * «намалюємо з фото» — і саме так підписано.
  */
+/*
+ * Без `reveal`: плитки зʼявлялися лише при прокрутці, і на телефоні під
+ * четвертою породою стояла порожнеча — виглядало, ніби порід усього чотири
+ * (відгук 01.10).
+ */
 const TILE =
-  'group reveal flex items-center gap-3.5 rounded-card bg-surface-sunken p-3 ' +
+  'group flex items-center gap-3.5 rounded-card bg-surface-sunken p-3 ' +
   'transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ghost ' +
   'motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
 
@@ -68,12 +73,20 @@ function BreedMedallion({ src, name }: { src: string; name: string }) {
 }
 
 export function BreedStrip({
-  breeds, limit = 11, cta = true,
-}: { breeds: readonly BreedCardDto[]; limit?: number; cta?: boolean }) {
+  breeds, limit = 11, cta = true, collapseAfter,
+}: {
+  breeds: readonly BreedCardDto[]; limit?: number; cta?: boolean;
+  /** Плитки після цієї кількості ховає `ShowMore` до натискання «Показати всі». */
+  collapseAfter?: number;
+}) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-      {breeds.slice(0, limit).map((breed) => (
-        <Link key={breed.id} href={`/breeds/${breed.slug}`} className={TILE}>
+      {breeds.slice(0, limit).map((breed, i) => (
+        <Link
+          key={breed.id}
+          href={`/breeds/${breed.slug}`}
+          className={collapseAfter !== undefined && i >= collapseAfter ? `${TILE} collapsible-extra` : TILE}
+        >
           <BreedMedallion src={breed.previewUrl} name={breed.name} />
           <span className="min-w-0">
             <span className="block truncate font-display text-base font-semibold uppercase leading-tight text-ink">

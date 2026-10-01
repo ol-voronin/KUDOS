@@ -112,7 +112,7 @@ export function BlockRenderer({ blocks }: { blocks: readonly AnyBlock[] }) {
          */
         const solo = group.length === 1 ? group[0] : undefined;
         if (solo !== undefined && solo.type === 'hero' && solo.image.url !== '') {
-          return <div key={solo.id} data-cursor="light">{renderBlock(solo)}</div>;
+          return <div key={solo.id} id={solo.id} data-cursor="light">{renderBlock(solo)}</div>;
         }
         const tone = group[0]?.tone ?? 'plain';
         const onDark = tone === 'ink';
@@ -120,7 +120,9 @@ export function BlockRenderer({ blocks }: { blocks: readonly AnyBlock[] }) {
           <Section key={group[0]?.id ?? i} tone={tone} className="block-section">
             <div className="block-stack flex flex-col gap-12">
               {group.map((block) => (
-                <div key={block.id} className="reveal">{renderBlock(block, onDark)}</div>
+                // id блока — це якір: кнопка «Знайти за породою» веде на `#породи`.
+                // scroll-mt — щоб липка шапка не накривала заголовок секції.
+                <div key={block.id} id={block.id} className="reveal scroll-mt-24">{renderBlock(block, onDark)}</div>
               ))}
             </div>
           </Section>

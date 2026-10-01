@@ -91,7 +91,11 @@ export default async function PrintPage({ params }: Params) {
           <span className="text-ink">{offer.print.title}</span>
         </nav>
         <PrintOfferView slug={params.slug} initialData={offer} />
-        <RelatedPrints excludeSlug={params.slug} collectionSlug={offer.print.collectionSlugs[0]} />
+        <RelatedPrints
+          excludeSlug={params.slug}
+          breedSlugs={offer.print.breedSlugs}
+          collectionSlug={offer.print.collectionSlugs[0]}
+        />
       </div>
     </PublicShell>
   );

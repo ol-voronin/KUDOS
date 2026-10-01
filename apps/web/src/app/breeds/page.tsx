@@ -6,8 +6,12 @@ import { BreedStrip } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink, EmptyState } from '@/components/ui';
+import { ShowMore } from '@/components/show-more';
 
 export const revalidate = 300;
+
+/** Скільки порід видно одразу; решта — за кнопкою «Показати всі породи». */
+const INITIAL_BREEDS = 12;
 
 /**
  * Перелік порід.
@@ -52,7 +56,13 @@ export default async function BreedsPage() {
 
         <div className="mt-10">
           {breeds.length > 0 ? (
-            <BreedStrip breeds={breeds} limit={breeds.length} />
+            breeds.length > INITIAL_BREEDS ? (
+              <ShowMore total={breeds.length} label="Показати всі породи">
+                <BreedStrip breeds={breeds} limit={breeds.length} collapseAfter={INITIAL_BREEDS} />
+              </ShowMore>
+            ) : (
+              <BreedStrip breeds={breeds} limit={breeds.length} />
+            )
           ) : (
             <EmptyState
               title="Породи ще додаємо"
