@@ -39,24 +39,6 @@ export interface CopySettings {
   readonly freeShippingFromMinor: number;
 }
 
-/**
- * Дрібні рядки під кнопкою купівлі.
- *
- * Три речі, які людина питає рівно перед тим, як натиснути: чи спишуть
- * гроші зараз, чи можна повернути, скільки коштує доставка. Відповіді
- * стоять тут, а не в розділах нижче, бо до розділів долистує меншість.
- */
-export function buyNotes(site: CopySettings, printed: boolean): readonly string[] {
-  return [
-    'Оплата не зараз — спершу підтвердимо наявність і напишемо',
-    printed
-      ? 'Річ із принтом виготовляємо під тебе — обмін лише за браку'
-      : `Обмін/повернення базового одягу без принтів — ${site.returnDays} днів, `
-        + 'якщо річ не носили та збережено товарний вигляд',
-    `Доставка Новою Поштою, від ${uah(site.freeShippingFromMinor)} — за наш рахунок`,
-  ];
-}
-
 /** Розділ «Строки й доставка». */
 export function shippingText(site: CopySettings): readonly string[] {
   return [
