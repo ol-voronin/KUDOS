@@ -22,7 +22,7 @@ import { placementFor, previewBase } from '../print-placement';
  * покаже свій запасний варіант, а не порожню рамку.
  */
 export function PrintOnGarment({
-  printSlug, collectionSlugs, garmentSlug, colourCode, mockupUrl, sizeTier, alt, className = '',
+  printSlug, collectionSlugs, garmentSlug, colourCode, mockupUrl, sizeTier, alt, className = '', fit = 'width',
 }: {
   printSlug: string;
   collectionSlugs: readonly string[];
@@ -32,6 +32,13 @@ export function PrintOnGarment({
   sizeTier: PrintSizeTier;
   alt: string;
   className?: string;
+  /**
+   * 'width' — на всю ширину, висота за пропорцією фото (як було).
+   * 'height' — на всю висоту батька, ширина за пропорцією: для мініатюри
+   * біля свотчів і кадрів, обмежених за висотою. Пропорція відома з
+   * `previewBase`, тож рамка не залежить від того, чи вже завантажилось фото.
+   */
+  fit?: 'width' | 'height';
 }) {
   const base = previewBase(garmentSlug, colourCode);
   if (!base || mockupUrl === '') return null;
@@ -49,13 +56,19 @@ export function PrintOnGarment({
 
   return (
     <div
-      className={`relative overflow-hidden ${className}`}
+      className={`relative overflow-hidden ${fit === 'height' ? 'h-full' : ''} ${className}`}
+      style={fit === 'height' ? { aspectRatio: String(base.aspect) } : undefined}
       role="img"
       aria-label={alt}
       data-placement={found.source}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={base.src} alt="" className="block h-auto w-full" draggable={false} />
+      <img
+        src={base.src}
+        alt=""
+        className={fit === 'height' ? 'block h-full w-full object-cover' : 'block h-auto w-full'}
+        draggable={false}
+      />
       <div className="absolute" style={box}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={mockupUrl} alt="" draggable={false} className="h-full w-full object-contain" />

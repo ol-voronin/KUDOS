@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type PrintCardDto } from '@dt/contracts';
+import { formatUAH, minor, type PrintCardDto } from '@dt/contracts';
 import { PrintThumb } from '@/components/print-thumb';
 import { PrintListTracker } from '@/features/analytics/PrintListTracker';
 import type { ListName } from '@/features/analytics/lists';
@@ -12,10 +12,12 @@ import type { ListName } from '@/features/analytics/lists';
  * вкладені прямокутники читаються як шум, і саме тому обидва референси
  * кладуть товар на голе тло й розділяють колонки волосінню.
  *
- * Ціни на плитці немає. Друк коштує однаково на всіх принтах, тож «від 890 ₴»
- * стояло б під кожною карткою тим самим числом — це не інформація, а шум, який
- * ще й відволікає від малюнка. Ціна живе там, де вона нарешті щось означає:
- * у картці принта, поруч із вибором виробу.
+ * Ціна «від N ₴» на плитці є (мобільний аудит, 01.10.2026): без неї людина
+ * не розуміє бюджету до кліку. Число — `fromPriceMinor` із каталогу:
+ * найдешевший виріб, на якому принт можна надрукувати, плюс друк за його
+ * розміром — та сама сума, що й «від …» на сторінці принта. Друк різний за
+ * розміром принта, тож числа на плитках справді різні. `null` — ціни немає
+ * (принт ніде не продається), і тоді рядок не показуємо, а не пишемо нуль.
  */
 export function PrintCard({ print }: { print: PrintCardDto }) {
   return (
@@ -34,22 +36,27 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
         </div>
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between gap-2 border-t border-ink pt-2">
+      <div className="mt-3 border-t border-ink pt-2">
         <p className="text-sm font-medium text-ink transition-opacity duration-200 group-hover:opacity-60">
           {print.title}
         </p>
-        {/*
-          Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
-          кожній картці однаково голосно, тобто не означала нічого. Але й одна
-          літера «є» біля крапки не читалася — потрібне слово, яке щось каже:
-          «є» відповідає на питання «коли», а не «скільки».
-        */}
-        {print.inStock && (
-          <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-ok">
-            <span aria-hidden className="h-1.5 w-1.5 rounded-pill bg-ok" />
-            в наявності
-          </span>
-        )}
+        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+          {print.fromPriceMinor !== null && (
+            <p className="whitespace-nowrap text-sm text-ink">від {formatUAH(minor(print.fromPriceMinor))}</p>
+          )}
+          {/*
+            Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
+            кожній картці однаково голосно, тобто не означала нічого. Але й одна
+            літера «є» біля крапки не читалася — потрібне слово, яке щось каже:
+            «є» відповідає на питання «коли», а не «скільки».
+          */}
+          {print.inStock && (
+            <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-ok">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-pill bg-ok" />
+              в наявності
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

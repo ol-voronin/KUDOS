@@ -36,8 +36,12 @@ const TILE =
   'transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-ghost ' +
   'motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink';
 
-/** Медальйон: превʼю принта або лапа, якщо принтів ще немає. */
-function BreedMedallion({ src }: { src: string }) {
+/**
+ * Медальйон: фото породи (або превʼю її принта) чи лапа, якщо нічого немає.
+ * alt — назва породи: картинка змістовна, і скрінрідер та пошук мають знати,
+ * що на ній (аудит: 25 з 34 картинок на головній були без опису).
+ */
+function BreedMedallion({ src, name }: { src: string; name: string }) {
   if (src === '') {
     return (
       <span
@@ -55,7 +59,7 @@ function BreedMedallion({ src }: { src: string }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
-        alt=""
+        alt={name}
         loading="lazy"
         className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transform-none"
       />
@@ -70,7 +74,7 @@ export function BreedStrip({
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {breeds.slice(0, limit).map((breed) => (
         <Link key={breed.id} href={`/breeds/${breed.slug}`} className={TILE}>
-          <BreedMedallion src={breed.previewUrl} />
+          <BreedMedallion src={breed.previewUrl} name={breed.name} />
           <span className="min-w-0">
             <span className="block truncate font-display text-base font-semibold uppercase leading-tight text-ink">
               {breed.name}
@@ -141,12 +145,12 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
               .map((url, i) => (
                 <div key={i} className="w-1/3 overflow-hidden rounded-card">
                   <div className="origin-[50%_22%] scale-150">
-                    <PrintThumb src={url} alt="" />
+                    <PrintThumb src={url} alt={`Принт із колекції «${collection.title}»`} />
                   </div>
                 </div>
               ))}
           </div>
-          <p className="mt-3 font-display text-lg font-bold uppercase leading-tight text-ink group-hover:underline">
+          <p className="mt-3 font-title text-xl font-bold uppercase leading-tight text-ink group-hover:underline">
             {collection.title}
           </p>
           {collection.description && (

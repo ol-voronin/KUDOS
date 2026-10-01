@@ -81,7 +81,7 @@ export function HeaderBar({
         hidden ? '-translate-y-full' : 'translate-y-0',
       ].join(' ')}
     >
-      <div className="mx-auto grid h-[4.4rem] max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto grid h-[4.4rem] max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <nav aria-label="Основна навігація" className="hidden items-center gap-7 md:flex">
           {nav.slice(0, 4).map((item) => (
             (item.children?.length ?? 0) === 0 ? (
@@ -138,7 +138,7 @@ export function HeaderBar({
           aria-label="Меню"
           aria-expanded={menu}
           onClick={() => setMenu((v) => !v)}
-          className="tap-sm flex h-9 w-9 items-center justify-center md:hidden"
+          className="-ml-2.5 flex h-11 w-11 items-center justify-center md:hidden"
         >
           <span className="relative block h-3 w-5">
             <span className={`absolute left-0 h-px w-full bg-ink transition-all duration-300 ${menu ? 'top-1.5 rotate-45' : 'top-0'}`} />
@@ -162,8 +162,21 @@ export function HeaderBar({
           />
         </Link>
 
-        <div className="flex items-center justify-end gap-5">
-          <button type="button" onClick={() => setOpen((v) => !v)} className="nav-link tap-sm inline-flex items-center gap-2">
+        {/*
+          Іконки пошуку й кошика — тап-зона 44×44 (WCAG 2.5.5 / Apple HIG).
+          Раніше зона дорівнювала самій іконці (17–18 px), і пальцем у неї
+          промахувались. На телефоні кнопки стоять впритул, а група трохи
+          заходить у бічне поле (`-mr-2.5`) — інакше дві зони по 44 px не
+          влазять у колонку поруч із логотипом.
+        */}
+        <div className="-mr-2.5 flex items-center justify-end gap-0 sm:mr-0 sm:gap-5">
+          <button
+            type="button"
+            aria-label="Пошук"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="nav-link inline-flex min-h-11 min-w-11 items-center justify-center gap-2"
+          >
             <SearchIcon />
             <span className="hidden sm:inline">Пошук</span>
           </button>
@@ -189,7 +202,11 @@ export function HeaderBar({
             зі сховища, і без цієї перевірки лічильник блимнув би нулем на
             кожному завантаженні сторінки.
           */}
-          <Link href="/koshyk" className="nav-link tap-sm inline-flex items-center gap-2 whitespace-nowrap">
+          <Link
+            href="/koshyk"
+            aria-label={ready && count > 0 ? `Кошик, товарів: ${count}` : 'Кошик'}
+            className="nav-link inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap"
+          >
             <CartIcon />
             <span className="hidden sm:inline">Кошик</span>
             {ready && count > 0 && (
@@ -230,6 +247,15 @@ export function HeaderBar({
         ].join(' ')}
       >
         <nav aria-label="Мобільна навігація" className="flex flex-col px-4 py-2 sm:px-6">
+          {/*
+            «Усі принти» — вхід у каталог, якого в меню з адмінки не було
+            (аудит 01.10.2026: каталог важко знайти з телефона). Додається
+            кодом і лише якщо такого пункту ще немає в базі — щоб не двоїлось,
+            коли його колись заведуть в адмінці.
+          */}
+          {!nav.some((item) => item.href === '/prints') && (
+            <Link href="/prints" onClick={() => setMenu(false)} className="nav-link py-3">Усі принти</Link>
+          )}
           {nav.map((item) => (
             <div key={item.id} className="flex flex-col">
               <Link href={item.href} onClick={() => setMenu(false)} className="nav-link py-3">

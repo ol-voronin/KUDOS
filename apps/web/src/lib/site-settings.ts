@@ -68,7 +68,7 @@ export const getChrome = cache(async (): Promise<SiteChromeDto> => {
 
 export const getSettings = cache(async (): Promise<SiteSettingsDto> => (await getChrome()).settings);
 
-/** «2 000 ₴» для текстів. */
+/** «3 000 ₴» для текстів. */
 export function freeShippingLabel(settings: SiteSettingsDto): string {
   return `${(settings.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴`;
 }

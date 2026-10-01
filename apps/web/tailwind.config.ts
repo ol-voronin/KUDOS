@@ -27,7 +27,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: '#0b0b0b', muted: '#5c5c56', subtle: '#8e8e87' },
+        /*
+         * `subtle` був #8e8e87 — 3.3:1 на білому й 2.9:1 на кремових
+         * підкладках, тобто дрібні підписи й плейсхолдери не проходили WCAG AA
+         * (мобільний аудит, 01.10.2026). #6b6b65 — 5.4:1 на білому і ≥ 4.6:1 на
+         * всіх `*.soft`/`sunken` підкладках; відтінок той самий, теплий сірий.
+         */
+        ink: { DEFAULT: '#0b0b0b', muted: '#5c5c56', subtle: '#6b6b65' },
         /** raised === DEFAULT навмисно: картку тримає лінія, не заливка. */
         surface: { DEFAULT: '#ffffff', raised: '#ffffff', sunken: '#f6f6f3' },
         line: { DEFAULT: '#e4e4df', strong: '#c9c9c2' },
@@ -39,7 +45,18 @@ export default {
          * блідіший відтінок зникав повністю: половина заголовка виглядала
          * як помилка рендера, а не як прийом.
          */
-        ghost: '#d6d6ce',
+        ghost: {
+          /* Тло: hover-підкладка карток. Лишається блідим — це не текст. */
+          DEFAULT: '#d6d6ce',
+          /*
+           * Текст «слова-привида» (`.ghost-word`). Був тим самим #d6d6ce —
+           * 1.3–1.5:1, тобто половину заголовка (H1 /svoya-ideya) просто не
+           * було видно. #82827a — 3.9:1 на білому і ≥ 3.4:1 на кремовому:
+           * поріг AA для великого тексту (3:1) з запасом, а прийом «другий
+           * склад тихіше» зберігається — до чорнила ще далеко.
+           */
+          ink: '#82827a',
+        },
 
         /*
          * Акцент = червоний із затвердженої палітри бренду (Azure Skies).
@@ -59,6 +76,12 @@ export default {
         teal:   { DEFAULT: '#0e6b60', soft: '#eaf3f1', strong: '#0a5049', ink: '#06342f' },
         sun:    { DEFAULT: '#8a6a00', soft: '#f7f2e2', strong: '#6d5400', ink: '#463600' },
         plum:   { DEFAULT: '#5e2b4a', soft: '#f5edf2', strong: '#48203a', ink: '#2e1425' },
+
+        /*
+         * Жовтий бренду (Primitives/brand у Figma): декор — хвилі, дудли,
+         * підкладки. Червоний `accent` лишається тільки для подій.
+         */
+        brand: { yellow: '#fdca41' },
 
         info: { DEFAULT: '#3a5a85', soft: '#edf1f6' },
         danger: { DEFAULT: '#c02a12', soft: '#fdeae6' },
@@ -96,6 +119,15 @@ export default {
       fontFamily: {
         sans: ['Onest Variable', 'Onest', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         display: ['Unbounded', 'Onest Variable', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        /*
+         * Lionel of Paris — фірмовий рукописний шрифт зі стайлгайду (рішення
+         * Олексія 01.10.2026: кирилиця є, ліцензія покриває сайт). Тільки для
+         * H1/H2 і назв колекцій. Знака ₴ і № у шрифті немає — браузер бере їх
+         * з наступного в списку, а ціни взагалі стоять в іншому наборі.
+         * Окремий токен, а не заміна `display`: `font-display` носять ще й
+         * ціни, мітки й кнопки, і їм тонкий рукопис не підходить.
+         */
+        title: ['Lionel of Paris', 'Unbounded', 'Onest Variable', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
       },
       fontSize: {
         /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */

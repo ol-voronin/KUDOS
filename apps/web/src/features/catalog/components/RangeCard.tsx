@@ -80,8 +80,14 @@ export function RangeCard({ garment }: { garment: RangeGarmentDto }) {
           тож «від» не попереджало б ні про що — лише натякало на дрібний
           шрифт, якого не існує.
         */}
+        {/*
+          Підпис «база, без принта» — рішення Олексія 01.10.2026. Без нього
+          690 ₴ тут і 1 290 ₴ на сторінці принта читались як розбіжність:
+          це ціна самого виробу, принт додається окремо.
+        */}
         <p className="mt-1 font-display text-xl font-bold text-ink">
           {formatUAH(minor(garment.basePriceMinor))}
+          <span className="ml-1.5 font-sans text-sm font-normal text-ink-subtle">база, без принта</span>
         </p>
 
         <dl className="mt-3 space-y-0.5 text-sm text-ink-muted">

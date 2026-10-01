@@ -3,6 +3,20 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Lionel of Paris лежить у public/fonts, а не тягнеться з CDN — з тієї ж
+   * причини, що й решта шрифтів (див. layout.tsx). Одне накреслення (500);
+   * `swap`: заголовок одразу видно запасним шрифтом, а не порожнє місце.
+   * Preload — у layout.tsx.
+   */
+  @font-face {
+    font-family: 'Lionel of Paris';
+    src: url('/fonts/LionelOfParis.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+
   html {
     font-family: theme('fontFamily.sans');
     /*
@@ -23,6 +37,19 @@
    * тексту, не плакат.
    */
   h1, h2 { @apply font-display tracking-tight; }
+  /*
+   * H1/H2 публічних сторінок — фірмовим Lionel of Paris. `#main` — це
+   * <main> публічної оболонки (адмінка має свій і лишається на Unbounded);
+   * id робить селектор сильнішим за утиліту `.font-display`, яку більшість
+   * заголовків носить класом, тож перемикати кожен заголовок руками не треба. Трекінг нейтральний: тонкий
+   * рукопис зі стиснутими літерами злипається. Жирність лишається bold —
+   * браузер потовщує єдине накреслення, і на фото (герой) заголовок
+   * читається; кегль не зменшували.
+   */
+  #main :is(h1, h2) {
+    font-family: theme('fontFamily.title');
+    letter-spacing: 0;
+  }
   h1 { @apply font-bold; }
   h2 { @apply font-bold; }
   h3 { @apply font-semibold tracking-tight; }
@@ -71,7 +98,7 @@
   }
 
   /* Слово-привид: другий склад заголовка тим самим кеглем, блідим тоном. */
-  .ghost-word { @apply text-ghost; }
+  .ghost-word { @apply text-ghost-ink; }
 
   /*
    * Хвиляста лінія під виділеним словом у заголовку на фотографії.
@@ -109,9 +136,15 @@
     right: -0.04em;
     bottom: -0.06em;
     height: 0.2em;
-    background-image: url('/wave-underline.png');
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
+    /*
+     * Колір — жовтий бренду, а не червоний із PNG: червоний у системі
+     * означає подію (знижка, помилка), а хвиля — декор (аудит 01.10.2026).
+     * PNG тепер лише форма штриха (маска), колір задає фон — тож змінити
+     * його можна одним рядком, без нового файлу.
+     */
+    background-color: theme('colors.brand.yellow');
+    -webkit-mask: url('/wave-underline.png') no-repeat 0 0 / 100% 100%;
+    mask: url('/wave-underline.png') no-repeat 0 0 / 100% 100%;
     pointer-events: none;
   }
 

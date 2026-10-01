@@ -16,6 +16,7 @@ import { ColourSwatch } from './ColourSwatch';
 import { GarmentPreview } from './GarmentPreview';
 import { MediaStack, type MediaFrame } from './MediaStack';
 import { canMockup, isFlatPreview, PrintOnGarment } from './PrintOnGarment';
+import { garmentPhoto } from '../garment-photos';
 import { SizeButton } from './SizeButton';
 import { SizeChart } from './SizeChart';
 
@@ -76,6 +77,56 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   const [added, setAdded] = useState(false);
 
   useEffect(() => { setAdded(false); }, [garmentId, fabricId, colourId, sizeId]);
+
+  /*
+   * Вибір кольору й галерея (ТЗ «Вибір кольору», аудит 01.10.2026).
+   *
+   * Свотчі на телефоні стоять нижче галереї, тож колір мінявся на фото, якого
+   * вже не видно. Тепер: (1) біля «Колір: …» живе мініатюра; (2) галерея
+   * сама перемикається на кадр у новому кольорі — без прокрутки сторінки;
+   * (3) якщо галерея поза екраном, на 2 с зʼявляється підказка
+   * «Фото оновилося ↑». Видимість галереї — через IntersectionObserver, а не
+   * через замір на кожен скрол.
+   */
+  const [focus, setFocus] = useState<{ key: string; nonce: number } | undefined>(undefined);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const galleryVisible = useRef(true);
+  const [hint, setHint] = useState(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const el = galleryRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => {
+      galleryVisible.current = entry?.isIntersecting ?? true;
+      if (entry?.isIntersecting) setHint(false);
+    }, { threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [data]);
+
+  useEffect(() => () => { if (hintTimer.current) clearTimeout(hintTimer.current); }, []);
+
+  /** Свідомий вибір, що міняє вигляд на фото: перемкнути галерею й, за потреби, підказати. */
+  function showUpdatedPhoto(): void {
+    setFocus((f) => ({ key: 'mockup', nonce: (f?.nonce ?? 0) + 1 }));
+    if (galleryVisible.current) return;
+    setHint(true);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(false), 2000);
+  }
+
+  function chooseColour(id: string): void {
+    if (id === colourId) return;
+    setColourId(id);
+    showUpdatedPhoto();
+  }
+
+  function chooseGarment(id: string): void {
+    if (id === garmentId) return;
+    setGarmentId(id);
+    showUpdatedPhoto();
+  }
 
   // Re-anchor the selection on the first garment/fabric whenever fresh data
   // arrives — a stale id from a previous slug must never leak into this one.
@@ -288,6 +339,26 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </figcaption>
         </figure>
       ),
+      // Та сама композиція, вписана у висоту кадру (мобільна стрічка, головний кадр).
+      compactNode: (
+        <figure className="flex h-full flex-col items-center justify-center p-2">
+          <div className="min-h-0 flex-1">
+            <PrintOnGarment
+              printSlug={slug}
+              collectionSlugs={data.print.collectionSlugs}
+              garmentSlug={garment.slug}
+              colourCode={selectedColour.supplierCode}
+              mockupUrl={data.print.mockupUrl}
+              sizeTier={data.print.sizeTier}
+              alt={`${data.print.title} на ${garment.name}, ${selectedColour.name ?? selectedColour.supplierCode}`}
+              fit="height"
+            />
+          </div>
+          <figcaption className="px-3 pt-2 text-center text-xs text-ink-subtle">
+            Орієнтовний вигляд · {garment.name}, {selectedColour.name ?? selectedColour.supplierCode}
+          </figcaption>
+        </figure>
+      ),
     }]
     : [];
 
@@ -299,17 +370,45 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
   return (
     /*
-     * Фото стосом ліворуч, панель покупки липне праворуч — тепер липне
-     * САМЕ панель, а не галерея: кадрів стало багато, вони довші за екран,
-     * і липка галерея ховала б власні нижні кадри. Довідковий хвіст
-     * (догляд, доставка) — під фото, щоб липка панель була короткою.
+     * Десктоп: галерея липне ЗЛІВА, права колонка прокручується (ТЗ, пункт 4).
+     * Раніше липла панель покупки, а галерея була стосом довшим за екран — і
+     * змінений колір малювався на кадрі, якого не видно. Тепер галерея — один
+     * головний кадр із мініатюрами, вміщається в екран, і фото міняється на
+     * місці. Довідковий хвіст (догляд, доставка) — під галереєю.
+     *
+     * Телефон: галерея (≤ 55 % екрана) → назва й ціна → виріб → колір →
+     * розмір → кнопка.
      */
-    <div className="grid items-start gap-x-10 gap-y-12 md:grid-cols-2">
-      <div>
-        <MediaStack frames={frames} emptyText="Фото принта готуємо" />
+    <div className="grid items-start gap-x-10 gap-y-6 md:grid-cols-2 md:gap-y-12">
+      {/*
+        `min-w-0` на обох колонках обовʼязковий: грід-елемент за
+        замовчуванням не стискається нижче ширини вмісту, а горизонтальні
+        стрічки (фото, ряд виробів) мають «ширину вмісту» в тисячі пікселів —
+        і розпирали сторінку вбік (аудит: документ до 732 px на 390).
+      */}
+      <div className="min-w-0 md:self-stretch">
+        <div ref={galleryRef} className="md:sticky md:top-24">
+          <MediaStack frames={frames} emptyText="Фото принта готуємо" desktop="sticky" focus={focus} />
+        </div>
       </div>
 
-      <div className="md:sticky md:top-24">
+      {/*
+        Підказка «Фото оновилося ↑» — лише коли галерея поза екраном.
+        Фіксована, тож нічого не зсуває; тап повертає до фото.
+      */}
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-20 z-30 flex justify-center">
+        {hint && (
+          <button
+            type="button"
+            onClick={() => { setHint(false); galleryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+            className="pointer-events-auto rounded-pill bg-ink px-4 text-sm font-medium text-surface shadow-lg animate-[toast-in_.2s_ease-out]"
+          >
+            Фото оновилося ↑
+          </button>
+        )}
+      </div>
+
+      <div className="min-w-0">
         <h1 className="font-display text-section font-bold uppercase text-ink">{data.print.title}</h1>
         {/*
           Розкладу «стільки виріб + стільки друк» тут більше немає.
@@ -325,17 +424,27 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         </div>
 
         {data.garments.length > 1 && (
-          <fieldset className="mt-6">
-            <legend className="label-eyebrow mb-2">Обрати виріб</legend>
-            <div className="flex flex-wrap gap-2">
+          /* `min-w-0`: у fieldset за замовчуванням min-width: min-content, і ряд
+             виробів без цього розпирав сторінку до ~2000 px. */
+          <fieldset className="mt-5 min-w-0">
+            <legend className="label-eyebrow mb-2">
+              Виріб{garment && <span className="text-ink"> {garment.name}</span>}
+            </legend>
+            {/*
+              Сім виробів на телефоні — горизонтальний ряд, а не стовпчик із
+              семи пігулок на пів екрана: колір і розмір піднімаються ближче
+              до фото. Ряд свідомо виходить у бічні поля (-mx-4), щоб було
+              видно, що він гортається. На десктопі — як раніше, з переносом.
+            */}
+            <div className="-mx-4 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:-mx-6 sm:px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0" style={{ scrollbarWidth: 'none' }}>
               {data.garments.map((g) => (
                 <button
                   key={g.id}
                   type="button"
                   aria-pressed={g.id === garment?.id}
-                  onClick={() => setGarmentId(g.id)}
+                  onClick={() => chooseGarment(g.id)}
                   className={[
-                    'min-h-10 rounded-pill border px-4 text-sm font-medium transition',
+                    'min-h-11 shrink-0 snap-start whitespace-nowrap rounded-pill border px-4 text-sm font-medium transition',
                     g.id === garment?.id ? 'border-ink bg-ink text-surface' : 'border-line text-ink hover:border-ink',
                   ].join(' ')}
                 >
@@ -378,23 +487,42 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         )}
 
         {colours.length > 0 && (
-          <fieldset className="mt-6">
+          <fieldset className="mt-5">
             {/*
               Назва кольору поруч із міткою, а не лише в підказці свотча:
               «Смарагдовий» і «Зелений мох» на екрані відрізняються менше,
               ніж у назві, а з телефона підказки не видно взагалі.
+
+              Поруч — живе прев'ю (лише телефон): мініатюра виробу в обраному
+              кольорі. Тап по свотчу міняє її одразу, сторінка не їде.
             */}
-            <legend id="colour-label" className="label-eyebrow mb-2">
-              Колір{' '}
-              {selectedColour && (
-                <span className="text-ink">
-                  {(selectedColour.name ?? selectedColour.supplierCode).toUpperCase()}
-                </span>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <legend id="colour-label" className="label-eyebrow">
+                Колір{' '}
+                {selectedColour && (
+                  <span className="text-ink">
+                    {(selectedColour.name ?? selectedColour.supplierCode).toUpperCase()}
+                  </span>
+                )}
+              </legend>
+              {garment && selectedColour && (
+                <ColourThumb
+                  key={`${garment.id}-${selectedColour.id}`}
+                  printSlug={slug}
+                  collectionSlugs={data.print.collectionSlugs}
+                  garmentSlug={garment.slug}
+                  garmentName={garment.name}
+                  colourCode={selectedColour.supplierCode}
+                  colourName={selectedColour.name ?? selectedColour.supplierCode}
+                  colourHex={selectedColour.hex}
+                  mockupUrl={data.print.mockupUrl}
+                  sizeTier={data.print.sizeTier}
+                />
               )}
-            </legend>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="colour-label">
+            </div>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-labelledby="colour-label">
               {colours.map((c) => (
-                <ColourSwatch key={c.id} colour={c} selected={c.id === colourId} onSelect={setColourId} />
+                <ColourSwatch key={c.id} colour={c} selected={c.id === colourId} onSelect={chooseColour} />
               ))}
             </div>
           </fieldset>
@@ -418,7 +546,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         )}
 
         {sizes.length > 0 && (
-          <fieldset className="mt-6">
+          <fieldset className="mt-5">
             {/*
               Таблиця розмірів відкривається ЗВІДСИ, а не з окремого блока
               внизу картки. Baymard знаходить це в кожному тесті одягу:
@@ -571,7 +699,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         Перший розділ відкритий: якщо всі згорнуті, більшість не відкриє
         жодного. Живе під фото: це читання ПІСЛЯ вибору, а не замість.
       */}
-      <div className="md:col-start-1">
+      <div className="min-w-0 md:col-start-1">
         <div className="divide-y divide-line border-y border-line">
           <Section title="Виріб і друк" open>
             <p>
@@ -635,3 +763,52 @@ function Section({ title, children, open = false }: { title: string; children: R
   );
 }
 
+/**
+ * Мініатюра «як виглядатиме» біля «Колір: …» — лише на телефоні (на
+ * десктопі галерея й так липне поруч). Мокап принта, якщо він є для цього
+ * виробу й кольору; інакше — фото самого виробу; інакше — плашка кольору.
+ * `key` на батьківському рівні перемонтовує її на кожну зміну кольору, тож
+ * поява — короткий crossfade, а не різка підміна.
+ */
+function ColourThumb({
+  printSlug, collectionSlugs, garmentSlug, garmentName, colourCode, colourName, colourHex, mockupUrl, sizeTier,
+}: {
+  printSlug: string;
+  collectionSlugs: readonly string[];
+  garmentSlug: string;
+  garmentName: string;
+  colourCode: string;
+  colourName: string;
+  colourHex: string | null;
+  mockupUrl: string;
+  sizeTier: PrintOfferDto['print']['sizeTier'];
+}) {
+  const alt = `${garmentName}, ${colourName}`;
+  const photo = garmentPhoto(garmentSlug, colourCode);
+  return (
+    <div className="flex h-[5.625rem] w-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-card border border-line bg-surface-sunken animate-[fade-in_.15s_ease-out] md:hidden">
+      {canMockup(garmentSlug, colourCode, mockupUrl) ? (
+        <PrintOnGarment
+          printSlug={printSlug}
+          collectionSlugs={collectionSlugs}
+          garmentSlug={garmentSlug}
+          colourCode={colourCode}
+          mockupUrl={mockupUrl}
+          sizeTier={sizeTier}
+          alt={`Прев'ю: ${alt}`}
+          fit="height"
+        />
+      ) : photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt={`Прев'ю: ${alt}`} className="h-full w-full object-contain p-1" />
+      ) : (
+        <span
+          role="img"
+          aria-label={`Прев'ю: ${alt}`}
+          className="block h-full w-full"
+          style={colourHex ? { backgroundColor: colourHex } : undefined}
+        />
+      )}
+    </div>
+  );
+}
