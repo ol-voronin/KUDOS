@@ -5,7 +5,7 @@ import { minor, formatUAH, type PrintOfferDto } from '@dt/contracts';
 import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/ui';
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
-import { CARE_WARNING, buyNotes, paymentText, shippingText } from '@/config/product-copy';
+import { CARE_WARNING, paymentText, shippingText } from '@/config/product-copy';
 import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
 import { shipWindow } from '../delivery-estimate';
 import { readRememberedSize, rememberSize } from '../remembered-size';
@@ -657,18 +657,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
             <ButtonLink href="/koshyk" variant="quiet" size="md" full className="mt-2">
               Перейти в кошик →
             </ButtonLink>
-          ) : (
-            /*
-              Три рядки під кнопкою — не прикраса, а зняття трьох конкретних
-              сумнівів, які Baymard бачить у кожному тесті чекауту:
-              «коли з мене візьмуть гроші», «а якщо не підійде» і «скільки
-              коштує доставка». Кожен із них поодинці зупиняє покупку, і
-              жоден не потребує більше рядка.
-            */
-            <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
-              {buyNotes(site, true).map((n) => <li key={n}>· {n}</li>)}
-            </ul>
-          )}
+          ) : null}
         </div>
 
         {/*

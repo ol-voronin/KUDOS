@@ -6,7 +6,7 @@ import { Button, ButtonLink, Drawer, ErrorBanner, Skeleton } from '@/components/
 import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
 import {
-  CARE_LINE, CARE_WARNING, buyNotes, paymentText, shippingText,
+  CARE_LINE, CARE_WARNING, paymentText, shippingText,
 } from '@/config/product-copy';
 import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
 import { garmentPhoto } from '../garment-photos';
@@ -369,11 +369,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
             <ButtonLink href="/koshyk" variant="quiet" size="md" full className="mt-2">
               Перейти в кошик →
             </ButtonLink>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-1.5 text-xs leading-relaxed text-ink-muted">
-              {buyNotes(site, false).map((n) => <li key={n}>· {n}</li>)}
-            </ul>
-          )}
+          ) : null}
         </div>
 
         {/*
