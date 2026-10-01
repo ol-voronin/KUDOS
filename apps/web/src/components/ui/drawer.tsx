@@ -77,7 +77,7 @@ export function Drawer({
           <button
             type="button"
             onClick={onClose}
-            className="tap-sm -mr-2 flex h-9 w-9 shrink-0 items-center justify-center text-ink hover:opacity-60"
+            className="-mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center text-ink hover:opacity-60"
             aria-label="Закрити"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">

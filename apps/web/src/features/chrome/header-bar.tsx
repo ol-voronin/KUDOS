@@ -247,6 +247,15 @@ export function HeaderBar({
         ].join(' ')}
       >
         <nav aria-label="Мобільна навігація" className="flex flex-col px-4 py-2 sm:px-6">
+          {/*
+            «Усі принти» — вхід у каталог, якого в меню з адмінки не було
+            (аудит 01.10.2026: каталог важко знайти з телефона). Додається
+            кодом і лише якщо такого пункту ще немає в базі — щоб не двоїлось,
+            коли його колись заведуть в адмінці.
+          */}
+          {!nav.some((item) => item.href === '/prints') && (
+            <Link href="/prints" onClick={() => setMenu(false)} className="nav-link py-3">Усі принти</Link>
+          )}
           {nav.map((item) => (
             <div key={item.id} className="flex flex-col">
               <Link href={item.href} onClick={() => setMenu(false)} className="nav-link py-3">
