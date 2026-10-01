@@ -65,6 +65,11 @@ export interface PlacedOrderNotification {
     readonly recipientPhone: string;
   };
   readonly note?: string;
+  /**
+   * Рахунок Monobank (HOLD) виставився автоматично при оформленні. Без
+   * цього рядка в адмінці його треба виставити вручну.
+   */
+  readonly invoiceSent?: boolean;
 }
 
 /**
@@ -90,6 +95,9 @@ export function formatOrderPlaced(order: PlacedOrderNotification): string {
   }
 
   rows.push('', `💰 ${formatUAH(order.totalMinor)}`);
+  rows.push(order.invoiceSent === true
+    ? '💳 Рахунок Monobank (HOLD) виставлено автоматично — коли гроші заблокуються, звір наявність і спиши їх в адмінці'
+    : '💳 Рахунку немає — виставити вручну з адмінки');
 
   const place = order.delivery.method === 'PICKUP'
     ? DELIVERY_LABEL['PICKUP']

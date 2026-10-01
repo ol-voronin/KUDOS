@@ -175,6 +175,11 @@ export class OrdersAdminService {
       });
     }
 
+    // Адреси — до запису платежу: без них рахунок однаково не виставити,
+    // а порожній `pending:` рядок у базі нікому не потрібен.
+    const webBase = publicUrl('WEB_PUBLIC_URL');
+    const apiBase = publicUrl('API_PUBLIC_URL');
+
     const pendingInvoiceId = `pending:${randomUUID()}`;
     await this.prisma.db.payment.create({
       data: {
@@ -186,9 +191,6 @@ export class OrdersAdminService {
         holdExpiresAt: new Date(Date.now() + HOLD_MAX_DAYS * MS_PER_DAY),
       },
     });
-
-    const webBase = publicUrl('WEB_PUBLIC_URL');
-    const apiBase = publicUrl('API_PUBLIC_URL');
 
     let invoice: { invoiceId: string; pageUrl: string };
     try {
