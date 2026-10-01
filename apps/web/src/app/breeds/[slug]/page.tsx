@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const count = data.prints.length;
   const title = `Футболки й худі з принтом ${name} — ${site.brand}`;
   const description = count > 0
-    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}, виготовляємо самі.`
+    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`
     : `Принта з ${name} ще немає в каталозі — намалюємо з твого фото. Друкуємо ${site.cityIn}.`;
 
   return {
@@ -59,11 +59,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-const GARMENT_LABELS: Record<string, string> = {
-  TSHIRT: 'Футболки', HOODIE: 'Худі', SWEATSHIRT: 'Світшоти',
-  LONGSLEEVE: 'Лонгсліви', JOGGERS: 'Джогери', TOTE: 'Шопери',
-};
-
 export default async function BreedPage({ params }: Params) {
   let data: BreedPageDto;
   try {
@@ -72,7 +67,7 @@ export default async function BreedPage({ params }: Params) {
     notFound();
   }
 
-  const { breed, prints, garmentTypes, relatedBreeds } = data;
+  const { breed, prints, relatedBreeds } = data;
 
   // Порода без принтів — усе одно сторінка каталогу, а не одна форма.
   // Показуємо жанри, у яких малюємо: людина бачить, ЩО саме отримає, а не
@@ -116,7 +111,7 @@ export default async function BreedPage({ params }: Params) {
 
             <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
               {prints.length > 0
-                ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Друкуємо {site.cityIn} на власних виробах і на органічній бавовні Native Spirit.</>
+                ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Обери принт, а далі — виріб, на якому його надрукувати. Друкуємо {site.cityIn}.</>
                 : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
             </p>
 
@@ -140,16 +135,6 @@ export default async function BreedPage({ params }: Params) {
             </figure>
           )}
         </div>
-
-        {garmentTypes.length > 1 && (
-          <div className="mt-8 flex flex-wrap gap-2" aria-label="Доступні вироби">
-            {garmentTypes.map((type) => (
-              <span key={type} className="rounded-pill border border-line px-3.5 py-1.5 text-sm text-ink-muted">
-                {GARMENT_LABELS[type] ?? type}
-              </span>
-            ))}
-          </div>
-        )}
 
         <div className="mt-10">
           {prints.length > 0

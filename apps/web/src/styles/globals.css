@@ -211,6 +211,9 @@
   .reveal-2 { transition-delay: .14s; }
   .reveal-3 { transition-delay: .21s; }
 
+  /* Згорнутий список (`ShowMore`): зайві елементи до «Показати всі». */
+  [data-collapsed] .collapsible-extra { display: none; }
+
   .scroll-hint { animation: hint 2.4s ease-in-out infinite; }
   @keyframes hint {
     0%, 100% { transform: translate(-50%, 0); opacity: .7; }
