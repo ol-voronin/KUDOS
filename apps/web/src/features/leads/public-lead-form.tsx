@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSiteSettings } from '@/app/providers';
 import { ApiError } from '@/lib/api-client';
 import { Consent, Field, SubmitButton, SuccessPanel, TextArea } from '@/features/forms/fields';
+import { phoneInputHandlers } from '@/features/forms/phone-input';
 import { createLead } from './public-api';
 
 /**
@@ -79,9 +80,9 @@ export function PublicLeadForm({ source, compact = false }: { source: string; co
       />
       <Field
         id="lead-phone" label="Телефон" type="tel" required
-        value={phone} onChange={setPhone} error={errors['phone']}
-        placeholder="+380 67 123 45 67" autoComplete="tel"
-        hint="Можна як завгодно — з плюсом, з нулем чи без. Ми зрозуміємо."
+        {...phoneInputHandlers(phone, setPhone)} error={errors['phone']}
+        placeholder="+380671234567" autoComplete="tel"
+        hint="+38 уже стоїть — допиши номер з нуля: 0XX XXX XX XX."
       />
       {!compact && (
         <TextArea
