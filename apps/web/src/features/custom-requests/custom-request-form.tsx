@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSiteSettings } from '@/app/providers';
 import { ApiError } from '@/lib/api-client';
 import { Consent, Field, Select, SubmitButton, SuccessPanel, TextArea } from '@/features/forms/fields';
+import { phoneInputHandlers } from '@/features/forms/phone-input';
 import { createCustomRequest } from './api';
 import { PhotoPlaceholder } from './photo-placeholder';
 
@@ -154,8 +155,8 @@ export function CustomRequestForm() {
         <div className="grid gap-5 sm:grid-cols-2">
           <Field id="brief-name" label="Як до тебе звертатися" required value={name} onChange={setName} error={errors['name']} autoComplete="name" />
           <Field
-            id="brief-phone" label="Телефон" type="tel" required value={phone} onChange={setPhone}
-            error={errors['phone']} placeholder="+380 67 123 45 67" autoComplete="tel"
+            id="brief-phone" label="Телефон" type="tel" required {...phoneInputHandlers(phone, setPhone)}
+            error={errors['phone']} placeholder="+380671234567" autoComplete="tel"
           />
         </div>
         <Consent id="brief-consent" checked={consent} onChange={setConsent} error={errors['consent']}>

@@ -12,6 +12,7 @@ import {
 } from '@/features/analytics/ga4';
 import { rememberOrder } from '@/features/analytics/order-snapshot';
 import { ApiError, apiFetch } from '@/lib/api-client';
+import { phoneEventHandlers } from '@/features/forms/phone-input';
 import { toCartItems, useCart } from './cart-store';
 import { useCartQuote } from './use-cart-quote';
 
@@ -192,11 +193,11 @@ export function CheckoutForm() {
                 className={`${inputClass()} w-full`}
               />
             </FieldShell>
-            <FieldShell label="Телефон" htmlFor="co-phone" hint="У форматі +380XXXXXXXXX">
+            <FieldShell label="Телефон" htmlFor="co-phone" hint="+38 уже стоїть — допиши номер з нуля: 0XX XXX XX XX">
               <input
                 id="co-phone" type="tel" required autoComplete="tel" inputMode="tel"
                 placeholder="+380XXXXXXXXX"
-                value={phone} onChange={(e) => setPhone(e.target.value)}
+                {...phoneEventHandlers(phone, setPhone)}
                 className={`${inputClass()} w-full`}
               />
             </FieldShell>
@@ -276,7 +277,7 @@ export function CheckoutForm() {
               <FieldShell label="Телефон одержувача" htmlFor="co-rec-phone">
                 <input
                   id="co-rec-phone" type="tel" inputMode="tel" placeholder="+380XXXXXXXXX"
-                  value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)}
+                  {...phoneEventHandlers(recipientPhone, setRecipientPhone)}
                   className={`${inputClass()} w-full`}
                 />
               </FieldShell>

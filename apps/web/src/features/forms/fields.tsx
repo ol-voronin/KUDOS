@@ -41,10 +41,12 @@ interface FieldProps {
   placeholder?: string | undefined;
   required?: boolean;
   autoComplete?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function Field({
-  id, label, value, onChange, error, hint, type = 'text', placeholder, required, autoComplete,
+  id, label, value, onChange, error, hint, type = 'text', placeholder, required, autoComplete, onFocus, onBlur,
 }: FieldProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -60,6 +62,9 @@ export function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        inputMode={type === 'tel' ? 'tel' : undefined}
         placeholder={placeholder}
         autoComplete={autoComplete}
         aria-invalid={error ? true : undefined}
