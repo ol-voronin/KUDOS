@@ -669,23 +669,6 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           ) : null}
         </div>
 
-        {/*
-          Другий шлях, про який просив замовник: людині сподобався принт,
-          але пес не той. Без цієї кнопки вона або купує «схоже», або йде.
-          Вторинна дія й нижче основної — вона потрібна меншості, але саме
-          тій меншості, яка інакше не купить нічого.
-        */}
-        <div className="mt-6 rounded-card border border-line p-4">
-          <p className="text-sm font-medium text-ink">Подобається принт, але пес не той?</p>
-          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-            Надішли 2–3 фото свого хвостика — зробимо цей самий принт із його мордочкою.
-            Доплата 200 ₴, строк той самий.
-          </p>
-          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-3">
-            Хочу такий, але зі своїм песом
-          </ButtonLink>
-        </div>
-
       </div>
 
       {/*
@@ -733,6 +716,23 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           <Section title="Оплата, обмін і повернення">
             {paymentText(site, true).map((p) => <p key={p}>{p}</p>)}
           </Section>
+        </div>
+        {/*
+          Другий шлях, про який просив замовник: людині сподобався принт,
+          але пес не той. Без цієї кнопки вона або купує «схоже», або йде.
+          Вторинна дія й нижче основної — вона потрібна меншості, але саме
+          тій меншості, яка інакше не купить нічого. Стоїть ПІСЛЯ опису
+          виробу (відгук 01.10): спершу «що я купую», потім «а можна інакше».
+        */}
+        <div className="mt-6 rounded-card border border-line p-4">
+          <p className="text-sm font-medium text-ink">Подобається принт, але пес не той?</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+            Надішли 2–3 фото свого хвостика — зробимо цей самий принт із його мордочкою.
+            Доплата 200 ₴, строк той самий.
+          </p>
+          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-3">
+            Хочу такий, але зі своїм песом
+          </ButtonLink>
         </div>
       </div>
     </div>

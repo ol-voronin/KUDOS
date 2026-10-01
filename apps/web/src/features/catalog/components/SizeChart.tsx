@@ -58,6 +58,11 @@ export function SizeChart({ garment, highlight }: { garment: GarmentDto; highlig
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Назва виробу першою (відгук 01.10): сітки в різних виробів різні,
+          і людина має бачити, що дивиться саме на свою. */}
+      <p className="border-b border-ink pb-3 font-display text-lg font-bold uppercase leading-tight text-ink">
+        {garment.name}
+      </p>
       <HowToMeasure garment={garment} />
       <Table sizes={sizes} keys={keys} highlight={highlight ?? null} />
       <p className="text-xs text-ink-subtle">
