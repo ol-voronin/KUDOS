@@ -113,18 +113,24 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}');` : ''}`}
  * у ЄС за таке штрафують, а тут це просто нечесно.
  */
 function ConsentBanner({ onDecide }: { onDecide: (value: 'granted' | 'denied') => void }) {
+  /*
+   * Компактна нижня плашка: 1–2 рядки тексту й дві кнопки поруч.
+   *
+   * Попередня версія на телефоні займала ~31 % висоти екрана (пʼять рядків
+   * тексту + кнопки стовпчиком) і закривала кнопку першого екрана — тобто
+   * перший екран не продавав, доки людина не розбереться з cookie. Пояснення
+   * про власну статистику без cookie живе в політиці, куди веде посилання.
+   */
   return (
     <div
       role="dialog"
       aria-label="Згода на аналітику"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-surface px-6 py-4 shadow-lg"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-surface px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-lg sm:px-6"
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center">
-        <p className="flex-1 text-sm leading-relaxed text-ink-muted">
-          Ми користуємось Google Аналітикою, щоб бачити, які сторінки корисні. Вона ставить
-          cookie. Наша власна статистика працює без них і нікого не впізнає — вона рахує
-          сторінки, а не людей. Деталі —{' '}
-          <Link href="/pryvatnist" className="font-medium text-ink underline">у політиці конфіденційності</Link>.
+      <div className="mx-auto flex max-w-4xl flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4">
+        <p className="flex-1 text-[0.8125rem] leading-snug text-ink-muted">
+          Google Аналітика ставить cookie лише з твоєї згоди.{' '}
+          <Link href="/pryvatnist" className="font-medium text-ink underline">Деталі</Link>
         </p>
         <div className="flex gap-2">
           <button
