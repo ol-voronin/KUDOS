@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderStatus } from './enums';
+import { OrderStatus, PaymentStatus } from './enums';
 
 /*
  * Одинична каса («один принт → одразу Monobank») жила тут до появи кошика.
@@ -19,5 +19,11 @@ export const OrderStatusPublicDto = z.object({
   orderNumber: z.number().int().positive(),
   status: OrderStatus,
   totalMinor: z.number().int().nonnegative(),
+  /**
+   * Стан останнього рахунку Monobank, `null` — рахунку ще немає. Потрібен,
+   * щоб відрізнити «гроші заблоковано, чекаємо підтвердження» (HOLD) і
+   * «оплата не пройшла» від просто «очікуємо оплату».
+   */
+  paymentStatus: PaymentStatus.nullable().optional(),
 });
 export type OrderStatusPublicDto = z.infer<typeof OrderStatusPublicDto>;

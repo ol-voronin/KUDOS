@@ -71,12 +71,16 @@ export const DeliveryDto = z.object({
 export type DeliveryDto = z.infer<typeof DeliveryDto>;
 
 /**
- * Оформлення замовлення. Оплати тут немає навмисно.
+ * Оформлення замовлення.
  *
- * Замовлення приходить у стані `NEW`: ми звіряємо наявність, пишемо людині
- * й лише потім виставляємо рахунок. Причина не технічна, а торгова —
- * власне виробництво гарантує один колір на складі, і продати те, чого
- * немає, дорожче, ніж зачекати годину до підтвердження.
+ * Якщо Monobank підключений (`MONOBANK_TOKEN`), сервер одразу виставляє
+ * рахунок типу HOLD: гроші лише блокуються на картці, а списуються після
+ * того, як ми звірили наявність (`finalize` з адмінки). Так зберігається
+ * торгове правило — не брати гроші за те, чого може не бути, — і людині
+ * не треба чекати на рахунок.
+ *
+ * Без токена або коли Monobank відповів помилкою замовлення однаково
+ * створюється у стані `NEW`, і рахунок виставляють вручну, як раніше.
  */
 export const OrderDraftRequestDto = z.object({
   items: z.array(CartItemDto).min(1).max(20),
@@ -99,6 +103,11 @@ export const OrderDraftResponseDto = z.object({
   orderId: z.string().uuid(),
   orderNumber: z.number().int().positive(),
   totalMinor: z.number().int().nonnegative(),
+  /**
+   * Сторінка оплати Monobank. Є лише тоді, коли рахунок виставився одразу;
+   * немає — замовлення чекає на ручний рахунок (стан `NEW`).
+   */
+  paymentPageUrl: z.string().url().optional(),
 });
 export type OrderDraftResponseDto = z.infer<typeof OrderDraftResponseDto>;
 
@@ -161,6 +170,11 @@ export const CartQuoteDto = z.object({
   maxLeadTimeDays: z.number().int().nonnegative(),
   /** Чи можна взагалі оформлювати: хоч один заблокований рядок — не можна. */
   purchasable: z.boolean(),
+  /**
+   * Чи оплата карткою відбудеться одразу після оформлення (Monobank
+   * підключений). Потрібно лише для чесного тексту біля кнопки.
+   */
+  payOnline: z.boolean().optional(),
 });
 export type CartQuoteDto = z.infer<typeof CartQuoteDto>;
 

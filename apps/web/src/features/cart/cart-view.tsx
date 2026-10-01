@@ -190,7 +190,9 @@ export function CartView() {
           )}
 
           <p className="mt-3 text-center text-xs leading-relaxed text-ink-subtle">
-            Оплата не зараз: ми звіримо наявність, напишемо тобі й надішлемо рахунок.
+            {data?.payOnline === true
+              ? 'Оплата карткою через Monobank: спишемо гроші, лише коли підтвердимо наявність.'
+              : 'Оплата не зараз: ми звіримо наявність, напишемо тобі й надішлемо рахунок.'}
           </p>
         </div>
       </aside>

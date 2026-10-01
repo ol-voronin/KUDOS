@@ -1,6 +1,6 @@
 import { formatUAH, minor } from '@dt/contracts';
 import { describe, expect, it } from 'vitest';
-import { formatOrderPaid } from './format-order-notification';
+import { formatOrderPaid, formatOrderPlaced } from './format-order-notification';
 
 const base = {
   orderNumber: 42,
@@ -37,5 +37,22 @@ describe('formatOrderPaid', () => {
     const withNote = formatOrderPaid({ ...base, note: 'x' });
     const withoutNote = formatOrderPaid(base);
     expect(withoutNote.split('\n').length).toBeLessThan(withNote.split('\n').length);
+  });
+});
+
+describe('formatOrderPlaced', () => {
+  const placed = {
+    orderNumber: 7, customerName: 'Оля', customerPhone: '+380671234567',
+    lines: [{ title: 'Boss lab', garmentName: 'Футболка', colourName: 'Чорний', sizeLabel: 'L', quantity: 1 }],
+    totalMinor: minor(70000),
+    delivery: { method: 'PICKUP', city: '', branch: '', recipientName: '', recipientPhone: '' },
+  };
+
+  it('каже, що рахунок уже виставлено автоматично', () => {
+    expect(formatOrderPlaced({ ...placed, invoiceSent: true })).toContain('виставлено автоматично');
+  });
+
+  it('без автоматичного рахунку нагадує виставити його вручну', () => {
+    expect(formatOrderPlaced(placed)).toContain('виставити вручну');
   });
 });

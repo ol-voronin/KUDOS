@@ -28,6 +28,34 @@ const STATUS_TONE: Record<string, string> = {
   CANCELLED: 'bg-danger-soft text-danger',
 };
 
+/**
+ * Стан замовлення сам по собі не каже всього про гроші: HOLD лишає
+ * замовлення в `PENDING_PAYMENT`, а невдала оплата переводить його в
+ * `CANCELLED`. Тут уточнюємо підпис за станом рахунку, щоб людина не
+ * дивилась на «Очікуємо оплату», коли вже заплатила, і на «Скасовано»,
+ * коли просто не пройшла картка.
+ */
+type View = 'HOLD' | 'PAYMENT_FAILED' | 'REFUNDED' | null;
+
+function paymentView(status: string, paymentStatus: string | null | undefined): View {
+  if (status === 'PENDING_PAYMENT' && paymentStatus === 'HOLD') return 'HOLD';
+  if (status === 'CANCELLED' && (paymentStatus === 'FAILURE' || paymentStatus === 'EXPIRED')) return 'PAYMENT_FAILED';
+  if (status === 'CANCELLED' && paymentStatus === 'REVERSED') return 'REFUNDED';
+  return null;
+}
+
+const VIEW_LABELS: Record<Exclude<View, null>, string> = {
+  HOLD: 'Оплату заблоковано',
+  PAYMENT_FAILED: 'Оплата не пройшла',
+  REFUNDED: 'Оплату повернуто',
+};
+
+const VIEW_TONE: Record<Exclude<View, null>, string> = {
+  HOLD: 'bg-info-soft text-info',
+  PAYMENT_FAILED: 'bg-danger-soft text-danger',
+  REFUNDED: 'bg-surface-sunken text-ink',
+};
+
 export function OrderStatusView({ orderId }: { orderId: string }) {
   const { data, isLoading, isError } = useOrderStatus(orderId);
 
@@ -76,16 +104,18 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
     return <p className="text-danger">Не вдалося знайти замовлення.</p>;
   }
 
+  const view = paymentView(data.status, data.paymentStatus);
+
   return (
     <div aria-live="polite">
       <h1 className="font-display text-2xl font-bold uppercase text-ink">Замовлення №{data.orderNumber}</h1>
       <span
         className={[
           'mt-3 inline-flex rounded-pill px-3 py-1 text-sm font-semibold',
-          STATUS_TONE[data.status] ?? 'bg-surface-sunken text-ink-subtle',
+          (view === null ? STATUS_TONE[data.status] : VIEW_TONE[view]) ?? 'bg-surface-sunken text-ink-subtle',
         ].join(' ')}
       >
-        {STATUS_LABELS[data.status] ?? data.status}
+        {view === null ? STATUS_LABELS[data.status] ?? data.status : VIEW_LABELS[view]}
       </span>
       <p className="mt-3 text-lg font-semibold text-ink">{formatUAH(minor(data.totalMinor))}</p>
       {/*
@@ -104,9 +134,29 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
           <p className="mt-2">Номер замовлення варто зберегти — за ним нас швидше знайти.</p>
         </div>
       )}
-      {data.status === 'PENDING_PAYMENT' && (
+      {data.status === 'PENDING_PAYMENT' && view === null && (
         <p className="mt-4 text-sm text-ink-muted">
           Сторінка оновиться автоматично, щойно ми отримаємо підтвердження оплати.
+        </p>
+      )}
+      {view === 'HOLD' && (
+        <div className="mt-4 max-w-prose text-sm leading-relaxed text-ink-muted">
+          <p>
+            Дякуємо! Гроші заблоковані на твоїй картці, але ще не списані.
+            Ми звіримо наявність і лише тоді їх спишемо.
+          </p>
+          <p className="mt-2">Номер замовлення варто зберегти — за ним нас швидше знайти.</p>
+        </div>
+      )}
+      {view === 'PAYMENT_FAILED' && (
+        <p className="mt-4 max-w-prose text-sm leading-relaxed text-ink-muted">
+          Гроші з картки не списані. Спробуй оформити замовлення ще раз або напиши нам
+          з номером замовлення — допоможемо.
+        </p>
+      )}
+      {data.status === 'PAID' && (
+        <p className="mt-4 max-w-prose text-sm leading-relaxed text-ink-muted">
+          Дякуємо! Оплату отримали.
         </p>
       )}
     </div>
