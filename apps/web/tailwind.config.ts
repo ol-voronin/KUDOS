@@ -77,6 +77,12 @@ export default {
         sun:    { DEFAULT: '#8a6a00', soft: '#f7f2e2', strong: '#6d5400', ink: '#463600' },
         plum:   { DEFAULT: '#5e2b4a', soft: '#f5edf2', strong: '#48203a', ink: '#2e1425' },
 
+        /*
+         * Жовтий бренду (Primitives/brand у Figma): декор — хвилі, дудли,
+         * підкладки. Червоний `accent` лишається тільки для подій.
+         */
+        brand: { yellow: '#fdca41' },
+
         info: { DEFAULT: '#3a5a85', soft: '#edf1f6' },
         danger: { DEFAULT: '#c02a12', soft: '#fdeae6' },
         ok: { DEFAULT: '#0e6b60', soft: '#eaf3f1' },

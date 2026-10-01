@@ -136,9 +136,15 @@
     right: -0.04em;
     bottom: -0.06em;
     height: 0.2em;
-    background-image: url('/wave-underline.png');
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
+    /*
+     * Колір — жовтий бренду, а не червоний із PNG: червоний у системі
+     * означає подію (знижка, помилка), а хвиля — декор (аудит 01.10.2026).
+     * PNG тепер лише форма штриха (маска), колір задає фон — тож змінити
+     * його можна одним рядком, без нового файлу.
+     */
+    background-color: theme('colors.brand.yellow');
+    -webkit-mask: url('/wave-underline.png') no-repeat 0 0 / 100% 100%;
+    mask: url('/wave-underline.png') no-repeat 0 0 / 100% 100%;
     pointer-events: none;
   }
 
