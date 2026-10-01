@@ -67,6 +67,15 @@ export class MonobankService {
   private readonly logger = new Logger(MonobankService.name);
   private cachedPublicKey: KeyObject | null = null;
 
+  /**
+   * Чи задано токен — без винятку. Потрібно оформленню: без токена
+   * замовлення просто лишається на ручний рахунок, а не падає.
+   */
+  isConfigured(): boolean {
+    const token = process.env['MONOBANK_TOKEN'];
+    return Boolean(token) && token !== '__replace_me__';
+  }
+
   private token(): string {
     const token = process.env['MONOBANK_TOKEN'];
     if (!token || token === '__replace_me__') {

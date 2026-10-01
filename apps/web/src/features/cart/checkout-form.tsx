@@ -19,7 +19,9 @@ import { useCartQuote } from './use-cart-quote';
 const PHONE_PATTERN = /^\+380\d{9}$/;
 
 /**
- * Оформлення: контакти, доставка, підтвердження. Оплати тут немає.
+ * Оформлення: контакти, доставка, підтвердження. Якщо Monobank підключений,
+ * сервер одразу виставляє HOLD-рахунок, і після оформлення ведемо людину на
+ * сторінку оплати; інакше — на сторінку «дякуємо», рахунок прийде пізніше.
  *
  * ── Чому одна сторінка, а не три кроки ────────────────────────────────
  *
@@ -58,6 +60,7 @@ export function CheckoutForm() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
+  const payOnline = quote?.payOnline === true;
   const option = DELIVERY_OPTIONS.find((o) => o.value === method);
   const needsAddress = method !== 'PICKUP';
 
@@ -139,12 +142,14 @@ export function CheckoutForm() {
         }),
       });
       /*
-       * Оплата в нас відкладена: рахунок виставляє людина після звірки
-       * наявності. Тому `add_payment_info` надсилається тут, у мить
-       * підтвердження замовлення, — це останній крок, який робить покупець,
-       * і саме його треба порівнювати з оплатою.
+       * `add_payment_info` — у мить підтвердження замовлення: це останній
+       * крок, який покупець робить на нашому сайті, і саме його треба
+       * порівнювати з оплатою. Назва каже, чи пішов він платити одразу.
        */
-      ga4AddPaymentInfo('Monobank (рахунок після підтвердження)', items);
+      ga4AddPaymentInfo(
+        result.paymentPageUrl === undefined ? 'Monobank (рахунок після підтвердження)' : 'Monobank (hold при оформленні)',
+        items,
+      );
 
       /*
        * Знімок замовлення для події покупки.
@@ -165,6 +170,12 @@ export function CheckoutForm() {
       // Кошик чистимо тільки після того, як сервер підтвердив замовлення:
       // помилка мережі не має коштувати людині зібраного кошика.
       clear();
+      if (result.paymentPageUrl !== undefined) {
+        // Сторінка Monobank — інший сайт, тож повний перехід, а не router.
+        // Після оплати Monobank поверне на `/order/:id`.
+        window.location.assign(result.paymentPageUrl);
+        return;
+      }
       router.push(`/order/${result.orderId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не вдалося оформити замовлення');
@@ -326,17 +337,19 @@ export function CheckoutForm() {
           {error !== null && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
           <Button type="submit" size="lg" full className="mt-5" disabled={sending || quote?.purchasable !== true}>
-            {sending ? 'Оформлюємо…' : 'Замовити'}
+            {sending ? 'Оформлюємо…' : payOnline ? 'Замовити й оплатити' : 'Замовити'}
           </Button>
 
           {/*
-            Головне, що людина мусить знати ДО натискання: грошей зараз не
-            візьмуть. Сюрприз у вигляді платіжної форми на цьому кроці — це
-            найдорожчий спосіб втратити замовлення.
+            Головне, що людина мусить знати ДО натискання: що буде з
+            грошима. Несподівана платіжна форма — так само погано, як і
+            несподівано списані гроші, тому текст залежить від того, чи
+            Monobank підключений.
           */}
           <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-            Зараз нічого не списується. Ми звіримо наявність, напишемо тобі й
-            надішлемо рахунок — оплатиш, коли підтвердимо.
+            {payOnline
+              ? 'Оплата карткою через Monobank. Гроші лише заблокуються на картці, а спишемо їх, коли підтвердимо наявність.'
+              : 'Зараз нічого не списується. Ми звіримо наявність, напишемо тобі й надішлемо рахунок — оплатиш, коли підтвердимо.'}
           </p>
         </div>
       </aside>

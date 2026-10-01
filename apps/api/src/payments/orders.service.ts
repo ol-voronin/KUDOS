@@ -4,29 +4,57 @@ import { ErrorCode, minor } from '@dt/contracts';
 import { attributionOf } from '../analytics/analytics.service';
 import { PrismaService } from '../common/prisma.service';
 import { sendToTelegram } from '../common/telegram';
-import { CartPricingService } from './cart-pricing.service';
+import { CartPricingService, type PricedCartLine } from './cart-pricing.service';
 import { formatOrderPlaced } from './format-order-notification';
+import { MonobankService } from './monobank.service';
+import { OrdersAdminService } from './orders-admin.service';
+
+type CheckoutLine = Pick<PricedCartLine, 'printId' | 'printSlug' | 'printMethod'>;
 
 /**
- * Оформлення замовлення БЕЗ оплати.
+ * Чи можна виставити рахунок одразу при оформленні.
  *
- * ── Чому оплата не тут ────────────────────────────────────────────────
+ * Лише кошиковий потік (`READY_PRINT`) і лише рядки двох видів: базовий
+ * одяг без принта або опублікований готовий принт. Кастомізація й «принт з
+ * нуля» — це заявки з обговоренням ціни, рахунок на них лишається ручним.
+ * Сьогодні кастом через кошик не проходить узагалі; перевірка тут, щоб так
+ * і лишилось, якщо колись проходитиме.
+ */
+export function canPayAtCheckout(stream: string, lines: readonly CheckoutLine[]): boolean {
+  if (stream !== 'READY_PRINT' || lines.length === 0) return false;
+  return lines.every((l) => (l.printSlug === null
+    ? l.printId === null && l.printMethod === null
+    : l.printId !== null));
+}
+
+/**
+ * Оформлення замовлення й (коли можна) одразу рахунок Monobank.
  *
- * Раніше «Оплатити» створювало замовлення й рахунок Monobank одним рухом:
- * людина одразу їхала на сторінку оплати. Це чесно працює для магазину, у
- * якого все є на складі. У нас власне виробництво гарантує рівно один колір,
- * решта — під замовлення, і взяти гроші за те, чого може не бути, дорожче,
- * ніж зачекати годину до підтвердження.
+ * ── Чому рахунок HOLD, а не звичайна оплата ───────────────────────────
  *
- * Тому замовлення народжується у стані `NEW`. Далі його бачить людина в
- * адмінці, звіряє наявність, пише покупцеві — і аж тоді виставляє рахунок
- * (`OrdersAdminService.createInvoice`).
+ * Власне виробництво гарантує рівно один колір на складі, решта — під
+ * замовлення, і взяти гроші за те, чого може не бути, дорожче, ніж
+ * зачекати. Тому рахунок, який виставляється одразу при оформленні, — той
+ * самий HOLD, що й з адмінки (`OrdersAdminService.createInvoice`): гроші
+ * блокуються на картці, а списуються лише після звірки наявності
+ * (`finalize`). Не підтвердили — hold знімається, нічого не списано.
+ *
+ * ── Коли рахунку одразу НЕ буде ───────────────────────────────────────
+ *
+ * - `MONOBANK_TOKEN` не задано;
+ * - Monobank (чи будь-що дорогою) відповів помилкою;
+ * - у замовленні щось, крім базового одягу й готових принтів.
+ *
+ * У всіх трьох випадках замовлення однаково створюється у стані `NEW`, і
+ * рахунок виставляє людина з адмінки, як раніше. Помилка оплати ніколи не
+ * має ставати втраченим замовленням.
  *
  * ── Порядок дій усередині ─────────────────────────────────────────────
  *
- * Спершу база, потім Telegram — той самий порядок, що й у заявок. Якщо
- * робити навпаки, падіння Telegram перетворюється на втрачене замовлення:
- * людина побачила помилку й пішла, а в базі нічого немає.
+ * Спершу база, потім рахунок, потім Telegram. Якщо робити навпаки, падіння
+ * Telegram перетворюється на втрачене замовлення: людина побачила помилку
+ * й пішла, а в базі нічого немає. Рахунок — перед Telegram, щоб у
+ * повідомленні було видно, чи виставляти його вручну.
  */
 @Injectable()
 export class OrdersService {
@@ -35,6 +63,8 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cart: CartPricingService,
+    private readonly ordersAdmin: OrdersAdminService,
+    private readonly monobank: MonobankService,
   ) {}
 
   async createDraft(dto: OrderDraftRequestDto): Promise<OrderDraftResponseDto> {
@@ -95,11 +125,13 @@ export class OrdersService {
             })),
           },
         },
-        select: { id: true, number: true, totalMinor: true },
+        select: { id: true, number: true, totalMinor: true, stream: true },
       });
     });
 
     this.logger.log(`order.placed №${order.number} позицій=${cart.lines.length}`);
+
+    const paymentPageUrl = await this.startPayment(order, cart.lines);
 
     try {
       await sendToTelegram(formatOrderPlaced({
@@ -118,6 +150,7 @@ export class OrdersService {
         totalMinor: minor(order.totalMinor),
         delivery: dto.delivery,
         note: dto.note,
+        invoiceSent: paymentPageUrl !== undefined,
       }));
     } catch (error) {
       // Замовлення вже в базі й видно в адмінці. Telegram — зручність, а не
@@ -126,18 +159,57 @@ export class OrdersService {
       this.logger.error(`Замовлення №${order.number} не долетіло в Telegram: ${message}`);
     }
 
-    return { orderId: order.id, orderNumber: order.number, totalMinor: order.totalMinor };
+    return {
+      orderId: order.id,
+      orderNumber: order.number,
+      totalMinor: order.totalMinor,
+      ...(paymentPageUrl === undefined ? {} : { paymentPageUrl }),
+    };
+  }
+
+  /**
+   * Рахунок одразу при оформленні. Повертає адресу сторінки оплати або
+   * `undefined` — тоді замовлення чекає на ручний рахунок. Ніколи не кидає:
+   * замовлення вже в базі, і помилка оплати не має його «скасувати» в
+   * очах покупця.
+   */
+  private async startPayment(
+    order: { id: string; number: number; stream: string },
+    lines: readonly CheckoutLine[],
+  ): Promise<string | undefined> {
+    if (!this.monobank.isConfigured()) return undefined;
+    if (!canPayAtCheckout(order.stream, lines)) return undefined;
+    try {
+      const { pageUrl } = await this.ordersAdmin.createInvoice(order.id);
+      return pageUrl;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Рахунок на замовлення №${order.number} одразу не виставився, лишається на ручний: ${message}`,
+      );
+      return undefined;
+    }
   }
 
   /** Публічний мінімум для сторінки подяки: ні контактів, ні позицій. */
   async getPublicStatus(orderId: string) {
     const order = await this.prisma.db.order.findUnique({
       where: { id: orderId },
-      select: { number: true, status: true, totalMinor: true },
+      select: {
+        number: true, status: true, totalMinor: true,
+        payments: { select: { invoiceId: true, status: true }, orderBy: { createdAt: 'desc' } },
+      },
     });
     if (!order) {
       throw new NotFoundException({ code: ErrorCode.NOT_FOUND, message: 'Замовлення не знайдено' });
     }
-    return { orderNumber: order.number, status: order.status, totalMinor: order.totalMinor };
+    // `pending:` — заготовка до відповіді Monobank, рахунком вона ще не є.
+    const payment = order.payments.find((p) => !p.invoiceId.startsWith('pending:'));
+    return {
+      orderNumber: order.number,
+      status: order.status,
+      totalMinor: order.totalMinor,
+      paymentStatus: payment?.status ?? null,
+    };
   }
 }

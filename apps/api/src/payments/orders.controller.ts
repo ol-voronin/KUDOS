@@ -6,6 +6,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { CartQuoteRequestDto, OrderDraftRequestDto } from '@dt/contracts';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CartPricingService, toCartQuote } from './cart-pricing.service';
+import { MonobankService } from './monobank.service';
 import { OrdersService } from './orders.service';
 
 @ApiTags('checkout')
@@ -14,6 +15,7 @@ export class OrdersController {
   constructor(
     private readonly orders: OrdersService,
     private readonly cart: CartPricingService,
+    private readonly monobank: MonobankService,
   ) {}
 
   /**
@@ -32,11 +34,13 @@ export class OrdersController {
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @UsePipes(new ZodValidationPipe(CartQuoteRequestDto))
   async quote(@Body() dto: CartQuoteRequestDto) {
-    return toCartQuote(await this.cart.price(dto.items));
+    // `payOnline` — лише для чесного тексту біля кнопки «Замовити».
+    return { ...toCartQuote(await this.cart.price(dto.items)), payOnline: this.monobank.isConfigured() };
   }
 
   /**
-   * Оформлення. Оплати тут немає — рахунок виставляє людина з адмінки.
+   * Оформлення. Коли Monobank підключений — одразу HOLD-рахунок і
+   * `paymentPageUrl` у відповіді; інакше рахунок виставляє людина з адмінки.
    *
    * Неавтентифікований ендпоінт, який створює запис із персональними
    * даними, тож ліміт жорсткий — той самий, що на заявках.

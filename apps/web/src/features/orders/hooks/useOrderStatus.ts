@@ -9,7 +9,12 @@ export function useOrderStatus(orderId: string) {
     queryKey: ['order-status', orderId],
     queryFn: () => apiFetch(`/orders/${orderId}/status`, OrderStatusPublicDto),
     // Payment confirmation arrives asynchronously via webhook — poll briefly
-    // so the page updates itself once Monobank confirms the invoice.
-    refetchInterval: (query) => (query.state.data?.status === 'PENDING_PAYMENT' ? 3000 : false),
+    // so the page updates itself once Monobank confirms the invoice. A HOLD
+    // is a settled state for the buyer (the capture happens days later, by
+    // hand), so polling stops there.
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.status === 'PENDING_PAYMENT' && data.paymentStatus !== 'HOLD' ? 3000 : false;
+    },
   });
 }
