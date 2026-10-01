@@ -68,6 +68,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const [settings, tracking] = await Promise.all([getSettings(), getTracking()]);
   return (
     <html lang="uk">
+      <head>
+        {/* Заголовковий шрифт — у першому екрані на кожній сторінці. */}
+        <link rel="preload" href="/fonts/LionelOfParis.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      </head>
       <body>
         <Providers settings={settings}>
           {children}

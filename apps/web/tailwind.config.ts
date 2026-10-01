@@ -113,6 +113,15 @@ export default {
       fontFamily: {
         sans: ['Onest Variable', 'Onest', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         display: ['Unbounded', 'Onest Variable', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        /*
+         * Lionel of Paris — фірмовий рукописний шрифт зі стайлгайду (рішення
+         * Олексія 01.10.2026: кирилиця є, ліцензія покриває сайт). Тільки для
+         * H1/H2 і назв колекцій. Знака ₴ і № у шрифті немає — браузер бере їх
+         * з наступного в списку, а ціни взагалі стоять в іншому наборі.
+         * Окремий токен, а не заміна `display`: `font-display` носять ще й
+         * ціни, мітки й кнопки, і їм тонкий рукопис не підходить.
+         */
+        title: ['Lionel of Paris', 'Unbounded', 'Onest Variable', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
       },
       fontSize: {
         /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */

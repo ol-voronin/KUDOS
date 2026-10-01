@@ -150,7 +150,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
                 </div>
               ))}
           </div>
-          <p className="mt-3 font-display text-lg font-bold uppercase leading-tight text-ink group-hover:underline">
+          <p className="mt-3 font-title text-xl font-bold uppercase leading-tight text-ink group-hover:underline">
             {collection.title}
           </p>
           {collection.description && (
