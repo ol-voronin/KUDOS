@@ -1,4 +1,5 @@
-# Правка сайту з Telegram → агент Claude → PR у dasha-edits (НЕ в main).
+# Правка сайту з Telegram → агент Claude → PR у dasha-edits (НЕ в main);
+# злиття на зеленому CI робить automerge-dasha-edits.yml.
 # Як усе влаштовано: docs/telegram-edits.md
 #
 # Репозиторій публічний: коментувати issue може будь-хто. Тому агента
@@ -186,7 +187,7 @@ jobs:
           pnpm --filter @dt/web test
           pnpm --filter @dt/web build
 
-      - name: Коміт, PR у dasha-edits, автозлиття
+      - name: Коміт і PR у dasha-edits
         if: steps.scope.outputs.allowed == 'true'
         run: |
           title=$(head -n1 .tg-pr-title 2>/dev/null | tr -d '\r' | cut -c1-70)
@@ -204,7 +205,7 @@ jobs:
           # Тільки dasha-edits. Злиття станеться, коли CI позеленіє.
           base=$(gh pr view "$pr" --json baseRefName --jq .baseRefName)
           [ "$base" = "dasha-edits" ] || { echo "PR #$pr дивиться не в dasha-edits ($base) — зупиняюсь"; exit 1; }
-          gh pr merge "$pr" --auto --squash
+          # Злиття — у automerge-dasha-edits.yml, коли CI на PR позеленіє.
 
       - name: Щось зламалось
         if: failure()

@@ -51,4 +51,4 @@ jobs:
           gh pr create --base dasha-edits --head "$branch" \
             --title "Синхронізація: main → dasha-edits (${GITHUB_SHA:0:7})" \
             --body "Автоматично після пушу в main. Злиття — merge commit."
-          gh pr merge "$branch" --auto --merge
+          # Злиття (merge commit) — у automerge-dasha-edits.yml на зеленому CI.
