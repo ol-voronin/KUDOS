@@ -28,7 +28,7 @@ jobs:
       GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
-      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
+      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID || '3' }}
       REPLY_TO: ${{ inputs.reply_to }}
       REQUESTED_BY: ${{ inputs.requested_by }}
     steps:
