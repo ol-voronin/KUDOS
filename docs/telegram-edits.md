@@ -110,9 +110,10 @@ Monobank (`API_ORIGIN` однаковий для Production і Preview). Том�
 |---|---|---|
 | secret | `EDITS_GH_PAT` | PR, коментарі й пуші від воркфлоу. Без PAT не запуститься CI на PR і не прийдуть сповіщення |
 | secret | `TELEGRAM_BOT_TOKEN` | повідомлення в тему |
+| secret | `TELEGRAM_WEBHOOK_SECRET` | те саме значення, що в Vercel; ним воркфлоу «Telegram setup» реєструє вебхук |
 | secret | `ANTHROPIC_API_KEY` або `CLAUDE_CODE_OAUTH_TOKEN` | агент Claude |
-| variable | `TELEGRAM_EDITS_CHAT_ID` | `-1004296608260` |
-| variable | `TELEGRAM_EDITS_THREAD_ID` | id теми правок |
+| variable | `TELEGRAM_EDITS_THREAD_ID` | id теми правок («Покращення сайту») |
+| variable | `TELEGRAM_EDITS_CHAT_ID` | необов'язково: за замовчуванням `-1004296608260` |
 | variable | `DASHA_PREVIEW_URL` | стабільна адреса тесту (необов'язково) |
 
 **PAT** (fine-grained, тільки репозиторій `ol-voronin/kudos`): Contents RW, Pull requests RW,
@@ -120,6 +121,14 @@ Issues RW, Actions RW, Workflows RW (sync переносить у dasha-edits і
 Той самий PAT підходить і для `TELEGRAM_GITHUB_TOKEN` у Vercel.
 
 ## Увімкнути / вимкнути
+
+Найпростіше — воркфлоу **Telegram setup** (Actions → Telegram setup → Run workflow):
+
+- `discover` — до ввімкнення вебхука показує теми чату й людей, що писали за добу:
+  звідти `TELEGRAM_EDITS_THREAD_ID` і `TELEGRAM_EDITORS` (напиши щось у темі перед запуском);
+- `set` — увімкнути вебхук; `info` — стан; `delete` — вимкнути.
+
+Токен береться з secrets і ніде не виводиться. Те саме локально:
 
 ```bash
 # увімкнути (значення ті самі, що в Vercel Production)

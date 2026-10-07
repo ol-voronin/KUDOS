@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID }}
+      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
       TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
     steps:
       - uses: actions/checkout@v4
