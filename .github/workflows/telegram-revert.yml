@@ -90,5 +90,5 @@ jobs:
             "$ISSUE" "$ORIG_PR" "${REQUESTED_BY:+: $REQUESTED_BY}" "${REPLY_TO:-0}")
           gh pr create --base dasha-edits --head "$branch" --title "Відкат #$ISSUE: $TITLE" --body "$body"
           gh pr edit "$ORIG_PR" --add-label reverted
-          gh pr merge "$branch" --auto --squash
+          # Злиття — у automerge-dasha-edits.yml, коли CI на PR позеленіє.
           node ../_ci/.github/scripts/telegram.cjs send "⏪ Відкочую #$ISSUE «$TITLE». Коли тест оновиться — напишу." "$REPLY_TO"

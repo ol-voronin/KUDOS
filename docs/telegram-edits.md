@@ -150,6 +150,7 @@ TELEGRAM_BOT_TOKEN=… node scripts/telegram-webhook.mjs delete
 - `apps/web/src/app/api/telegram/webhook/route.ts` — вебхук;
 - `apps/web/src/features/telegram-edits/*` — розбір повідомлень, GitHub, Telegram, Blob;
 - `apps/web/src/middleware.ts`, `apps/web/src/lib/deploy-env.ts` — захист Preview;
-- `.github/workflows/telegram-{edit,notify,release,revert}.yml`, `sync-dasha-edits.yml`;
+- `.github/workflows/telegram-{edit,notify,release,revert,setup}.yml`, `sync-dasha-edits.yml`;
+- `.github/workflows/automerge-dasha-edits.yml` — злиття PR `tg/`, `revert/`, `sync/` у dasha-edits на зеленому CI (не залежить від правил захисту гілок);
 - `.github/scripts/telegram.cjs` — відправка в тему з Actions (відмовляється писати в тему 88);
 - `scripts/telegram-webhook.mjs` — setWebhook / getWebhookInfo / deleteWebhook.
