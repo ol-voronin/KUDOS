@@ -102,10 +102,13 @@ jobs:
 
   claude-comment:
     # Агент «питає» коментарем у issue — коментар іде реплаєм у тему.
+    # Лише коментарі власника (агент пише через PAT Олексія): репо публічне,
+    # і інакше будь-хто міг би писати в тему через маркер.
     if: >-
       github.event_name == 'issue_comment' &&
       !github.event.issue.pull_request &&
       contains(github.event.issue.labels.*.name, 'telegram-edit') &&
+      github.event.comment.author_association == 'OWNER' &&
       contains(github.event.comment.body, '<!-- claude-bot -->')
     runs-on: ubuntu-latest
     steps:
@@ -123,9 +126,11 @@ jobs:
 
   ci-failed:
     # CI на PR правки червоний — автозлиття не відбудеться.
+    # Лише гілки цього репо: PR з форку теж може називатися tg/<N>.
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
       startsWith(github.event.workflow_run.head_branch, 'tg/')
     runs-on: ubuntu-latest
     steps:

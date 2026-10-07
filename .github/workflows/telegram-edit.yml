@@ -1,6 +1,10 @@
 # Правка сайту з Telegram → агент Claude → PR у dasha-edits (НЕ в main).
 # Як усе влаштовано: docs/telegram-edits.md
 #
+# Репозиторій публічний: коментувати issue може будь-хто. Тому агента
+# запускають лише коментарі власника — їх пишуть вебхук і сам агент через
+# PAT Олексія, — а мітку telegram-edit можуть ставити лише учасники репо.
+#
 # Безпека тримається не на інструкції агенту, а на кроках навколо нього:
 #   · агент не має git і не може нічого пушити — лише міняти файли;
 #   · коміт, пуш і PR робить цей воркфлоу, і тільки в tg/<N> → dasha-edits;
@@ -35,9 +39,9 @@ jobs:
       (
         (github.event_name == 'issues' && github.event.label.name == 'telegram-edit') ||
         (github.event_name == 'issue_comment' &&
+          github.event.comment.author_association == 'OWNER' &&
           !contains(github.event.comment.body, '<!-- claude-bot -->') &&
-          (contains(github.event.comment.body, '<!-- tg:') ||
-            (github.event.comment.author_association == 'OWNER' && contains(github.event.comment.body, '@claude'))))
+          (contains(github.event.comment.body, '<!-- tg:') || contains(github.event.comment.body, '@claude')))
       )
     runs-on: ubuntu-latest
     timeout-minutes: 40

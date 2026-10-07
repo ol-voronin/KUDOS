@@ -73,14 +73,15 @@ if (cmd === 'discover') {
     const t = topics.get(thread) ?? { name: created ?? '', messages: 0, sample: '' };
     t.messages += 1;
     if (created) t.name = created;
-    if (!t.sample && m.text) t.sample = m.text.slice(0, 60);
+    if (!t.sample && m.text?.startsWith('/')) t.sample = m.text.split(/\s/)[0].slice(0, 20);
     topics.set(thread, t);
     if (m.from && !m.from.is_bot) {
-      const name = [m.from.first_name, m.from.last_name].filter(Boolean).join(' ');
-      people.set(m.from.id, `${name}${m.from.username ? ` (@${m.from.username})` : ''}`);
+      // Лог публічний: лише ініціали, щоб відрізнити Олексія від Даші.
+      const initials = [m.from.first_name, m.from.last_name].filter(Boolean).map((n) => `${n[0]}.`).join(' ');
+      people.set(m.from.id, initials || '?');
     }
   }
-  const lines = ['## Теми чату (за останню добу)', '', '| thread_id | назва | повідомлень | приклад |', '|---|---|---|---|'];
+  const lines = ['## Теми чату (за останню добу)', '', '| thread_id | назва | повідомлень | команда |', '|---|---|---|---|'];
   for (const [id, t] of topics) lines.push(`| ${id || '— (General)'} | ${t.name || '?'} | ${t.messages} | ${t.sample.replace(/\|/g, '/')} |`);
   lines.push('', '## Люди', '', '| user_id | імʼя |', '|---|---|');
   for (const [id, name] of people) lines.push(`| ${id} | ${name} |`);
