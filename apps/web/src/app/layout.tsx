@@ -34,6 +34,7 @@ import { Reveal } from '@/features/motion/reveal';
 import { Cursor } from '@/features/motion/cursor';
 import { getSettings } from '@/lib/site-settings';
 import { getTracking } from '@/lib/tracking';
+import { isPreviewDeploy } from '@/lib/deploy-env';
 
 /**
  * Абсолютна адреса сайту. Без неї Next лишає canonical відносним
@@ -49,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // Поки індексація вимкнена — `noindex` на кожній сторінці, а не тільки в
     // robots.txt. robots.txt забороняє обхід, але сторінку, на яку вже є
     // посилання, він з індексу не прибирає; метатег прибирає.
-    ...(settings.allowIndexing ? {} : { robots: { index: false, follow: false } }),
+    ...(settings.allowIndexing && !isPreviewDeploy() ? {} : { robots: { index: false, follow: false } }),
     ...(settings.googleSiteVerification !== ''
       ? { verification: { google: settings.googleSiteVerification } }
       : {}),
@@ -66,9 +67,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const [settings, tracking] = await Promise.all([getSettings(), getTracking()]);
+  const preview = isPreviewDeploy();
   return (
     <html lang="uk">
       <body>
+        {preview && (
+          <div className="bg-ink px-4 py-2 text-center text-xs font-medium text-white">
+            Тестова версія сайту. Тут можна дивитись, але не замовляти.
+          </div>
+        )}
         <Providers settings={settings}>
           {children}
           {/*
@@ -78,8 +85,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           */}
           <Reveal />
           <Cursor />
-          {/* Після вмісту навмисно: статистика ніколи не має затримувати сторінку. */}
-          <Analytics config={tracking} />
+          {/*
+            Після вмісту навмисно: статистика ніколи не має затримувати сторінку.
+            На превʼю її немає зовсім: тестові перегляди й кліки не мають
+            потрапити ні в нашу статистику, ні в GA4, ні в Google Ads, де за
+            ними вчиться рекламна кампанія.
+          */}
+          {!preview && <Analytics config={tracking} />}
         </Providers>
       </body>
     </html>

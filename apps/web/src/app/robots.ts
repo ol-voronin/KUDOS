@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getSettings } from '@/lib/site-settings';
+import { isPreviewDeploy } from '@/lib/deploy-env';
 
 const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
@@ -15,6 +16,13 @@ const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
  * по-різному.
  */
 export default async function robots(): Promise<MetadataRoute.Robots> {
+  // Превʼю бере налаштування з продового API, тож там allowIndexing теж
+  // увімкнений. Тестова копія сайту в пошуку — дубль, який конкурує з
+  // babaka.shop, тому превʼю забороняє все незалежно від налаштувань.
+  if (isPreviewDeploy()) {
+    return { rules: { userAgent: '*', disallow: '/' } };
+  }
+
   const settings = await getSettings();
 
   if (!settings.allowIndexing) {
