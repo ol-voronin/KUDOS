@@ -1,0 +1,212 @@
+# Правка сайту з Telegram → агент Claude → PR у dasha-edits (НЕ в main).
+# Як усе влаштовано: docs/telegram-edits.md
+#
+# Безпека тримається не на інструкції агенту, а на кроках навколо нього:
+#   · агент не має git і не може нічого пушити — лише міняти файли;
+#   · коміт, пуш і PR робить цей воркфлоу, і тільки в tg/<N> → dasha-edits;
+#   · перед пушем — перевірка меж: зачеплено API, оплату, адмінку, аналітику,
+#     robots, секрети тощо → нічого не пушимо, питаємо Олексія;
+#   · typecheck + тести + build — до пушу; червоне — не пушимо.
+name: Telegram edit
+run-name: "Правка #${{ github.event.issue.number }}"
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+# Одна правка — один агент за раз; нові коментарі стають у чергу.
+concurrency:
+  group: telegram-edit-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: read
+  id-token: write
+
+jobs:
+  edit:
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      contains(github.event.issue.labels.*.name, 'telegram-edit') &&
+      (
+        (github.event_name == 'issues' && github.event.label.name == 'telegram-edit') ||
+        (github.event_name == 'issue_comment' &&
+          !contains(github.event.comment.body, '<!-- claude-bot -->') &&
+          (contains(github.event.comment.body, '<!-- tg:') ||
+            (github.event.comment.author_association == 'OWNER' && contains(github.event.comment.body, '@claude'))))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ISSUE: ${{ github.event.issue.number }}
+      BRANCH: tg/${{ github.event.issue.number }}
+      # PAT, а не GITHUB_TOKEN: PR і коментарі, створені GITHUB_TOKEN, не
+      # запускають інші воркфлоу — не було б ні CI, ні сповіщень у Telegram.
+      GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
+      MARK: '<!-- claude-bot -->'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dasha-edits
+          fetch-depth: 0
+          token: ${{ secrets.EDITS_GH_PAT }}
+
+      - name: Гілка tg/<N>
+        run: |
+          git config user.name "babaka-edits-bot"
+          git config user.email "babaka-edits-bot@users.noreply.github.com"
+          printf '%s\n' .tg-pr-title .tg-images/ >> .git/info/exclude
+          # Є відкритий PR — продовжуємо в ньому. Нема (перша правка або
+          # попередній уже влито) — свіжа гілка від dasha-edits.
+          open=$(gh pr list --head "$BRANCH" --base dasha-edits --state open --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          else
+            git checkout -B "$BRANCH" origin/dasha-edits
+          fi
+          before=$(gh issue view "$ISSUE" --json comments --jq "[.comments[] | select(.body | contains(\"$MARK\"))] | length")
+          echo "BOT_COMMENTS_BEFORE=$before" >> "$GITHUB_ENV"
+
+      - name: Картинки з правки — локально, щоб агент їх побачив
+        run: |
+          mkdir -p .tg-images
+          gh issue view "$ISSUE" --json body,comments --jq '.body, .comments[].body' \
+            | grep -oE 'https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/edits/[^ )]+' \
+            | sort -u | head -20 | while read -r url; do
+                curl -sfL --max-filesize 20000000 -o ".tg-images/$(basename "$url")" "$url" || true
+              done
+          ls .tg-images
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:contracts
+
+      - name: Агент вносить правку
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.EDITS_GH_PAT }}
+          claude_args: |
+            --max-turns 60
+            --allowedTools "Read,Edit,Write,Glob,Grep,LS,Bash(gh issue view:*),Bash(gh issue comment:*),Bash(git status:*),Bash(git diff:*),Bash(pnpm --filter @dt/web typecheck),Bash(pnpm --filter @dt/web test),Bash(pnpm --filter @dt/web build)"
+          prompt: |
+            Ти вносиш правку на сайт babaka.shop (магазин одягу з принтами собак) за запитом із Telegram.
+            Запит — GitHub issue #${{ github.event.issue.number }} у ${{ github.repository }}.
+            Прочитай його повністю разом з усіма коментарями: `gh issue view ${{ github.event.issue.number }} --comments`.
+            Останні коментарі — уточнення або відповіді на твої питання; вони важливіші за перший текст.
+            Якщо до правки є фото, вони вже лежать у теці `.tg-images/` — подивись їх інструментом Read.
+            Ти в гілці tg/${{ github.event.issue.number }}, яка відходить від dasha-edits. Код вітрини — apps/web (Next.js App Router, apps/web/src/app).
+            Тексти сайту здебільшого в apps/web/src/config і в компонентах apps/web/src/features.
+
+            Голос БАБАКА: тепло, з гумором про собак, звертання на «ти», українська мова.
+
+            МОЖНА: тексти, верстка, стилі, зображення, компоненти вітрини в apps/web.
+
+            НЕ МОЖНА без Олексія — у такому разі нічого не міняй, напиши коментар із питанням до Олексія і зупинись:
+            міграції БД; apps/api (замовлення, оплати Monobank); packages/contracts; авторизація й адмінка;
+            env, секрети, .github; видалення сторінок чи даних; robots, sitemap, індексація; аналітика й теги
+            (GA4, Google Ads AW-18499573527, features/analytics); ціни в коді; оформлення замовлення й оплата (features/cart/checkout-form.tsx).
+
+            Якщо правка стосується вмісту, який редагують в адмінці або який лежить у базі (товари, принти, колекції,
+            ціни, статті, FAQ, налаштування сайту, телефон) — код не міняй; напиши коментар, де саме в адмінці
+            (babaka.shop/admin/…) це змінити, і зупинись.
+
+            Якщо запит неоднозначний — постав ОДНЕ коротке питання коментарем і зупинись. Не вгадуй.
+
+            Коментарі: `gh issue comment ${{ github.event.issue.number }} --body "…"`. Пиши коротко й простою мовою —
+            їх отримає в Telegram Даша (дизайнерка, не технічна людина). Без шляхів до файлів, якщо питання до Даші.
+            Кожен твій коментар ОБОВʼЯЗКОВО закінчується рядком `<!-- claude-bot -->` — інакше він не дійде в Telegram.
+
+            Інакше:
+            1. Внеси правку мінімально: рівно те, що просили, нічого зайвого.
+            2. Запусти `pnpm --filter @dt/web typecheck`, `pnpm --filter @dt/web test` і `pnpm --filter @dt/web build`; виправ, якщо впало.
+            3. Запиши в файл `.tg-pr-title` (корінь репозиторію) ОДИН рядок українською — що змінено, до 70 символів.
+            Не роби коміт і не створюй PR: це зробить воркфлоу після тебе, і тільки в dasha-edits.
+            Коментар «готово» не пиши — Даша отримає посилання на тест автоматично.
+
+      - name: Перевірка меж
+        id: scope
+        run: |
+          changed=$(git status --porcelain --untracked-files=all | grep -vE ' (\.tg-pr-title|\.tg-images/)' || true)
+          if [ -z "$changed" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git add -A
+          git reset -q -- .tg-pr-title .tg-images 2>/dev/null || true
+          files=$(git diff --cached --name-only)
+          deleted=$(git diff --cached --name-only --diff-filter=D)
+          forbidden=$(printf '%s\n' "$files" | grep -E '^(apps/api/|packages/|\.github/|scripts/|tools/|docs/|apps/web/(package\.json|next\.config|vercel\.json|middleware|src/middleware|src/app/(admin|api|order|robots|sitemap)|src/features/(admin|auth|analytics|orders|telegram-edits|cart/checkout-form|cart/use-cart-quote)|src/lib/(tracking|deploy-env|api-|server-api|admin-server-api))|pnpm-lock\.yaml|package\.json|docker-compose|\.env)|(^|/)\.env|prisma/' || true)
+          prices=$(git diff --cached -U0 -- apps/web | grep -E '^\+' | grep -vE '^\+\+\+' | grep -E '[0-9]\s*(₴|грн)|[pP]rice|Minor\s*[:=]\s*[0-9]' || true)
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          if [ -n "$forbidden" ] || [ -n "$deleted" ] || [ -n "$prices" ]; then
+            {
+              echo "🛑 Правка #$ISSUE зачіпає те, що вирішує лише Олексій, тож я нічого не змерджив."
+              echo
+              [ -n "$forbidden" ] && { echo "Файли поза межами:"; printf '%s\n' "$forbidden" | sed 's/^/- /'; }
+              [ -n "$deleted" ] && { echo "Видалено:"; printf '%s\n' "$deleted" | sed 's/^/- /'; }
+              [ -n "$prices" ] && echo "Схоже на зміну цін у коді."
+              echo
+              echo "@ol-voronin подивись, будь ласка."
+              echo
+              echo "$MARK"
+            } > "$RUNNER_TEMP/stop.md"
+            gh issue comment "$ISSUE" --body-file "$RUNNER_TEMP/stop.md"
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Агент нічого не змінив і нічого не спитав
+        if: steps.scope.outputs.changed == 'false'
+        run: |
+          after=$(gh issue view "$ISSUE" --json comments --jq "[.comments[] | select(.body | contains(\"$MARK\"))] | length")
+          if [ "$after" = "$BOT_COMMENTS_BEFORE" ]; then
+            gh issue comment "$ISSUE" --body "🤔 Не зрозумів, що саме змінити в #$ISSUE. Опиши трохи детальніше (можна зі скріном) — реплаєм на це повідомлення.
+
+          $MARK"
+          fi
+
+      - name: Перевірки перед пушем
+        if: steps.scope.outputs.allowed == 'true'
+        run: |
+          pnpm --filter @dt/web typecheck
+          pnpm --filter @dt/web test
+          pnpm --filter @dt/web build
+
+      - name: Коміт, PR у dasha-edits, автозлиття
+        if: steps.scope.outputs.allowed == 'true'
+        run: |
+          title=$(head -n1 .tg-pr-title 2>/dev/null | tr -d '\r' | cut -c1-70)
+          [ -n "$title" ] || title=$(gh issue view "$ISSUE" --json title --jq .title | cut -c1-70)
+          git commit -q -m "Правка #$ISSUE: $title"
+          git push --force-with-lease origin "HEAD:refs/heads/$BRANCH"
+          pr=$(gh pr list --head "$BRANCH" --base dasha-edits --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            gh pr create --base dasha-edits --head "$BRANCH" \
+              --title "$title (#$ISSUE)" \
+              --body "Правка #$ISSUE з Telegram: $title"
+            pr=$(gh pr list --head "$BRANCH" --base dasha-edits --state open --json number --jq '.[0].number')
+          fi
+          gh pr edit "$pr" --add-label telegram-edit
+          # Тільки dasha-edits. Злиття станеться, коли CI позеленіє.
+          base=$(gh pr view "$pr" --json baseRefName --jq .baseRefName)
+          [ "$base" = "dasha-edits" ] || { echo "PR #$pr дивиться не в dasha-edits ($base) — зупиняюсь"; exit 1; }
+          gh pr merge "$pr" --auto --squash
+
+      - name: Щось зламалось
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE" --body "⚠️ Правка #$ISSUE не пройшла перевірки, Олексій подивиться.
+
+          [Лог запуску](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          $MARK"

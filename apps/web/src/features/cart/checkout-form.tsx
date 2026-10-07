@@ -43,7 +43,12 @@ const DELIVERY_OPTIONS: ReadonlyArray<{ value: DeliveryMethod; label: string; hi
   { value: 'PICKUP', label: 'Самовивіз', hint: '' },
 ];
 
-export function CheckoutForm() {
+/**
+ * `orderingDisabled` — превʼю-збірка: форму видно цілком (її теж правлять),
+ * але кнопка неактивна. Справжній захист — у middleware.ts, кнопка лише
+ * не дає натиснути й здивуватись помилці.
+ */
+export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: boolean }) {
   const router = useRouter();
   const { lines, clear, ready } = useCart();
   const { data: quote, isLoading } = useCartQuote();
@@ -109,6 +114,7 @@ export function CheckoutForm() {
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
+    if (orderingDisabled) return;
 
     if (!PHONE_PATTERN.test(phone)) {
       setError('Введи телефон у форматі +380XXXXXXXXX');
@@ -336,7 +342,11 @@ export function CheckoutForm() {
 
           {error !== null && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
-          <Button type="submit" size="lg" full className="mt-5" disabled={sending || quote?.purchasable !== true}>
+          {orderingDisabled && (
+            <p className="mt-4 text-sm text-ink-muted">Це тестова версія сайту: замовлення тут вимкнене.</p>
+          )}
+
+          <Button type="submit" size="lg" full className="mt-5" disabled={orderingDisabled || sending || quote?.purchasable !== true}>
             {sending ? 'Оформлюємо…' : payOnline ? 'Замовити й оплатити' : 'Замовити'}
           </Button>
 

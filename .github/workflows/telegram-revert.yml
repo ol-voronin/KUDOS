@@ -1,0 +1,94 @@
+# /відкат з Telegram: відкотити останню правку в dasha-edits (НЕ в main).
+# Через PR з автозлиттям — так само, як і самі правки, з CI.
+name: Telegram revert
+
+on:
+  workflow_dispatch:
+    inputs:
+      reply_to:
+        description: message_id у Telegram, на яке відповісти
+        required: false
+        default: ''
+      requested_by:
+        description: хто попросив
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-revert
+  cancel-in-progress: false
+
+jobs:
+  revert:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID }}
+      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
+      REPLY_TO: ${{ inputs.reply_to }}
+      REQUESTED_BY: ${{ inputs.requested_by }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+      - uses: actions/checkout@v4
+        with:
+          ref: dasha-edits
+          path: repo
+          fetch-depth: 0
+          token: ${{ secrets.EDITS_GH_PAT }}
+
+      - name: Знайти останню невідкочену правку
+        id: find
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.EDITS_GH_PAT }}
+          script: |
+            const { owner, repo } = context.repo;
+            const { stdout } = await exec.getExecOutput('git', ['-C', 'repo', 'log', '--first-parent', '--format=%H', '-n', '100', 'origin/dasha-edits'], { silent: true });
+            for (const sha of stdout.split('\n').filter(Boolean)) {
+              const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: sha });
+              const pr = prs.find((p) => p.base.ref === 'dasha-edits' && p.merged_at && p.merge_commit_sha === sha);
+              if (!pr || !pr.head.ref.startsWith('tg/')) continue;
+              if (pr.labels.some((l) => l.name === 'reverted')) continue;
+              core.setOutput('sha', sha);
+              core.setOutput('pr', String(pr.number));
+              core.setOutput('issue', pr.head.ref.split('/')[1]);
+              core.setOutput('title', pr.title);
+              return;
+            }
+            core.setOutput('sha', '');
+
+      - name: Нема чого відкочувати
+        if: steps.find.outputs.sha == ''
+        run: |
+          node _ci/.github/scripts/telegram.cjs send "Нема що відкочувати: на тесті немає правок з Telegram 🐶" "$REPLY_TO"
+
+      - name: git revert → PR у dasha-edits → автозлиття
+        if: steps.find.outputs.sha != ''
+        working-directory: repo
+        env:
+          SHA: ${{ steps.find.outputs.sha }}
+          ORIG_PR: ${{ steps.find.outputs.pr }}
+          ISSUE: ${{ steps.find.outputs.issue }}
+          TITLE: ${{ steps.find.outputs.title }}
+        run: |
+          git config user.name "babaka-edits-bot"
+          git config user.email "babaka-edits-bot@users.noreply.github.com"
+          branch="revert/$ISSUE-${{ github.run_id }}"
+          git checkout -b "$branch" origin/dasha-edits
+          if ! git revert --no-edit "$SHA"; then
+            git revert --abort || true
+            node ../_ci/.github/scripts/telegram.cjs send "Не вдалося відкотити #$ISSUE автоматично — потрібен Олексій 🙏" "$REPLY_TO"
+            exit 1
+          fi
+          git push origin "$branch"
+          body=$(printf 'Відкат правки #%s (PR #%s) на прохання з Telegram%s.\n\nЛише dasha-edits; main не чіпаємо.\n\n<!-- tg:{"msg":%s} -->' \
+            "$ISSUE" "$ORIG_PR" "${REQUESTED_BY:+: $REQUESTED_BY}" "${REPLY_TO:-0}")
+          gh pr create --base dasha-edits --head "$branch" --title "Відкат #$ISSUE: $TITLE" --body "$body"
+          gh pr edit "$ORIG_PR" --add-label reverted
+          gh pr merge "$branch" --auto --squash
+          node ../_ci/.github/scripts/telegram.cjs send "⏪ Відкочую #$ISSUE «$TITLE». Коли тест оновиться — напишу." "$REPLY_TO"

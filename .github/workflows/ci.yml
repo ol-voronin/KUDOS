@@ -15,3 +15,6 @@ jobs:
       - run: pnpm --filter @dt/api prisma generate
       - run: pnpm run typecheck
       - run: pnpm -r test
+      # Збірка вітрини: typecheck не ловить помилок пререндеру, а правки з
+      # Telegram зливаються в dasha-edits автоматично на зеленому CI.
+      - run: pnpm --filter @dt/web build

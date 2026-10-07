@@ -1,0 +1,142 @@
+# Усе, що бот пише в тему правок (крім відповідей вебхука).
+# Пише лише в TELEGRAM_EDITS_THREAD_ID; тему «Реклама» не чіпає.
+# Як усе влаштовано: docs/telegram-edits.md
+name: Telegram notify
+
+on:
+  push:
+    branches: [main]
+  deployment_status:
+  issue_comment:
+    types: [created]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID }}
+  TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
+
+jobs:
+  push-main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+      - env:
+          HEAD_MSG: ${{ github.event.head_commit.message }}
+          SHA: ${{ github.sha }}
+        run: |
+          first=$(printf '%s' "$HEAD_MSG" | head -n1 | cut -c1-120)
+          node _ci/.github/scripts/telegram.cjs send "🔄 Пуш у main: ${first} (${SHA:0:7}). Деплою на сайт…"
+
+  deploy:
+    # Vercel створює деплойменти з оточенням «Production – kudos-web»,
+    # «Preview – kudos-web» тощо. API (kudos-api) — лише про падіння.
+    if: >-
+      github.event_name == 'deployment_status' &&
+      contains(fromJSON('["success","failure","error"]'), github.event.deployment_status.state)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+      - uses: actions/github-script@v7
+        env:
+          SITE_URL: https://babaka.shop
+          PREVIEW_URL: ${{ vars.DASHA_PREVIEW_URL }}
+        with:
+          script: |
+            const tg = require(`${process.env.GITHUB_WORKSPACE}/_ci/.github/scripts/telegram.cjs`);
+            const { owner, repo } = context.repo;
+            const { deployment, deployment_status: status } = context.payload;
+            const env = String(deployment.environment || '');
+            const isWeb = !/kudos-api/i.test(env);
+            const link = status.log_url || status.target_url || `${context.serverUrl}/${owner}/${repo}/deployments`;
+
+            if (/^production/i.test(env)) {
+              if (status.state === 'success') {
+                if (isWeb) await tg.send(`✅ На сайті: ${process.env.SITE_URL}`);
+              } else {
+                await tg.send(`❌ Деплой упав (${env}): ${link}`);
+              }
+              return;
+            }
+
+            if (!/^preview/i.test(env) || !isWeb || status.state !== 'success') return;
+
+            const contains = async (base, head) => {
+              try {
+                const r = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: `${base}...${head}`, per_page: 1 });
+                return r.data.status === 'ahead' || r.data.status === 'identical';
+              } catch { return false; }
+            };
+
+            // Тільки превʼю гілки dasha-edits: задеплоєний коміт має бути в її історії.
+            const sha = deployment.sha;
+            if (!(await contains(sha, 'dasha-edits'))) return;
+
+            const url = process.env.PREVIEW_URL || status.environment_url || status.target_url;
+            const prs = await github.rest.pulls.list({ owner, repo, base: 'dasha-edits', state: 'closed', sort: 'updated', direction: 'desc', per_page: 50 });
+            for (const pr of prs.data) {
+              if (!pr.merged_at || !/^(tg|revert)\//.test(pr.head.ref)) continue;
+              if (pr.labels.some((l) => l.name === 'on-preview')) continue;
+              if (!(await contains(pr.merge_commit_sha, sha))) continue;
+
+              if (pr.head.ref.startsWith('tg/')) {
+                const issue = Number(pr.head.ref.split('/')[1]);
+                const msg = await tg.lastTgMessage(github, owner, repo, issue);
+                await tg.send(`Готово на тесті ✅ ${url}\nНа сайт вийде разом з іншими правками (#${issue})`, msg);
+              } else {
+                const msg = tg.tgBlocks(pr.body).pop()?.msg;
+                await tg.send(`⏪ ${pr.title} — вже на тесті ✅ ${url}`, msg);
+              }
+              await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels: ['on-preview'] });
+            }
+
+  claude-comment:
+    # Агент «питає» коментарем у issue — коментар іде реплаєм у тему.
+    if: >-
+      github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
+      contains(github.event.issue.labels.*.name, 'telegram-edit') &&
+      contains(github.event.comment.body, '<!-- claude-bot -->')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const tg = require(`${process.env.GITHUB_WORKSPACE}/_ci/.github/scripts/telegram.cjs`);
+            const { owner, repo } = context.repo;
+            const issue = context.payload.issue.number;
+            const msg = await tg.lastTgMessage(github, owner, repo, issue);
+            const text = tg.visibleText(context.payload.comment.body);
+            await tg.send(`#${issue} ${text}\n\n↩️ Відповідай реплаєм на це повідомлення.`, msg);
+
+  ci-failed:
+    # CI на PR правки червоний — автозлиття не відбудеться.
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      startsWith(github.event.workflow_run.head_branch, 'tg/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const tg = require(`${process.env.GITHUB_WORKSPACE}/_ci/.github/scripts/telegram.cjs`);
+            const { owner, repo } = context.repo;
+            const issue = Number(context.payload.workflow_run.head_branch.split('/')[1]);
+            if (!Number.isInteger(issue)) return;
+            const msg = await tg.lastTgMessage(github, owner, repo, issue);
+            await tg.send(`⚠️ Правка #${issue} не пройшла перевірки, Олексій подивиться.`, msg);

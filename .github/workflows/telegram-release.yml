@@ -1,0 +1,87 @@
+# /випуск з Telegram (лише Олексій): PR dasha-edits → main зі списком правок.
+# БЕЗ автозлиття — зливає Олексій руками. Гілку dasha-edits не чіпаємо.
+name: Telegram release
+
+on:
+  workflow_dispatch:
+    inputs:
+      reply_to:
+        description: message_id у Telegram, на яке відповісти
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID }}
+      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+      - uses: actions/github-script@v7
+        env:
+          REPLY_TO: ${{ inputs.reply_to }}
+        with:
+          # PAT: PR, створений GITHUB_TOKEN, не запускає CI.
+          github-token: ${{ secrets.EDITS_GH_PAT }}
+          script: |
+            const tg = require(`${process.env.GITHUB_WORKSPACE}/_ci/.github/scripts/telegram.cjs`);
+            const { owner, repo } = context.repo;
+            const replyTo = process.env.REPLY_TO;
+
+            const cmp = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: 'main...dasha-edits', per_page: 250 });
+            if (cmp.data.ahead_by === 0) {
+              await tg.send('Нічого нового для випуску: на тесті те саме, що й на сайті 🐶', replyTo);
+              return;
+            }
+
+            // Що саме їде: PR, влиті в dasha-edits, чиї коміти ще не в main.
+            const lines = [];
+            const closes = [];
+            const seen = new Set();
+            for (const commit of cmp.data.commits) {
+              const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: commit.sha });
+              for (const pr of prs) {
+                if (pr.base.ref !== 'dasha-edits' || !pr.merged_at || seen.has(pr.number)) continue;
+                seen.add(pr.number);
+                if (pr.head.ref.startsWith('tg/')) {
+                  const n = Number(pr.head.ref.split('/')[1]);
+                  const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: n });
+                  lines.push(`- #${n} ${issue.title} (PR #${pr.number})`);
+                  closes.push(`Closes #${n}`);
+                } else if (pr.head.ref.startsWith('revert/')) {
+                  lines.push(`- ⏪ ${pr.title} (PR #${pr.number})`);
+                }
+              }
+            }
+
+            const today = new Date().toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });
+            const body = [
+              'Випуск правок з Telegram на сайт.',
+              '',
+              lines.length > 0 ? lines.join('\n') : '- (без правок з Telegram — лише синхронізація)',
+              '',
+              'Зливає лише Олексій, вручну. Бажано «Create a merge commit», щоб dasha-edits і main не розходились.',
+              'Гілку dasha-edits після злиття НЕ видаляти.',
+              '',
+              ...[...new Set(closes)],
+            ].join('\n');
+
+            const open = await github.rest.pulls.list({ owner, repo, base: 'main', head: `${owner}:dasha-edits`, state: 'open' });
+            let pr;
+            if (open.data.length > 0) {
+              pr = open.data[0];
+              await github.rest.pulls.update({ owner, repo, pull_number: pr.number, body });
+            } else {
+              pr = (await github.rest.pulls.create({ owner, repo, base: 'main', head: 'dasha-edits', title: `Випуск правок з Telegram — ${today}`, body })).data;
+            }
+            await tg.send(`📦 Випуск готовий до перевірки: ${pr.html_url}\nПравок: ${lines.length}. На сайт вийде, коли Олексій зіллє PR.`, replyTo);

@@ -38,6 +38,14 @@ const RENAMED_POLO = {
   'polo-22': 'polo-labrador', 'polo-23': 'polo-amstaf', 'polo-24': 'polo-frantsuz',
 };
 
+/**
+ * Превʼю-збірки на Vercel не мають потрапити в пошук: адреса
+ * kudos-web-git-dasha-edits-….vercel.app відкрита, і на неї легко дати
+ * посилання. Заголовок ставимо всім відповідям превʼю, включно з
+ * картинками й robots.txt. `VERCEL_ENV` відомий уже під час збірки.
+ */
+const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -70,6 +78,7 @@ const nextConfig = {
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ...(IS_PREVIEW ? [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] : []),
       ],
     }];
   },
