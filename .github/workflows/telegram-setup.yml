@@ -33,4 +33,7 @@ jobs:
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
           ACTION: ${{ inputs.action }}
+        # shell: bash — це -o pipefail: без нього помилка скрипта ховалась за tee,
+        # і запуск без токена виглядав зеленим.
+        shell: bash
         run: node scripts/telegram-webhook.mjs "$ACTION" | tee -a "$GITHUB_STEP_SUMMARY"
