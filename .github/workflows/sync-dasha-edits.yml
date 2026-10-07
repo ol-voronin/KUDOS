@@ -24,7 +24,7 @@ jobs:
       TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+        with: { path: _ci, sparse-checkout: .github/scripts }
       - uses: actions/checkout@v4
         with:
           ref: dasha-edits

@@ -33,7 +33,7 @@ jobs:
       REQUESTED_BY: ${{ inputs.requested_by }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+        with: { path: _ci, sparse-checkout: .github/scripts }
       - uses: actions/checkout@v4
         with:
           ref: dasha-edits

@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+        with: { path: _ci, sparse-checkout: .github/scripts }
       - env:
           HEAD_MSG: ${{ github.event.head_commit.message }}
           SHA: ${{ github.sha }}
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+        with: { path: _ci, sparse-checkout: .github/scripts }
       - uses: actions/github-script@v7
         env:
           SITE_URL: https://babaka.shop
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+        with: { path: _ci, sparse-checkout: .github/scripts }
       - uses: actions/github-script@v7
         with:
           script: |
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: _ci, sparse-checkout: .github/scripts }
+        with: { path: _ci, sparse-checkout: .github/scripts }
       - uses: actions/github-script@v7
         with:
           script: |
