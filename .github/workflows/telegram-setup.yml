@@ -1,0 +1,36 @@
+# Налаштування бота правок без локального запуску: токен береться з
+# secrets і ніде не виводиться.
+#   discover — теми й люди чату (до ввімкнення вебхука): thread_id і user_id.
+#              Репо публічне, а лог запуску видно всім — тому discover
+#              показує лише id і перші літери імен, без тексту повідомлень.
+#   set      — увімкнути вебхук на https://babaka.shop/api/telegram/webhook
+#   info     — стан вебхука
+#   delete   — вимкнути вебхук (звіт у «Реклама» не зачіпає)
+name: Telegram setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Що зробити
+        type: choice
+        options: [discover, info, set, delete]
+        default: discover
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: scripts }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
+          ACTION: ${{ inputs.action }}
+        run: node scripts/telegram-webhook.mjs "$ACTION" | tee -a "$GITHUB_STEP_SUMMARY"

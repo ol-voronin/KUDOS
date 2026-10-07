@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { PublicShell } from '@/components/public-shell';
 import { CheckoutForm } from '@/features/cart/checkout-form';
 import { getSettings } from '@/lib/site-settings';
+import { isPreviewDeploy } from '@/lib/deploy-env';
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSettings();
@@ -23,7 +24,7 @@ export default function CheckoutPage() {
         </nav>
         <h1 className="mt-3 font-display text-hero font-bold uppercase text-ink">Оформлення</h1>
         <div className="mt-10">
-          <CheckoutForm />
+          <CheckoutForm orderingDisabled={isPreviewDeploy()} />
         </div>
       </div>
     </PublicShell>

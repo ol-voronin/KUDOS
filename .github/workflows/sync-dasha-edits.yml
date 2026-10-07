@@ -1,0 +1,54 @@
+# Після кожного пушу в main — злити main у dasha-edits, щоб правки Даші
+# завжди лягали поверх актуального сайту, а випуск не ловив конфліктів.
+# Через PR (merge commit, не squash): dasha-edits захищена обовʼязковим CI.
+name: Sync dasha-edits
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-dasha-edits
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
+      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: _ci, sparse-checkout: .github/scripts }
+      - uses: actions/checkout@v4
+        with:
+          ref: dasha-edits
+          path: repo
+          fetch-depth: 0
+          token: ${{ secrets.EDITS_GH_PAT }}
+      - working-directory: repo
+        run: |
+          git config user.name "babaka-edits-bot"
+          git config user.email "babaka-edits-bot@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "dasha-edits уже містить main"
+            exit 0
+          fi
+          branch="sync/main-${GITHUB_SHA:0:7}"
+          git checkout -b "$branch"
+          if ! git merge --no-edit origin/main; then
+            git merge --abort || true
+            node ../_ci/.github/scripts/telegram.cjs send "⚠️ dasha-edits розійшлась з main, потрібен Олексій"
+            exit 1
+          fi
+          git push origin "$branch"
+          gh pr create --base dasha-edits --head "$branch" \
+            --title "Синхронізація: main → dasha-edits (${GITHUB_SHA:0:7})" \
+            --body "Автоматично після пушу в main. Злиття — merge commit."
+          gh pr merge "$branch" --auto --merge
