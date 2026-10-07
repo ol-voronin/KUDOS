@@ -38,10 +38,16 @@ export async function POST(request: Request) {
 
   const config = readConfig();
   // Без налаштувань — закрито, а не відкрито.
-  if (config === null) return new NextResponse(null, { status: 503 });
+  if (config === null) {
+    console.warn('telegram.webhook.not_configured');
+    return new NextResponse(null, { status: 503 });
+  }
 
   const provided = request.headers.get('x-telegram-bot-api-secret-token') ?? '';
-  if (!safeEqual(provided, config.webhookSecret)) return new NextResponse(null, { status: 401 });
+  if (!safeEqual(provided, config.webhookSecret)) {
+    console.warn('telegram.webhook.bad_secret');
+    return new NextResponse(null, { status: 401 });
+  }
 
   let update: TgUpdate;
   try {
@@ -52,6 +58,15 @@ export async function POST(request: Request) {
   if (typeof update.update_id !== 'number') return OK();
 
   const action = classify(update.message, config);
+  // Один рядок на оновлення: лише id і рішення — без тексту й токенів.
+  // Без цього «бот мовчить» не відрізнити від «бот вирішив, що це не його тема».
+  console.info('telegram.webhook.update', JSON.stringify({
+    update: update.update_id,
+    chat: update.message?.chat.id,
+    thread: update.message?.message_thread_id ?? null,
+    from: update.message?.from?.id,
+    action: action.kind,
+  }));
   if (action.kind === 'ignore') return OK();
   const message = update.message as TgMessage;
 
