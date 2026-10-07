@@ -6,6 +6,8 @@
 #   set      — увімкнути вебхук на https://babaka.shop/api/telegram/webhook
 #   info     — стан вебхука
 #   delete   — вимкнути вебхук (звіт у «Реклама» не зачіпає)
+#   check-pat — чи приймає GitHub секрет EDITS_GH_PAT (лише код відповіді й
+#              форма токена: тип, довжина, чи є пробіли/переноси; не значення)
 name: Telegram setup
 
 on:
@@ -14,7 +16,7 @@ on:
       action:
         description: Що зробити
         type: choice
-        options: [discover, info, set, delete]
+        options: [discover, info, set, delete, check-pat]
         default: discover
 
 permissions:
@@ -28,7 +30,25 @@ jobs:
         with: { sparse-checkout: scripts }
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - env:
+      - name: Перевірка EDITS_GH_PAT
+        if: inputs.action == 'check-pat'
+        shell: bash
+        env:
+          PAT: ${{ secrets.EDITS_GH_PAT }}
+        run: |
+          {
+            echo "## EDITS_GH_PAT"
+            if [ -z "$PAT" ]; then echo "- секрет порожній або не знайдений"; exit 1; fi
+            case "$PAT" in github_pat_*) kind="fine-grained";; ghp_*) kind="classic";; *) kind="невідомий префікс";; esac
+            echo "- тип: $kind, довжина: ${#PAT}"
+            if printf '%s' "$PAT" | grep -q '[[:space:]]'; then echo "- ⚠️ є пробіли або переноси рядка"; fi
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $PAT" https://api.github.com/repos/${{ github.repository }})
+            echo "- GitHub API (репо): HTTP $code"
+            git ls-remote "https://x-access-token:${PAT}@github.com/${{ github.repository }}" HEAD >/dev/null 2>&1 && echo "- git: ✅" || echo "- git: ❌"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - if: inputs.action != 'check-pat'
+        env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
