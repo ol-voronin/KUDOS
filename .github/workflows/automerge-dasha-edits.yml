@@ -1,0 +1,49 @@
+# Автозлиття PR у dasha-edits на зеленому CI — без залежності від правил
+# захисту гілок (GitHub вмикає `gh pr merge --auto` лише там, де є
+# обовʼязкові перевірки; без них падає «Pull request is in clean status»).
+#
+# Що зливається: лише PR цього репо з гілок tg/<N> (правки), revert/… (відкат)
+# і sync/… (main → dasha-edits), лише в dasha-edits і лише той коміт, на якому
+# CI позеленів. У main цей воркфлоу не зливає ніколи.
+name: Automerge dasha-edits
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automerge-dasha-edits
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (startsWith(github.event.workflow_run.head_branch, 'tg/') ||
+       startsWith(github.event.workflow_run.head_branch, 'revert/') ||
+       startsWith(github.event.workflow_run.head_branch, 'sync/'))
+    runs-on: ubuntu-latest
+    env:
+      # PAT: злиття від GITHUB_TOKEN не запускає наступні воркфлоу.
+      GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
+      REPO: ${{ github.repository }}
+      OWNER: ${{ github.repository_owner }}
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Злити PR у dasha-edits
+        run: |
+          pr=$(gh api "repos/$REPO/pulls?state=open&base=dasha-edits&head=$OWNER:$BRANCH" --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then echo "Відкритого PR $BRANCH → dasha-edits немає"; exit 0; fi
+          read -r base head <<<"$(gh api "repos/$REPO/pulls/$pr" --jq '"\(.base.ref) \(.head.sha)"')"
+          [ "$base" = "dasha-edits" ] || { echo "PR #$pr дивиться в $base — не чіпаю"; exit 0; }
+          [ "$head" = "$SHA" ] || { echo "CI був для старого коміту PR #$pr — чекаю наступного"; exit 0; }
+          # sync — merge commit, щоб main лишався предком dasha-edits;
+          # правки й відкати — squash, по одному коміту на правку.
+          case "$BRANCH" in sync/*) method=merge ;; *) method=squash ;; esac
+          gh api -X PUT "repos/$REPO/pulls/$pr/merge" -f merge_method="$method" -f sha="$SHA" --jq .message
