@@ -43,7 +43,10 @@ for prefix, m in MAP.items():
     slug = m['slug']
     cov = next(p for n, p in files.items() if n.startswith(prefix + '_') and 'обложка' in n)
     art = next(p for n, p in files.items() if n.startswith(prefix + '_') and 'принт' in n)
-    c = Image.open(cov).convert('RGB')
+    c = Image.open(cov)
+    if 'A' in c.getbands():  # обкладинки приходять із прозорими полями по боках
+        c = c.crop(c.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox())
+    c = c.convert('RGB')
     c = c.resize((1200, round(1200 * c.height / c.width)), Image.LANCZOS)
     c.save(OUT / 'covers' / f'{slug}.webp', 'WEBP', quality=82, method=6)
     a = Image.open(art); a = a.convert('RGBA') if 'A' in a.getbands() or a.mode == 'P' else a.convert('RGB')
