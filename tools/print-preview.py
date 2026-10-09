@@ -66,6 +66,7 @@ COLLECTION_PREFIXES = {
     'babaka_polo': 'polo-babaky',
     'babaka_ua': 'babaka-ua',
     'babaky_z_zirkamy': 'zirky-z-babakamy',
+    'КОЛЕКЦІЯ_F_CK WINTER': 'fck-winter',
 }
 KEEP_OLD_BASE = {'fcu'}
 
