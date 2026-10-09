@@ -1,0 +1,19 @@
+{
+ "Акіта": {"slug": "winter-akita", "title": "Акіта", "breeds": ["akita-inu"]},
+ "Ауссі": {"slug": "winter-aussi", "title": "Ауссі", "breeds": ["aussi"]},
+ "Вестік": {"slug": "winter-vestik", "title": "Вестік", "breeds": ["vestik"]},
+ "Джек рассел": {"slug": "winter-dzhek-rassel", "title": "Джек-рассел", "breeds": ["dzhek-rassel"]},
+ "Доберман": {"slug": "winter-doberman", "title": "Доберман", "breeds": ["doberman"]},
+ "Кане корсо": {"slug": "winter-kane-korso", "title": "Кане-корсо", "breeds": ["kane-korso"]},
+ "Коргі": {"slug": "winter-korhi", "title": "Коргі", "breeds": ["korgi"]},
+ "Ксоло": {"slug": "winter-ksolo", "title": "Ксоло", "breeds": ["ksolo"]},
+ "Лабрадор": {"slug": "winter-labrador", "title": "Лабрадор", "breeds": ["labrador"]},
+ "Левретка": {"slug": "winter-levretka", "title": "Левретка", "breeds": ["levretka"]},
+ "Пудель": {"slug": "winter-pudel", "title": "Пудель", "breeds": ["pudel"]},
+ "Ретривер": {"slug": "winter-retryver", "title": "Ретривер", "breeds": ["retriver"]},
+ "Самоїд": {"slug": "winter-samoid", "title": "Самоїд", "breeds": ["samoyid"]},
+ "Спаніель": {"slug": "winter-spaniel", "title": "Спанієль", "breeds": ["koker-spaniel"]},
+ "Фрнцуз": {"slug": "winter-frantsuz", "title": "Француз", "breeds": ["frantsuzkyi-buldog"]},
+ "Хаскі": {"slug": "winter-khaski", "title": "Хаскі", "breeds": ["khaski"]},
+ "Шпіц": {"slug": "winter-shpits", "title": "Шпіц", "breeds": ["shpits"]}
+}
