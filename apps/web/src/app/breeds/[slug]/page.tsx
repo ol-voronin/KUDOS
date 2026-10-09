@@ -43,10 +43,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const name = data.breed.name;
   const count = data.prints.length;
-  const title = `Футболки й худі з принтом ${name} — ${site.brand}`;
+  // Назва породи завжди в називному: «з принтом Такса» чи «Твій такса»
+  // ламали мову, а відмінювати кожну з порід вручну — окреме поле в базі.
+  const title = `${name}: футболки й худі з принтом — ${site.brand}`;
   const description = count > 0
-    ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`
-    : `Принта з ${name} ще немає в каталозі — намалюємо з твого фото. Друкуємо ${site.cityIn}.`;
+    ? `${name}: ${count} ${plural(count, 'принт', 'принти', 'принтів')} на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`
+    : `${name}: готового принта ще немає — намалюємо з твого фото. Друкуємо ${site.cityIn}.`;
 
   return {
     title,
@@ -106,13 +108,13 @@ export default async function BreedPage({ params }: Params) {
         <div className={breed.photoUrl ? 'mt-3 grid gap-6 md:grid-cols-[1fr_18rem] md:items-start' : 'mt-3'}>
           <div>
             <h1 className="font-display text-hero font-bold text-ink">
-              Футболки й худі з принтом {breed.name}
+              {breed.name}: футболки й худі з принтом
             </h1>
 
             <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
               {prints.length > 0
-                ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} з {breed.name.toLowerCase()} на вибір. Обери принт, а далі — виріб, на якому його надрукувати. Друкуємо {site.cityIn}.</>
-                : <>Принта з {breed.name.toLowerCase()} у каталозі ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
+                ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} на вибір. Обери принт, а далі — виріб, на якому його надрукувати. Друкуємо {site.cityIn}.</>
+                : <>Готового принта для цієї породи ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
             </p>
 
             {/* Синоніми — те, за чим реально гуглять. Поле в схемі було завжди. */}
@@ -144,7 +146,7 @@ export default async function BreedPage({ params }: Params) {
 
         {articles.length > 0 && (
           <section className="mt-14">
-            <h2 className="font-display text-xl font-bold text-ink">Про {breed.name.toLowerCase()}</h2>
+            <h2 className="font-display text-xl font-bold text-ink">Про породу: {breed.name.toLowerCase()}</h2>
             <div className="mt-6">
               <ArticleGrid articles={articles} />
             </div>
@@ -155,7 +157,7 @@ export default async function BreedPage({ params }: Params) {
         {prints.length > 0 && (
           <div className="mt-12 border-t border-ink pt-6">
             <h2 className="font-display text-xl font-bold text-ink">
-              Твій {breed.name.toLowerCase()} не схожий на жодного тут?
+              Твій пес не схожий на жодного тут?
             </h2>
             <p className="mt-2 max-w-prose leading-relaxed text-ink-muted">
               Намалюємо саме його — з твого фото, з його вухами й характером.
