@@ -6,6 +6,7 @@
 #   set      — увімкнути вебхук на https://babaka.shop/api/telegram/webhook
 #   info     — стан вебхука
 #   delete   — вимкнути вебхук (звіт у «Реклама» не зачіпає)
+#   say      — бот пише в тему правок текст із поля text (оголошення для Даші)
 #   check-pat — чи приймає GitHub секрет EDITS_GH_PAT (лише код відповіді й
 #              форма токена: тип, довжина, чи є пробіли/переноси; не значення)
 name: Telegram setup
@@ -16,8 +17,12 @@ on:
       action:
         description: Що зробити
         type: choice
-        options: [discover, info, set, delete, check-pat]
+        options: [discover, info, set, delete, check-pat, say]
         default: discover
+      text:
+        description: Текст для «say» — бот напише його в тему правок
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -27,7 +32,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { sparse-checkout: scripts }
+        with:
+          sparse-checkout: |
+            scripts
+            .github/scripts
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - name: Перевірка EDITS_GH_PAT
@@ -47,7 +55,19 @@ jobs:
             git ls-remote "https://x-access-token:${PAT}@github.com/${{ github.repository }}" HEAD >/dev/null 2>&1 && echo "- git: ✅" || echo "- git: ❌"
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - if: inputs.action != 'check-pat'
+      - name: Повідомлення в тему правок
+        if: inputs.action == 'say'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
+          TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID || '3' }}
+          TEXT: ${{ inputs.text }}
+        run: |
+          [ -n "$TEXT" ] || { echo "Порожній text — нічого не надсилаю"; exit 1; }
+          node .github/scripts/telegram.cjs send "$TEXT"
+          echo "Надіслано в тему правок (${#TEXT} символів)" >> "$GITHUB_STEP_SUMMARY"
+
+      - if: inputs.action != 'check-pat' && inputs.action != 'say'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
