@@ -29,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // просто у видачі — «скільки їде», «чи можна повернути».
     { url: `${BASE}/faq`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/pro-nas`, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${BASE}/statti`, changeFrequency: 'weekly', priority: 0.7 },
   ];
 
