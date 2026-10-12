@@ -634,7 +634,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           полем зору саме тоді, коли вибір нарешті зроблено. На широкому
           екрані вона нікуди не липне — там усе видно й так.
         */}
-        <div className="sticky bottom-0 z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <div className="sticky bottom-[var(--consent-h,0px)] z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
           {/*
             Кнопка кладе товар у кошик, а не веде на оплату.
 
