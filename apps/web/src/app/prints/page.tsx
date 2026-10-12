@@ -99,7 +99,7 @@ export default async function PrintsPage({ searchParams }: Search) {
 
         <div className="mt-10">
           {data && data.items.length > 0 ? (
-            <PrintGrid prints={data.items} list={LIST.catalog} />
+            <PrintGrid prints={data.items} list={LIST.catalog} aboveFold />
           ) : (
             <EmptyState
               title="Каталог ще наповнюється"
