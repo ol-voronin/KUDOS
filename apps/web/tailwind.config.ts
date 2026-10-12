@@ -128,8 +128,8 @@ export default {
       },
       letterSpacing: { label: '0.16em' },
       /*
-       * Дві анімації на весь застосунок. Обидві короткі й обидві про одне:
-       * пояснити, що елемент щойно зʼявився, а не був тут завжди.
+       * Дві короткі анімації появи — пояснити, що елемент щойно зʼявився, а
+       * не був тут завжди, — і біжучий рядок для «Про нас».
        */
       keyframes: {
         'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
@@ -137,7 +137,10 @@ export default {
           from: { opacity: '0', transform: 'translateY(12px)' },
           to: { opacity: '1', transform: 'none' },
         },
+        /** Біжучий рядок порід на «Про нас»: стрічка задвоєна, тож -50% — це рівно один цикл. */
+        marquee: { from: { transform: 'translateX(0)' }, to: { transform: 'translateX(-50%)' } },
       },
+      animation: { marquee: 'marquee 60s linear infinite' },
     },
   },
   plugins: [],
