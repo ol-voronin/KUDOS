@@ -16,10 +16,20 @@ import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/config/social';
  * Групування футера — за полем `group`: колонка називається так, як її
  * назвали в адмінці, а не так, як тут колись написали руками.
  */
+/**
+ * Адреси, які переїхали, а в меню з бази лишилися старі.
+ *
+ * Редирект і так спрацює, але посилання на редирект — зайвий крок для
+ * людини й сигнал «сторінка переїхала» для пошуку. Змінять пункт в
+ * адмінці — заміна просто перестане знаходити, що міняти.
+ */
+const MOVED: Readonly<Record<string, string>> = { '/spivpratsia': '/opt' };
+
 function groupFooter(menu: readonly MenuItemDto[]): Array<[string, MenuItemDto[]]> {
   const groups = new Map<string, MenuItemDto[]>();
-  for (const item of menu) {
-    if (item.area !== 'FOOTER') continue;
+  for (const raw of menu) {
+    if (raw.area !== 'FOOTER') continue;
+    const item = MOVED[raw.href] ? { ...raw, href: MOVED[raw.href] as string } : raw;
     const list = groups.get(item.group) ?? [];
     list.push(item);
     groups.set(item.group, list);
