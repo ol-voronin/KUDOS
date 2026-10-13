@@ -7,6 +7,7 @@ import { ga4Purchase } from '@/features/analytics/ga4';
 import { readOrder } from '@/features/analytics/order-snapshot';
 import { useOrderStatus } from '../hooks/useOrderStatus';
 import { Skeleton } from '@/components/ui';
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/config/social';
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: 'Прийнято, перевіряємо наявність',
@@ -157,6 +158,15 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
       {data.status === 'PAID' && (
         <p className="mt-4 max-w-prose text-sm leading-relaxed text-ink-muted">
           Дякуємо! Оплату отримали.
+        </p>
+      )}
+      {INSTAGRAM_URL !== '' && view !== 'PAYMENT_FAILED' && (
+        <p className="mt-6 max-w-prose text-sm leading-relaxed text-ink-muted">
+          Поки друкуємо — зазирни до нас в{' '}
+          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-4">
+            Instagram @{INSTAGRAM_HANDLE}
+          </a>
+          . Познач нас на фото в обновці — покажемо в сторіс.
         </p>
       )}
     </div>

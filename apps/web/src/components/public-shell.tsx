@@ -4,6 +4,7 @@ import { CollectionListDto, type MenuItemDto } from '@dt/contracts';
 import { HeaderBar, type HeaderNavItem } from '@/features/chrome/header-bar';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getChrome } from '@/lib/site-settings';
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/config/social';
 
 /**
  * Меню — з бази, а не з масиву в цьому файлі.
@@ -103,6 +104,16 @@ export async function PublicFooter() {
           >
             Telegram: @{site.telegram}
           </a>
+          {INSTAGRAM_URL !== '' && (
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="me noreferrer"
+              className="link-sweep w-fit text-ink-muted"
+            >
+              Instagram: @{INSTAGRAM_HANDLE}
+            </a>
+          )}
           {site.email && (
             <a href={`mailto:${site.email}`} className="link-sweep w-fit text-ink-muted">
               {site.email}
