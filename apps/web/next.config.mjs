@@ -85,6 +85,12 @@ const nextConfig = {
        * 301 веде їх на нову полицю, а не на 404.
        */
       { source: '/collections/mystetstvo', destination: '/collections/vintage', permanent: true },
+      /*
+       * Коротка CMS-сторінка «Співпраця та опт» замінена повною сторінкою
+       * `/opt` (код, з живим асортиментом). Посилання у футері з бази й
+       * зовнішні посилання на стару адресу ведуть туди ж.
+       */
+      { source: '/spivpratsia', destination: '/opt', permanent: true },
       ...RENAMED_COLLECTIONS.map(([was, now]) => ({
         source: `/collections/${was}`, destination: `/collections/${now}`, permanent: true,
       })),

@@ -3,14 +3,16 @@
 import Link from 'next/link';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TrackingConfigDto } from '@dt/contracts';
 import { setTrackingConfig, track } from './client';
-import { ga4ConsentGranted } from './ga4';
+import { ga4ConsentGranted, sendGtag } from './ga4';
 
 const CONSENT_KEY = 'dt.consent';
 
 type Consent = 'granted' | 'denied' | 'unknown';
+/** Ще не прочитали сховище — нічого не вантажимо, щоб не випередити «ні». */
+type ConsentState = Consent | 'loading';
 
 function readConsent(): Consent {
   try {
@@ -26,23 +28,26 @@ function readConsent(): Consent {
 /**
  * Статистика й теги.
  *
- * Тут проходить межа, заради якої весь цей модуль і розділений надвоє:
- *
  *   · **власні події** пишуться завжди. Вони не ставлять cookie й не
  *     містять нічого, що дозволяє когось упізнати, — отже, згода на них не
- *     потрібна ні за законом, ні по совісті;
- *   · **GA4 і Google Ads** не вантажаться взагалі, доки людина не натисне
- *     «Погоджуюсь». Не «вантажаться з обмеженнями», а не вантажаться: жоден
- *     запит на google не йде, поки згоди немає.
+ *     потрібна;
+ *   · **GA4 і Google Ads** працюють у розширеному Consent Mode v2. Тег
+ *     вантажиться одразу, але зі станом «усе заборонено»: до згоди Google не
+ *     ставить і не читає cookie, а отримує лише знеособлені пінги, з яких
+ *     моделює пропущені візити й конверсії. Після «Погоджуюсь» стан
+ *     оновлюється до «дозволено».
  *
- * Другий варіант — Consent Mode з дозволеними безcookie-пінгами — дав би
- * Google трохи більше даних для моделювання. Він теж законний, але означає
- * запит на чужий сервер до згоди, і пояснювати цю різницю в політиці
- * складніше, ніж вона того варта на нашому обсязі.
+ * Чому не базовий режим, як було. На рекламі з телефона більшість людей
+ * банер просто ігнорує — і для Google їх не існувало: кампанії вчилися на
+ * кількох відсотках трафіку, а покупок не бачили зовсім. Розширений режим
+ * повертає Google ці дані без cookie.
+ *
+ * Явне «Не треба» шануємо жорсткіше, ніж вимагає Consent Mode: такій людині
+ * тег не вантажиться взагалі, жоден запит на google не йде.
  */
 export function Analytics({ config }: { config: TrackingConfigDto }) {
   const pathname = usePathname();
-  const [consent, setConsent] = useState<Consent>('unknown');
+  const [consent, setConsent] = useState<ConsentState>('loading');
 
   useEffect(() => { setTrackingConfig(config); }, [config]);
   useEffect(() => { setConsent(readConsent()); }, []);
@@ -65,12 +70,16 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
       const link = target?.closest?.('a');
       const href = link?.getAttribute('href') ?? '';
       if (href.includes('t.me/')) track('telegram_click');
+      // Instagram — лише подія GA4: власний список подій фіксований у контракті
+      // API, а для «чи переходять у Instagram» GA4 достатньо. У Google Ads її
+      // можна імпортувати як вторинну конверсію.
+      if (href.includes('instagram.com/')) sendGtag('event', 'instagram_click', { link_url: href, page_path: window.location.pathname });
     };
     document.addEventListener('click', onClick, { capture: true });
     return () => document.removeEventListener('click', onClick, { capture: true });
   }, []);
 
-  const decide = (value: Consent) => {
+  const decide = (value: 'granted' | 'denied') => {
     try { window.localStorage.setItem(CONSENT_KEY, value); } catch { /* нічого */ }
     setConsent(value);
     // Явні сигнали Consent Mode v2. Без `ad_user_data` розширені конверсії
@@ -86,17 +95,28 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
   const wanted = config.ga4MeasurementId !== '' || config.googleAdsId !== '';
   const tagId = config.ga4MeasurementId !== '' ? config.ga4MeasurementId : config.googleAdsId;
 
-  return (
-    <>
-      {wanted && consent === 'granted' && tagId !== '' && (
-        <>
-          <Script src={`https://www.googletagmanager.com/gtag/js?id=${tagId}`} strategy="afterInteractive" />
-          <Script id="gtag-init" strategy="afterInteractive">
-            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+  // Стан за замовчуванням вписується в той самий скрипт, що й `config`, і
+  // стоїть перед ним: інакше перший хіт піде без стану згоди, і Google
+  // вважатиме, що згода була.
+  const level = consent === 'granted' ? 'granted' : 'denied';
+  const init = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{ad_storage:'${level}',ad_user_data:'${level}',ad_personalization:'${level}',analytics_storage:'${level}',wait_for_update:500});
+gtag('set','ads_data_redaction',true);
+gtag('set','url_passthrough',true);
 gtag('js', new Date());
 ${config.ga4MeasurementId !== '' ? `gtag('config','${config.ga4MeasurementId}');` : ''}
-${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}');` : ''}`}
-          </Script>
+${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enhanced_conversions:true});` : ''}`;
+
+  // Вирішується один раз на візит: <Script> не вивантажується, тож теги, які
+  // вже поїхали, лишаються, а після «Не треба» вони просто й далі без cookie.
+  const loadTags = wanted && tagId !== '' && (consent === 'granted' || consent === 'unknown');
+
+  return (
+    <>
+      {loadTags && (
+        <>
+          <Script id="gtag-init" strategy="afterInteractive">{init}</Script>
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${tagId}`} strategy="afterInteractive" />
         </>
       )}
 
@@ -113,6 +133,33 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}');` : ''}`}
  * у ЄС за таке штрафують, а тут це просто нечесно.
  */
 function ConsentBanner({ onDecide }: { onDecide: (value: 'granted' | 'denied') => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  /*
+   * Банер не має нічого закривати. Його висота йде в `--consent-h`: на неї
+   * піднімаються липкі кнопки «Додати в кошик» (вони теж притиснуті до низу
+   * екрана і раніше ховалися під банером), а сторінка отримує такий самий
+   * відступ знизу, щоб футер і останні кнопки лишалися досяжними.
+   */
+  useEffect(() => {
+    const el = ref.current;
+    if (el === null) return undefined;
+    const root = document.documentElement;
+    const apply = () => {
+      const h = `${Math.ceil(el.getBoundingClientRect().height)}px`;
+      root.style.setProperty('--consent-h', h);
+      document.body.style.paddingBottom = h;
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--consent-h');
+      document.body.style.paddingBottom = '';
+    };
+  }, []);
+
   /*
    * Компактна нижня плашка: 1–2 рядки тексту й дві кнопки поруч.
    *
@@ -123,6 +170,7 @@ function ConsentBanner({ onDecide }: { onDecide: (value: 'granted' | 'denied') =
    */
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-label="Згода на аналітику"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-surface px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-lg sm:px-6"

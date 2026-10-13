@@ -165,7 +165,11 @@ export function track(
  * існує. Прямий виклик у цей момент мовчки не робив нічого, і конверсія
  * губилася саме там, де вона найдорожча.
  */
-export function fireConversion(name: AnalyticsEventName, valueMinor?: number): void {
+export function fireConversion(
+  name: AnalyticsEventName,
+  valueMinor?: number,
+  options: { transactionId?: string } = {},
+): void {
   const action = config?.conversions.find((c) => c.event === name && c.isActive);
   const adsId = config?.googleAdsId ?? '';
 
@@ -176,5 +180,62 @@ export function fireConversion(name: AnalyticsEventName, valueMinor?: number): v
     ...(action.sendValue && valueMinor !== undefined
       ? { value: valueMinor / 100, currency: 'UAH' }
       : {}),
+    // Без `transaction_id` Google Ads не вміє відкинути повтор тієї самої
+    // покупки (друга вкладка, інший пристрій) — і кожен повтор рахувався б
+    // окремим замовленням із окремою цінністю.
+    ...(options.transactionId !== undefined && options.transactionId !== ''
+      ? { transaction_id: options.transactionId }
+      : {}),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Розширені конверсії (Enhanced Conversions)
+// ---------------------------------------------------------------------------
+
+/**
+ * Телефон → E.164 (`+380XXXXXXXXX`) або `null`, якщо формат не впізнано.
+ *
+ * Google зіставляє розширені конверсії лише з нормалізованим номером; номер
+ * у форматі «067 …» чи «380…» дає інший хеш і просто не збігається.
+ */
+export function normalizePhone(raw: string): string | null {
+  const digits = raw.replace(/[^\d+]/g, '');
+  if (/^\+\d{10,15}$/.test(digits)) return digits;
+  const bare = digits.replace(/\D/g, '');
+  if (/^380\d{9}$/.test(bare)) return `+${bare}`;
+  if (/^0\d{9}$/.test(bare)) return `+38${bare}`;
+  return null;
+}
+
+/**
+ * SHA-256 нормалізованого телефону, hex. `null`, якщо номер не впізнано або
+ * в браузері немає `crypto.subtle` (не-HTTPS, старий WebView).
+ *
+ * Хешуємо самі, а не віддаємо gtag відкритий номер: хеш можна безпечно
+ * пронести через редирект на Monobank у знімку замовлення, а відкритий
+ * номер у сховищі браузера лежати не повинен.
+ */
+export async function hashPhone(raw: string): Promise<string | null> {
+  const phone = normalizePhone(raw);
+  if (phone === null) return null;
+  try {
+    if (typeof crypto === 'undefined' || crypto.subtle === undefined) return null;
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(phone));
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Дані для розширених конверсій — ставиться ПЕРЕД подією конверсії.
+ *
+ * Згоду це не обходить: Consent Mode сам не використовує ці дані, доки
+ * `ad_user_data` не `granted`, а після «Не треба» тег не завантажується
+ * взагалі, і черга `sendGtag` просто згорає.
+ */
+export function setAdsUserData(sha256Phone: string | null | undefined): void {
+  if (sha256Phone === null || sha256Phone === undefined || sha256Phone === '') return;
+  sendGtag('set', 'user_data', { sha256_phone_number: sha256Phone });
 }

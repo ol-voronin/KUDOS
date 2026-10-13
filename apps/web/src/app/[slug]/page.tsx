@@ -4,11 +4,17 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import { PageDto, RedirectDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { BlockRenderer } from '@/features/content/block-renderer';
+import { applyLegalPatches } from '@/features/content/legal-patches';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { faqJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
+
+const SEO_TITLE_UPGRADES: Readonly<Record<string, string>> = {
+  'Свій принт: адаптація або власна ідея — БАБАКА':
+    'Принт з вашою собакою на замовлення — портрет пса на футболці чи худі | БАБАКА',
+};
 
 export const revalidate = 300;
 
@@ -21,7 +27,8 @@ export const revalidate = 300;
  * навмисно.
  */
 async function load(slug: string): Promise<PageDto | null> {
-  return serverFetchOrNull(`/content/pages/${slug}`, PageDto, 300);
+  const page = await serverFetchOrNull(`/content/pages/${slug}`, PageDto, 300);
+  return page === null ? null : applyLegalPatches(page);
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -31,9 +38,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   // Порожнє SEO-поле означає «взяти зі сторінки». Змушувати редактора
   // дублювати заголовок у два поля — вірний спосіб отримати їх різними.
-  const title = page.seo.title.trim() !== ''
+  const stored = page.seo.title.trim() !== ''
     ? page.seo.title
     : `${page.title} — ${site.brand}`;
+  // Заголовок під пошуковий запит, а не під внутрішню назву розділу.
+  // Спрацьовує, лише поки в адмінці стоїть старий текст: щойно його там
+  // змінять, перемагає адмінка.
+  const title = SEO_TITLE_UPGRADES[stored] ?? stored;
   const description = page.seo.description.trim() !== '' ? page.seo.description : page.excerpt;
 
   return {

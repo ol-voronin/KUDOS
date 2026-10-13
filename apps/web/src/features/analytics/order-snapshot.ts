@@ -27,6 +27,11 @@ export interface OrderSnapshot {
   readonly valueMinor: number;
   readonly shippingMinor: number;
   readonly discountMinor: number;
+  /**
+   * SHA-256 телефону покупця для розширених конверсій Google Ads. Саме хеш,
+   * не номер: відкритий телефон у сховищі браузера лежати не повинен.
+   */
+  readonly sha256Phone?: string;
 }
 
 export function rememberOrder(orderId: string, snapshot: OrderSnapshot): void {

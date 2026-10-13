@@ -1,4 +1,5 @@
 import type { SiteSettingsDto } from '@dt/contracts';
+import { INSTAGRAM_URL } from '@/config/social';
 
 /**
  * JSON-LD. Єдине місце, де формуються структуровані дані.
@@ -15,7 +16,23 @@ export function organizationJsonLd(baseUrl: string, site: SiteSettingsDto) {
     url: baseUrl,
     ...(site.phone ? { telephone: site.phone } : {}),
     ...(site.city ? { address: { '@type': 'PostalAddress', addressLocality: site.city, addressCountry: 'UA' } } : {}),
-    sameAs: [site.telegramUrl].filter(Boolean),
+    logo: `${baseUrl}/brand/logo-dog.svg`,
+    sameAs: [site.telegramUrl, INSTAGRAM_URL].filter(Boolean),
+  };
+}
+
+/** Сайт із пошуком: Google може показати поле пошуку прямо під результатом. */
+export function websiteJsonLd(baseUrl: string, site: SiteSettingsDto) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: site.brand,
+    url: baseUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${baseUrl}/search?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
   };
 }
 

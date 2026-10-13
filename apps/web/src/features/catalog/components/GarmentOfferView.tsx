@@ -354,7 +354,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
           </div>
         )}
 
-        <div className="sticky bottom-0 z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <div className="sticky bottom-[var(--consent-h,0px)] z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
           <Button
             size="lg"
             full

@@ -29,6 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // просто у видачі — «скільки їде», «чи можна повернути».
     { url: `${BASE}/faq`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/pro-nas`, changeFrequency: 'yearly', priority: 0.5 },
+    { url: `${BASE}/opt`, changeFrequency: 'monthly', priority: 0.7 },
+    // Хаб усіх порід — головний вхід із пошуку «футболка з [порода]», а в карті його не було.
+    { url: `${BASE}/breeds`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${BASE}/insta`, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${BASE}/statti`, changeFrequency: 'weekly', priority: 0.7 },
   ];
 
@@ -43,6 +48,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Головна вже стоїть у списку вище під адресою `/`. Її ж slug `home`
     // дав би другий рядок на ту саму сторінку.
     .filter((p) => p.slug !== 'home')
+    // `spivpratsia` переадресовується на `/opt` (next.config) — редирект у карті сайту зайвий.
+    .filter((p) => p.slug !== 'spivpratsia')
     .map((p) => ({
       // Матеріал живе під /statti — і в карті сайту має стояти саме та
       // адреса, на яку веде сайт. Адреса, з якої йде 301, у карті — це

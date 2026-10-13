@@ -30,7 +30,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const data = await serverFetchOrNull(`/catalog/collections/${params.slug}`, CollectionPageDto);
   if (!data) return { title: 'Колекцію не знайдено' };
 
-  const title = `${data.collection.title} — ${site.brand}`;
+  // Назва колекції сама по собі нічого не каже пошуку («Polo Бабаки»), тож
+  // поруч — що це за товар.
+  const title = `${data.collection.title}: футболки та худі з собаками | ${site.brand}`;
   const description = data.collection.description
     ?? `${data.collection.title}: принти з собаками на футболках, худі та світшотах.`;
 
