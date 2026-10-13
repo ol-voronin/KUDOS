@@ -145,7 +145,7 @@ export default async function ArticlePage({ params }: Params) {
                 href={`/breeds/${b.slug}`}
                 className="rounded-pill border border-line px-4 py-1.5 text-sm text-ink-muted transition hover:border-ink hover:text-ink"
               >
-                Одяг з принтом {b.name}
+                {b.name}: одяг з принтом
               </Link>
             ))}
             {page.collections.map((c) => (
