@@ -4,6 +4,7 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import { PageDto, RedirectDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { BlockRenderer } from '@/features/content/block-renderer';
+import { applyLegalPatches } from '@/features/content/legal-patches';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { faqJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
@@ -26,7 +27,8 @@ export const revalidate = 300;
  * навмисно.
  */
 async function load(slug: string): Promise<PageDto | null> {
-  return serverFetchOrNull(`/content/pages/${slug}`, PageDto, 300);
+  const page = await serverFetchOrNull(`/content/pages/${slug}`, PageDto, 300);
+  return page === null ? null : applyLegalPatches(page);
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
