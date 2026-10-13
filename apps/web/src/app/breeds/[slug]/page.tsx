@@ -13,6 +13,7 @@ import { breadcrumbJsonLd, breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
 import { LIST } from '@/features/analytics/lists';
+import { breedRuSnippet } from '@/features/catalog/breed-names-ru';
 
 interface Params { params: { slug: string } }
 
@@ -47,10 +48,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const description = count > 0
     ? `${count} ${plural(count, 'принт', 'принти', 'принтів')} з ${name} на футболках, худі та світшотах. Друкуємо ${site.cityIn}.`
     : `Принта з ${name} ще немає в каталозі — намалюємо з твого фото. Друкуємо ${site.cityIn}.`;
+  // Російська фраза — тільки в meta description, під російськомовний попит
+  // із пошуку; Open Graph і сама сторінка лишаються українськими.
+  const ru = breedRuSnippet(params.slug);
+  const metaDescription = ru === '' ? description : `${description} ${ru}`;
 
   return {
     title,
-    description,
+    description: metaDescription,
     alternates: { canonical: `/breeds/${params.slug}` },
     openGraph: {
       title, description, type: 'website',

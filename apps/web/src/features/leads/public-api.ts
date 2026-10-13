@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiFetch } from '@/lib/api-client';
-import { attribution, track } from '@/features/analytics/client';
+import { attribution, hashPhone, setAdsUserData, track } from '@/features/analytics/client';
 import { ga4GenerateLead } from '@/features/analytics/ga4';
 
 const LeadCreatedDto = z.object({ ok: z.literal(true), number: z.number().int().positive() });
@@ -25,6 +25,8 @@ export async function createLead(input: LeadInput) {
     body: JSON.stringify({ ...input, attribution: attribution() }),
   });
   // Після успіху, а не до: подія «заявка» має означати заявку, а не спробу.
+  // Телефон (хешем) — перед конверсією, для розширених конверсій Google Ads.
+  setAdsUserData(await hashPhone(input.phone));
   track('lead_submitted');
   ga4GenerateLead('Форма на сторінці');
   return created;
