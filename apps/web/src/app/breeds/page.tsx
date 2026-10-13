@@ -27,8 +27,8 @@ const INITIAL_BREEDS = 12;
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSettings();
   return {
-    title: `Породи — ${site.brand}`,
-    description: 'Усі породи, для яких у нас є готові принти. Немає твоєї — намалюємо з фото.',
+    title: `Футболки та худі з собаками за породою | ${site.brand}`,
+    description: 'Усі породи, для яких у нас є готові принти на футболках, худі й світшотах. Немає твоєї — намалюємо з фото.',
     alternates: { canonical: '/breeds' },
   };
 }

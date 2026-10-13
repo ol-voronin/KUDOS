@@ -10,6 +10,11 @@ import { getSettings } from '@/lib/site-settings';
 
 interface Params { params: { slug: string } }
 
+const SEO_TITLE_UPGRADES: Readonly<Record<string, string>> = {
+  'Свій принт: адаптація або власна ідея — БАБАКА':
+    'Принт з вашою собакою на замовлення — портрет пса на футболці чи худі | БАБАКА',
+};
+
 export const revalidate = 300;
 
 /**
@@ -31,9 +36,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   // Порожнє SEO-поле означає «взяти зі сторінки». Змушувати редактора
   // дублювати заголовок у два поля — вірний спосіб отримати їх різними.
-  const title = page.seo.title.trim() !== ''
+  const stored = page.seo.title.trim() !== ''
     ? page.seo.title
     : `${page.title} — ${site.brand}`;
+  // Заголовок під пошуковий запит, а не під внутрішню назву розділу.
+  // Спрацьовує, лише поки в адмінці стоїть старий текст: щойно його там
+  // змінять, перемагає адмінка.
+  const title = SEO_TITLE_UPGRADES[stored] ?? stored;
   const description = page.seo.description.trim() !== '' ? page.seo.description : page.excerpt;
 
   return {

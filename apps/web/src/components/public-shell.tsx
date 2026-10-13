@@ -4,6 +4,7 @@ import { CollectionListDto, type MenuItemDto } from '@dt/contracts';
 import { HeaderBar, type HeaderNavItem } from '@/features/chrome/header-bar';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getChrome } from '@/lib/site-settings';
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/config/social';
 
 /**
  * Меню — з бази, а не з масиву в цьому файлі.
@@ -15,10 +16,20 @@ import { getChrome } from '@/lib/site-settings';
  * Групування футера — за полем `group`: колонка називається так, як її
  * назвали в адмінці, а не так, як тут колись написали руками.
  */
+/**
+ * Адреси, які переїхали, а в меню з бази лишилися старі.
+ *
+ * Редирект і так спрацює, але посилання на редирект — зайвий крок для
+ * людини й сигнал «сторінка переїхала» для пошуку. Змінять пункт в
+ * адмінці — заміна просто перестане знаходити, що міняти.
+ */
+const MOVED: Readonly<Record<string, string>> = { '/spivpratsia': '/opt' };
+
 function groupFooter(menu: readonly MenuItemDto[]): Array<[string, MenuItemDto[]]> {
   const groups = new Map<string, MenuItemDto[]>();
-  for (const item of menu) {
-    if (item.area !== 'FOOTER') continue;
+  for (const raw of menu) {
+    if (raw.area !== 'FOOTER') continue;
+    const item = MOVED[raw.href] ? { ...raw, href: MOVED[raw.href] as string } : raw;
     const list = groups.get(item.group) ?? [];
     list.push(item);
     groups.set(item.group, list);
@@ -103,6 +114,16 @@ export async function PublicFooter() {
           >
             Telegram: @{site.telegram}
           </a>
+          {INSTAGRAM_URL !== '' && (
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="me noreferrer"
+              className="link-sweep w-fit text-ink-muted"
+            >
+              Instagram: @{INSTAGRAM_HANDLE}
+            </a>
+          )}
           {site.email && (
             <a href={`mailto:${site.email}`} className="link-sweep w-fit text-ink-muted">
               {site.email}

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PrintOfferDto } from '@dt/contracts';
+import { CollectionListDto, PrintOfferDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintOfferView } from '@/features/catalog/components/PrintOfferView';
 import { RelatedPrints } from '@/features/catalog/components/RelatedRail';
@@ -22,11 +22,18 @@ export const revalidate = 60;
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const site = await getSettings();
-  const offer = await serverFetchOrNull(`/catalog/prints/${params.slug}`, PrintOfferDto);
+  const [offer, collections] = await Promise.all([
+    serverFetchOrNull(`/catalog/prints/${params.slug}`, PrintOfferDto),
+    serverFetchOrNull('/catalog/collections', CollectionListDto, 300),
+  ]);
   if (!offer) return { title: 'Принт не знайдено' };
 
-  const title = `${offer.print.title} — принт на футболці й худі | ${site.brand}`;
-  const description = `${offer.print.title}: друк на футболці, худі або світшоті. Друкуємо ${site.cityIn}, виготовляємо самі.`;
+  // «Коргі» є в трьох колекціях — без назви колекції три сторінки мали
+  // однаковий заголовок, і пошук бачив дублікати. Колекція робить їх різними.
+  const collection = collections?.items.find((c) => offer.print.collectionSlugs.includes(c.slug))?.title;
+  const name = collection ? `${offer.print.title} — ${collection}` : offer.print.title;
+  const title = `${name}: футболка й худі з принтом | ${site.brand}`;
+  const description = `${name}: принт на футболці, худі або світшоті. Друкуємо ${site.cityIn}, виготовляємо самі, доставка Новою поштою.`;
 
   return {
     title,
