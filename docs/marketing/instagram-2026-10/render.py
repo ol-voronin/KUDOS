@@ -81,7 +81,7 @@ posts = []
 # 01 intro
 def p01():
     img, d = new(PAPER); chrome(img, d, PAPER, INK, 'ПРО НАС', INK, WHITE)
-    y, _ = head(d, 'Ми — БАБАКА', 'Шиємо й друкуємо одяг з собаками. У Харкові. З любов’ю і шерстю на светрі.', INK, GREY)
+    y, _ = head(d, 'Ми — БАБАКА', 'Друкуємо одяг з собаками. У Харкові. З любов’ю і шерстю на светрі.', INK, GREY)
     top = y + 36; bottom = H - P - 60; gap = 20
     cw = (W - 2 * P - gap) // 2; ch = (bottom - top - gap) // 2
     for i, f in enumerate(['pab-korhi.webp', 'pab-taksa-i-york.webp', 'pab-mops.webp', 'pab-frantsuz.webp']):
@@ -124,17 +124,17 @@ posts.append(('03 Портрет з фото — Твій пес твій при
 # 04 BTS
 def p04():
     img, d = new(INK); chrome(img, d, INK, WHITE, 'ЗАКУЛІССЯ', YEL, INK)
-    y, _ = head(d, 'Шиємо в Харкові', 'Від рулону тканини до коробки на Новій пошті.', WHITE, (201, 201, 194))
+    y, _ = head(d, 'Друкуємо в Харкові', 'Від файлу принта до коробки на Новій пошті.', WHITE, (201, 201, 194))
     f = font('disp', 200); d.text((P - 6, y + 30), '4–7', font=f, fill=YEL)
     f2 = font('b', 40); d.text((P, y + 30 + 230), 'робочих днів на кожне замовлення', font=f2, fill=WHITE)
-    steps = ['Розкрій', 'Друк', 'Пошив', 'Пакування']
+    steps = ['Принт', 'Друк', 'Перевірка', 'Пакування']
     top = y + 30 + 320; bottom = H - P - 70; gap = 16; cw = (W - 2 * P - 3 * gap) // 4
     for i, s in enumerate(steps):
         x = P + i * (cw + gap); d.rounded_rectangle([x, top, x + cw, bottom], radius=28, fill=(30, 30, 28))
         d.text((x + 24, top + 22), f'0{i+1}', font=font('disp', 44), fill=RED)
         text_block(d, (x + 24, bottom - 64), s, 'b', 32, WHITE, cw - 40, minsize=24, maxlines=1, name=s)
     return img
-posts.append(('04 Закулісся — Шиємо в Харкові', p04))
+posts.append(('04 Закулісся — Друкуємо в Харкові', p04))
 
 posts.append(('05 Порода тижня — Мопс у пабі', lambda: breed(INK, WHITE, (201, 201, 194), 'БАБАКИ В ПАБІ', YEL, INK, 'Мопс у пабі', 'Колекція «Бабаки в пабі»: бо п’ятниця в кожного своя.', 'pab-mops.webp')))
 
