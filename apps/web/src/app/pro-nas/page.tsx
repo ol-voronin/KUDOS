@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BreedListDto } from '@dt/contracts';
+import { BreedListDto, PrintListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { Section } from '@/components/section';
 import { ButtonLink } from '@/components/ui';
@@ -35,13 +35,16 @@ export async function generateMetadata(): Promise<Metadata> {
  * сайті гірша, ніж її відсутність. Обличчя бренду тут — принти.
  */
 export default async function AboutPage() {
-  const [site, breedsData] = await Promise.all([
+  const [site, breedsData, printsData] = await Promise.all([
     getSettings(),
     serverFetchOrNull('/catalog/breeds', BreedListDto, 300),
+    serverFetchOrNull('/catalog/prints?page=1&perPage=1', PrintListDto, 300),
   ]);
   const breeds = breedsData?.items ?? [];
   const drawn = breeds.filter((b) => b.printCount > 0);
-  const printTotal = drawn.reduce((sum, b) => sum + b.printCount, 0);
+  // Сума `printCount` за породами завищує число: принт із двома породами
+  // рахується двічі. Тому беремо `total` самого каталогу принтів.
+  const printTotal = printsData?.total ?? 0;
   const gallery = drawn.filter((b) => b.previewUrl !== '').slice(0, 12);
 
   const days = `${site.productionDaysMin}–${site.productionDaysMax}`;

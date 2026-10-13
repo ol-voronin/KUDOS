@@ -105,7 +105,7 @@ gtag('set','ads_data_redaction',true);
 gtag('set','url_passthrough',true);
 gtag('js', new Date());
 ${config.ga4MeasurementId !== '' ? `gtag('config','${config.ga4MeasurementId}');` : ''}
-${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}');` : ''}`;
+${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enhanced_conversions:true});` : ''}`;
 
   // Вирішується один раз на візит: <Script> не вивантажується, тож теги, які
   // вже поїхали, лишаються, а після «Не треба» вони просто й далі без cookie.
