@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/ui';
 import { plural } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
+import { INSTAGRAM_URL } from '@/config/social';
 
 export const revalidate = 300;
 
@@ -263,6 +264,9 @@ export default async function AboutPage() {
           <div className="flex flex-wrap gap-3">
             <ButtonLink href="/breeds" size="lg">Обрати породу</ButtonLink>
             <ButtonLink href={site.telegramUrl} variant="outline" size="lg">Написати в Telegram</ButtonLink>
+            {INSTAGRAM_URL !== '' && (
+              <ButtonLink href={INSTAGRAM_URL} variant="outline" size="lg">Боня й Паштет в Instagram</ButtonLink>
+            )}
           </div>
         </div>
       </Section>

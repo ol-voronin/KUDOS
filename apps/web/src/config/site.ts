@@ -10,7 +10,7 @@
  * тільки в аварійному режимі.
  */
 export const site = {
-  brand: 'Хвісторія',
+  brand: 'БАБАКА',
 
   /** Сторона договору в оферті. Без цього оферта юридично порожня. */
   legalEntityName: 'Фізична особа-підприємець Воронін Олексій Петрович',
@@ -29,8 +29,8 @@ export const site = {
   phone: '+380508646355',
   phoneDisplay: '+380 50 864 63 55',
 
-  telegram: 'kudos_print',         // без @
-  telegramUrl: 'https://t.me/kudos_print',
+  telegram: 'babaka_shop',         // без @
+  telegramUrl: 'https://t.me/babaka_shop',
 
   /**
    * Пошта для звернень щодо персональних даних. Політика конфіденційності

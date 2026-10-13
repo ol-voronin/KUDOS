@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { TrackingConfigDto } from '@dt/contracts';
 import { setTrackingConfig, track } from './client';
-import { ga4ConsentGranted } from './ga4';
+import { ga4ConsentGranted, sendGtag } from './ga4';
 
 const CONSENT_KEY = 'dt.consent';
 
@@ -70,6 +70,10 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
       const link = target?.closest?.('a');
       const href = link?.getAttribute('href') ?? '';
       if (href.includes('t.me/')) track('telegram_click');
+      // Instagram — лише подія GA4: власний список подій фіксований у контракті
+      // API, а для «чи переходять у Instagram» GA4 достатньо. У Google Ads її
+      // можна імпортувати як вторинну конверсію.
+      if (href.includes('instagram.com/')) sendGtag('event', 'instagram_click', { link_url: href, page_path: window.location.pathname });
     };
     document.addEventListener('click', onClick, { capture: true });
     return () => document.removeEventListener('click', onClick, { capture: true });

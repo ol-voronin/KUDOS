@@ -4,7 +4,7 @@ import { PageDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { BlockRenderer } from '@/features/content/block-renderer';
 import { serverFetchOrNull } from '@/lib/server-api';
-import { faqJsonLd, JsonLd } from '@/lib/json-ld';
+import { faqJsonLd, JsonLd, organizationJsonLd, websiteJsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
 
@@ -22,6 +22,7 @@ import { ButtonLink } from '@/components/ui';
  */
 
 const HOME_SLUG = 'home';
+const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
 async function load(): Promise<PageDto | null> {
   return serverFetchOrNull(`/content/pages/${HOME_SLUG}`, PageDto, 60);
@@ -34,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const title = page && page.seo.title.trim() !== ''
     ? page.seo.title
-    : `${settings.brand} — одяг з принтом твоєї собаки`;
+    : `Футболки та худі з собаками — принти порід і портрет твого пса | ${settings.brand}`;
   const description = page?.seo.description.trim() !== ''
     ? page?.seo.description
     : `Готові принти за породами або власний портрет із фото. Виготовляємо й друкуємо ${settings.cityIn}.`;
@@ -48,7 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const page = await load();
+  const [page, settings] = await Promise.all([load(), getSettings()]);
 
   // Розмітка FAQ збирається з блоків — того самого джерела, що й текст на
   // сторінці. Два списки питань розійшлися б на першій правці.
@@ -56,6 +57,9 @@ export default async function HomePage() {
 
   return (
     <PublicShell>
+      {/* Хто ми й де нас шукати: знання про бренд у Google, включно з Instagram у sameAs. */}
+      <JsonLd data={organizationJsonLd(BASE, settings)} />
+      <JsonLd data={websiteJsonLd(BASE, settings)} />
       {faq.length > 0 && <JsonLd data={faqJsonLd(faq)} />}
 
       {page === null

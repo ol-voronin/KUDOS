@@ -31,6 +31,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/zayavka`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/pro-nas`, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${BASE}/opt`, changeFrequency: 'monthly', priority: 0.7 },
+    // Хаб усіх порід — головний вхід із пошуку «футболка з [порода]», а в карті його не було.
+    { url: `${BASE}/breeds`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${BASE}/insta`, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${BASE}/statti`, changeFrequency: 'weekly', priority: 0.7 },
   ];
 
