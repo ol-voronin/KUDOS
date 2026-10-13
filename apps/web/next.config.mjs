@@ -46,11 +46,34 @@ const RENAMED_POLO = {
  */
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
 
+/**
+ * Обкладинки принтів лежать у публічному Vercel Blob (`prints/<slug>/cover-….webp`)
+ * в оригіналі ≈1200×1800 і до 200 КБ, а картка на телефоні — ≈155 CSS-пікселів
+ * завширшки. Каталог з 24 карток тягнув ≈3,5 МБ і через рекламний трафік з'їв
+ * ліміт Blob Data Transfer. `next/image` віддає зменшену копію під розмір
+ * картки й кешує її на CDN сайту, тож Blob бачить лише перше звернення за картинкою.
+ *
+ * Хост і шлях вужчі навмисно: оптимізатор не має працювати для чужих сховищ
+ * і для `media/` (картинки сторінок), інакше на наш рахунок можна гнати чужі
+ * картинки. Хост не секрет (його видно в HTML), але його ім'я дублює
+ * `src/lib/image-source.ts`; розбіжність ловить `image-source.spec.ts`.
+ */
+export const BLOB_HOST = '57fwtlsqujgnycet.public.blob.vercel-storage.com';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@dt/contracts'],
   poweredByHeader: false,
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: BLOB_HOST, pathname: '/prints/**' }],
+    /*
+     * 30 днів. Адреса обкладинки містить хеш (`cover-<hash>.webp`), тож нова
+     * картинка = нова адреса = нова копія; стара не «застрягне». Кожне
+     * протухання кешу — ще одна платна трансформація, тому коротше не треба.
+     */
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/api/:path*` }];
   },
