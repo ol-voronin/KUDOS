@@ -20,7 +20,23 @@ import type { ListName } from '@/features/analytics/lists';
  * розміром принта, тож числа на плитках справді різні. `null` — ціни немає
  * (принт ніде не продається), і тоді рядок не показуємо, а не пишемо нуль.
  */
-export function PrintCard({ print }: { print: PrintCardDto }) {
+/**
+ * Ширина фото в плитці в CSS-пікселях на кожному брейкпоінті сітки
+ * (2 колонки до 640, 3 до 1024, далі 4; відступи сторінки й картки вже
+ * відняті; на 1280+ контейнер перестає рости). За цим браузер вибирає з
+ * `srcset` найменшу копію, якої вистачає: ≈384 px на телефоні при DPR 2.
+ * Змінюєш сітку (`PrintGrid`) чи відступи — онови й це.
+ */
+const CARD_IMAGE_SIZES =
+  '(min-width: 1280px) 284px, (min-width: 1024px) calc(25vw - 36px), (min-width: 640px) calc(33vw - 40px), calc(50vw - 40px)';
+
+/** Скільком першим плиткам сітки на першому екрані не потрібен lazy. */
+const EAGER_CARDS = 8;
+
+export function PrintCard(
+  { print, eager = false, priority = false }:
+  { print: PrintCardDto; eager?: boolean; priority?: boolean },
+) {
   return (
     <Link
       href={`/prints/${print.slug}`}
@@ -33,7 +49,14 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
       */}
       <div className="relative overflow-hidden bg-surface-sunken">
         <div className="transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none">
-          <PrintThumb src={print.previewUrl} alt={print.title} ratio="portrait" />
+          <PrintThumb
+            src={print.previewUrl}
+            alt={print.title}
+            ratio="portrait"
+            sizes={CARD_IMAGE_SIZES}
+            eager={eager}
+            priority={priority}
+          />
         </div>
       </div>
 
@@ -71,8 +94,18 @@ export function PrintCard({ print }: { print: PrintCardDto }) {
  * перетворився б на сірі плями там, де товарів забракло.
  */
 export function PrintGrid(
-  { prints, list, listId }:
-  { prints: readonly PrintCardDto[]; list?: ListName; listId?: string },
+  { prints, list, listId, aboveFold = false }:
+  {
+    prints: readonly PrintCardDto[]; list?: ListName; listId?: string;
+    /**
+     * Сітка — головний вміст сторінки і починається на першому екрані
+     * (каталог, колекція, порода, пошук). Тоді перші `EAGER_CARDS` плиток
+     * вантажаться без lazy, а перша ще й із preload: вона найімовірніший LCP.
+     * Решта сіток (головна, «схожі» на сторінці принта) лежать нижче за
+     * першу прокрутку, і для них ледачими лишаються всі плитки.
+     */
+    aboveFold?: boolean;
+  },
 ) {
   const grid = (
     <div
@@ -84,7 +117,14 @@ export function PrintGrid(
         'lg:[&>*:nth-child(3n)]:border-r lg:[&>*:nth-child(4n)]:border-r-0',
       ].join(' ')}
     >
-      {prints.map((print) => <PrintCard key={print.id} print={print} />)}
+      {prints.map((print, i) => (
+        <PrintCard
+          key={print.id}
+          print={print}
+          eager={aboveFold && i < EAGER_CARDS}
+          priority={aboveFold && i === 0}
+        />
+      ))}
     </div>
   );
 
