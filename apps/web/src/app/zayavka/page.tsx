@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Залишити заявку — ${site.brand}`,
     description: 'Напиши, що тебе цікавить. Відповідаємо того ж дня.',
-  
+    alternates: { canonical: '/zayavka' },
   };
 }
 

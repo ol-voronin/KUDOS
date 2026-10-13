@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '@/config/social';
 import { useEffect, useRef, useState } from 'react';
 import { LiveSearch } from '@/features/search/live-search';
 import { useCart } from '@/features/cart/cart-store';
@@ -280,6 +281,9 @@ export function HeaderBar({
           ))}
           <Link href="/faq" onClick={() => setMenu(false)} className="nav-link py-3">Часті запитання</Link>
           <Link href="/pro-nas" onClick={() => setMenu(false)} className="nav-link py-3">Про нас</Link>
+          {INSTAGRAM_URL !== '' && (
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="nav-link py-3">Instagram @{INSTAGRAM_HANDLE}</a>
+          )}
           {/* На телефоні номер лишається: там натиснути на нього — це подзвонити. */}
           <a href={`tel:${phone}`} className="nav-link py-3 font-semibold">{phoneDisplay}</a>
         </nav>

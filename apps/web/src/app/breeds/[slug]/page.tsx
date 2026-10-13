@@ -9,7 +9,7 @@ import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { CollectionStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
-import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
+import { breadcrumbJsonLd, breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
 import { LIST } from '@/features/analytics/lists';
@@ -91,10 +91,17 @@ export default async function BreedPage({ params }: Params) {
   return (
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(breed.name, prints, BASE)} />}
+      <JsonLd data={breadcrumbJsonLd([
+        { name: 'Головна', url: `${BASE}/` },
+        { name: 'Породи', url: `${BASE}/breeds` },
+        { name: breed.name, url: `${BASE}/breeds/${breed.slug}` },
+      ])} />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
+          <span className="px-1.5">·</span>
+          <Link href="/breeds" className="hover:underline">Породи</Link>
           <span className="px-1.5">·</span>
           <span className="text-ink">{breed.name}</span>
         </nav>
