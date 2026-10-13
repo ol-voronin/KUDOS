@@ -6,11 +6,23 @@ F = os.path.join(D, 'fonts'); I = os.path.join(D, 'img'); O = os.path.join(D, 'p
 os.makedirs(O, exist_ok=True)
 W, H, P = 1080, 1350, 72
 
-INK = (11, 11, 11); PAPER = (246, 246, 243); LINE = (228, 228, 223); RED = (223, 42, 53)
-YEL = (253, 202, 65); TEAL = (14, 107, 96); BLUE = (58, 90, 133); WHITE = (255, 255, 255); GREY = (107, 107, 101)
+# Палітра бренду (design.md): на червоному й синьому текст тільки білий, червоний ніколи поруч із синім.
+INK = (8, 7, 8); WHITE = (255, 255, 255); PAPER = WHITE; LINE = (231, 232, 230); RED = (223, 42, 53)
+YEL = (253, 202, 65); BLUE = (55, 114, 255); GREY = (92, 92, 86)
+
+# Заголовки — Lionel of Paris (шрифт бренду). TTF не комітимо (ліцензія): шлях у LIONEL_TTF.
+LIONEL = os.environ.get('LIONEL_TTF', os.path.join(F, 'LionelOfParis.ttf'))
 
 def font(kind, size):
-    return ImageFont.truetype(os.path.join(F, {'disp': 'Unbounded-800.ttf', 'b': 'Onest-700.ttf', 'm': 'Onest-500.ttf'}[kind]), size)
+    if kind == 'disp': return ImageFont.truetype(LIONEL, size)
+    return ImageFont.truetype(os.path.join(F, {'b': 'Onest-700.ttf', 'm': 'Onest-500.ttf'}[kind]), size)
+
+def sw(f):
+    # Lionel тонкий: потовщуємо обводкою того ж кольору, як у Figma (≈ size × 0.035).
+    return max(1, round(f.size * 0.035)) if f.path == LIONEL else 0
+
+def txt(d, xy, t, f, fill):
+    d.text(xy, t, font=f, fill=fill, stroke_width=sw(f), stroke_fill=fill)
 
 def wrap(d, text, f, maxw):
     lines = []
@@ -35,7 +47,7 @@ def text_block(d, xy, text, kind, size, color, maxw, lh=1.12, minsize=None, maxl
         if minsize and size > minsize: size -= 2; continue
         OVER.append((name, text, size)); break
     for l in lines:
-        d.text((x, y), l, font=f, fill=color); y += int(size * lh)
+        txt(d, (x, y), l, f, color); y += int(size * lh)
     return y, size
 
 def pill(d, xy, text, bg, fg, size=26, pad=(22, 12), anchor_right=False):
@@ -47,7 +59,7 @@ def pill(d, xy, text, bg, fg, size=26, pad=(22, 12), anchor_right=False):
     return x + tw + 2 * pad[0]
 
 def chrome(img, d, bg, fg, tag, tagbg, tagfg):
-    d.text((P, P - 8), 'БАБАКА', font=font('disp', 40), fill=fg)
+    txt(d, (P, P - 8), 'БАБАКА', font('disp', 44), fg)
     pill(d, (W - P, P - 10), tag, tagbg, tagfg, anchor_right=True)
     fb = font('b', 28)
     d.text((P, H - P - 30), 'babaka.shop', font=fb, fill=fg)
@@ -67,12 +79,20 @@ def paste_card(img, path, box, bg=WHITE, radius=36, pad=24, mode='fit'):
     mask = Image.new('L', card.size, 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, card.width - 1, card.height - 1], radius=radius, fill=255)
     img.paste(card, (x0, y0), mask)
 
-def new(bg):
-    img = Image.new('RGB', (W, H), bg); return img, ImageDraw.Draw(img)
+PATTERN = Image.open(os.path.join(I, 'pattern-dark.png')).convert('RGBA').crop((0, 0, W, H))
 
-def head(d, title, sub, fg, subfg, y=170, hsize=88, maxlines=3, ssize=36):
-    y, hs = text_block(d, (P, y), title.upper(), 'disp', hsize, fg, W - 2 * P, lh=1.08, minsize=64, maxlines=maxlines, name=title)
-    y += 18
+def new(bg):
+    # Фон бренду: колір + патерн дудлів (Figma Assets Pattern/Dark 2:20) ледь помітно.
+    img = Image.new('RGB', (W, H), bg)
+    dark = sum(bg) < 300 or bg in (RED, BLUE)
+    a = PATTERN.split()[3].point(lambda v: v * (0.07 if dark else 0.06))
+    tone = Image.new('RGB', (W, H), WHITE if dark else INK)
+    img.paste(tone, (0, 0), a)
+    return img, ImageDraw.Draw(img)
+
+def head(d, title, sub, fg, subfg, y=170, hsize=112, maxlines=3, ssize=36):
+    y, hs = text_block(d, (P, y), title.upper(), 'disp', hsize, fg, W - 2 * P, lh=1.0, minsize=72, maxlines=maxlines, name=title)
+    y += 30
     y, _ = text_block(d, (P, y), sub, 'm', ssize, subfg, W - 2 * P, lh=1.3, name=sub)
     return y, hs
 
@@ -125,13 +145,13 @@ posts.append(('03 Портрет з фото — Твій пес твій при
 def p04():
     img, d = new(INK); chrome(img, d, INK, WHITE, 'ЗАКУЛІССЯ', YEL, INK)
     y, _ = head(d, 'Друкуємо в Харкові', 'Від файлу принта до коробки на Новій пошті.', WHITE, (201, 201, 194))
-    f = font('disp', 200); d.text((P - 6, y + 30), '4–7', font=f, fill=YEL)
+    f = font('disp', 200); txt(d, (P - 6, y + 30), '4–7', f, YEL)
     f2 = font('b', 40); d.text((P, y + 30 + 230), 'робочих днів на кожне замовлення', font=f2, fill=WHITE)
     steps = ['Принт', 'Друк', 'Перевірка', 'Пакування']
     top = y + 30 + 320; bottom = H - P - 70; gap = 16; cw = (W - 2 * P - 3 * gap) // 4
     for i, s in enumerate(steps):
         x = P + i * (cw + gap); d.rounded_rectangle([x, top, x + cw, bottom], radius=28, fill=(30, 30, 28))
-        d.text((x + 24, top + 22), f'0{i+1}', font=font('disp', 44), fill=RED)
+        txt(d, (x + 24, top + 22), f'0{i+1}', font('disp', 48), RED)
         text_block(d, (x + 24, bottom - 64), s, 'b', 32, WHITE, cw - 40, minsize=24, maxlines=1, name=s)
     return img
 posts.append(('04 Закулісся — Друкуємо в Харкові', p04))
@@ -152,7 +172,7 @@ def p06():
     sd.rounded_rectangle([6, 6, 374, 164], radius=24, outline=RED + (255,), width=8)
     f = font('disp', 34);
     for i, t in enumerate(['ПЕРЕВІРЕНО', 'ПАШТЕТОМ']):
-        sd.text((190 - sd.textlength(t, font=f) / 2, 30 + i * 56), t, font=f, fill=RED + (255,))
+        sd.text((190 - sd.textlength(t, font=f) / 2, 30 + i * 56), t, font=f, fill=RED + (255,), stroke_width=sw(f), stroke_fill=RED + (255,))
     st = st.rotate(8, expand=True, resample=Image.BICUBIC); img.paste(st, (sx - 20, sy - 10), st)
     d.text((P + 56, H - P - 70 - 90), 'Боня: «Я тут модель».', font=font('b', 32), fill=INK)
     return img
@@ -163,18 +183,18 @@ def p07():
     img, d = new(PAPER); chrome(img, d, PAPER, INK, 'FAQ', INK, WHITE)
     y, _ = head(d, 'Питаєте — відповідаємо', 'Три питання, які нам ставлять найчастіше.', INK, GREY)
     items = [('ОПЛАТА', 'Гроші під захистом банку до підтвердження замовлення', RED),
-             ('ДОСТАВКА', 'Новою поштою по всій Україні', TEAL),
+             ('ДОСТАВКА', 'Новою поштою по всій Україні', YEL),
              ('ТЕРМІН', '4–7 робочих днів на виготовлення', INK)]
     top = y + 40; bottom = H - P - 70; gap = 18; ch = (bottom - top - 2 * gap) // 3
     for i, (k, v, c) in enumerate(items):
         cy = top + i * (ch + gap); d.rounded_rectangle([P, cy, W - P, cy + ch], radius=28, fill=WHITE, outline=LINE, width=3)
         d.rounded_rectangle([P, cy, P + 18, cy + ch], radius=9, fill=c)
-        d.text((P + 50, cy + 30), k, font=font('disp', 34), fill=c)
+        txt(d, (P + 50, cy + 26), k, font('disp', 40), INK)
         text_block(d, (P + 50, cy + 84), v, 'm', 36, INK, W - 2 * P - 90, lh=1.25, name=v)
     return img
 posts.append(('07 FAQ — Питаєте відповідаємо', p07))
 
-posts.append(('08 Порода тижня — Коргі', lambda: breed(TEAL, WHITE, (234, 243, 241), 'ПОРОДА ТИЖНЯ', YEL, INK, 'Коргі. Низько літає', 'Принти для власників найпухнастіших булочок.', 'polo-korhi.webp', card=(253, 235, 209), mode='fill')))
+posts.append(('08 Порода тижня — Коргі', lambda: breed(BLUE, WHITE, WHITE, 'ПОРОДА ТИЖНЯ', YEL, INK, 'Коргі. Низько літає', 'Принти для власників найпухнастіших булочок.', 'polo-korhi.webp', card=(253, 235, 209), mode='fill')))
 
 # 09 UGC
 def p09():
@@ -187,7 +207,7 @@ def p09():
     f = font('b', 30); t = 'тут міг би бути'; t2 = 'твій пес'
     mid = (bottom - top - 100) // 2
     pd.text((pw / 2 - pd.textlength(t, font=f) / 2, mid - 30), t, font=f, fill=GREY + (255,))
-    pd.text((pw / 2 - pd.textlength(t2, font=font('disp', 40)) / 2, mid + 14), t2, font=font('disp', 40), fill=INK + (255,))
+    f2 = font('disp', 48); pd.text((pw / 2 - pd.textlength(t2, font=f2) / 2, mid + 14), t2, font=f2, fill=INK + (255,), stroke_width=sw(f2), stroke_fill=INK + (255,))
     f3 = font('b', 32); t3 = '@babaka_club'
     pd.text((pw / 2 - pd.textlength(t3, font=f3) / 2, bottom - top - 88), t3, font=f3, fill=INK + (255,))
     pol = pol.rotate(-4, expand=True, resample=Image.BICUBIC)
@@ -198,7 +218,7 @@ posts.append(('09 UGC — Покажи свого пса', p09))
 # 10 UA
 def p10():
     img, d = new(BLUE); chrome(img, d, BLUE, WHITE, 'БАБАКА UA', YEL, INK)
-    y, _ = head(d, 'Бабака UA', 'Класики, яких ти ще не бачив: з собачими мордами. До Дня української писемності та мови.', YEL, WHITE)
+    y, _ = head(d, 'Бабака UA', 'Класики, яких ти ще не бачив: з собачими мордами. До Дня української писемності та мови.', WHITE, WHITE)
     top = y + 40; bottom = H - P - 60; gap = 20; cw = (W - 2 * P - gap) // 2
     paste_card(img, 'ua-skovoroda.webp', (P, top, P + cw, bottom), mode='fill', pad=0)
     paste_card(img, 'ua-shevchenko.webp', (P + cw + gap, top, W - P, bottom), mode='fill', pad=0)

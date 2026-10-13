@@ -41,12 +41,17 @@
 
 ```bash
 pip install pillow
-# Шрифти (SIL OFL) з Google Fonts покласти в fonts/:
-#   Unbounded-800.ttf, Onest-700.ttf, Onest-500.ttf
-python3 render.py   # пише posts/01.png … 10.png
+# Onest (SIL OFL) з Google Fonts — у fonts/: Onest-700.ttf, Onest-500.ttf
+# Lionel of Paris — ліцензійний, у репозиторій не кладемо: шлях через змінну
+LIONEL_TTF=/шлях/до/Lionel_of_Paris.ttf python3 render.py   # пише posts/01.png … 10.png
 ```
 
-Стиль узято з сайту: Unbounded ExtraBold для заголовків, Onest для тексту; кольори ink `#0B0B0B`, paper `#F6F6F3`, red `#DF2A35`, yellow `#FDCA41`, teal `#0E6B60`, blue `#3A5A85`.
+Стиль — за бренд-системою (Figma «БАБАКА — Design system», `design.md` поверху babaka):
+заголовки **Lionel of Paris** (потовщені обводкою ≈ 3,5 % кегля, як у Figma), текст **Onest**;
+кольори бренду: жовтий `#FDCA41`, червоний `#DF2A35`, синій `#3772FF`, чорний `#080708`, білий.
+На червоному й синьому текст тільки білий; червоний ніколи поруч із синім. Фон — колір + патерн дудлів
+(`img/pattern-dark.png`, Figma Assets `Pattern/Dark`) на 6–7 %.
+У Lionel немає гліфів ₴, ↗ і ʼ — ціни з ₴ лишаються в Onest.
 
 ## Figma
 
