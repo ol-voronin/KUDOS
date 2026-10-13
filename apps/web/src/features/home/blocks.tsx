@@ -136,6 +136,13 @@ export function BreedStrip({
   );
 }
 
+/**
+ * Видима ширина превʼю: ≈106 CSS-px комірки × `scale-150` ≈ 160, на широких
+ * екранах до ≈180. Масштаб CSS браузер у `sizes` не враховує, тому його
+ * закладено сюди вручну.
+ */
+const COLLECTION_THUMB_SIZES = '180px';
+
 export function CollectionStrip({ collections }: { collections: readonly CollectionCardDto[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -158,7 +165,7 @@ export function CollectionStrip({ collections }: { collections: readonly Collect
               .map((url, i) => (
                 <div key={i} className="w-1/3 overflow-hidden rounded-card">
                   <div className="origin-[50%_22%] scale-150">
-                    <PrintThumb src={url} alt={`Принт із колекції «${collection.title}»`} />
+                    <PrintThumb src={url} alt={`Принт із колекції «${collection.title}»`} sizes={COLLECTION_THUMB_SIZES} />
                   </div>
                 </div>
               ))}
