@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { CustomRequestCreateDto } from '@dt/contracts';
 import { apiFetch } from '@/lib/api-client';
-import { track } from '@/features/analytics/client';
+import { hashPhone, setAdsUserData, track } from '@/features/analytics/client';
 import { ga4GenerateLead } from '@/features/analytics/ga4';
 
 const CustomRequestCreatedDto = z.object({
@@ -17,6 +17,7 @@ export async function createCustomRequest(input: CustomRequestCreateDto) {
   // Бриф — така сама заявка з погляду реклами: людина залишила контакт.
   // Рахувати його окремою подією означало б мати дві цифри там, де відповідь
   // одна: скільки звернень принесла кампанія.
+  setAdsUserData(await hashPhone(input.contact.phone));
   track('lead_submitted');
   ga4GenerateLead('Свій принт');
   return created;

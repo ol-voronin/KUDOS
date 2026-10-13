@@ -6,7 +6,7 @@ import {
   OrderDraftResponseDto, formatUAH, minor, type DeliveryMethod,
 } from '@dt/contracts';
 import { Button, ErrorBanner, FieldShell, Skeleton, inputClass } from '@/components/ui';
-import { attribution, track } from '@/features/analytics/client';
+import { attribution, hashPhone, track } from '@/features/analytics/client';
 import {
   ga4AddPaymentInfo, ga4AddShippingInfo, ga4BeginCheckout, itemFromCartLine, type Ga4Item,
 } from '@/features/analytics/ga4';
@@ -171,6 +171,7 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
         valueMinor: result.totalMinor,
         shippingMinor: quote?.shippingMinor ?? 0,
         discountMinor: quote?.discountMinor ?? 0,
+        sha256Phone: (await hashPhone(phone)) ?? undefined,
       });
 
       // Кошик чистимо тільки після того, як сервер підтвердив замовлення:
