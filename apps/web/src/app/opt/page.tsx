@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `Опт і мерч для кінологів, вет-клінік, притулків і dog-спільнот | ${site.brand}`,
     description:
       'Футболки, худі й світшоти з собаками або вашим логотипом — від 10 штук, різні розміри й принти '
-      + `в одній партії. Шиємо й друкуємо ${site.cityIn}. Розрахунок і мокап безкоштовно.`,
+      + `в одній партії. Друкуємо ${site.cityIn}. Розрахунок і мокап безкоштовно.`,
     alternates: { canonical: '/opt' },
   };
 }
@@ -123,7 +123,7 @@ export default async function OptPage() {
           Мерч із собаками <span className="ghost-word">для тих, хто працює</span> <span className="wave-underline text-accent">з собаками</span>
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
-          Кінологи, вет-клініки, грумери, притулки, клуби порід. Шиємо й друкуємо самі {site.cityIn} —
+          Кінологи, вет-клініки, грумери, притулки, клуби порід. Друкуємо самі {site.cityIn} —
           тому беремося за тиражі від 10 штук, з різними розмірами й принтами в одній партії.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
@@ -133,7 +133,7 @@ export default async function OptPage() {
         <dl className="mt-12 grid grid-cols-2 gap-6 border-t border-ink pt-8 md:grid-cols-4">
           {[
             { n: '10+', l: 'штук — мінімальна партія' },
-            { n: String(garments.length > 0 ? garments.length : 7), l: 'виробів власного пошиття' },
+            { n: String(garments.length > 0 ? garments.length : 7), l: 'виробів на вибір' },
             { n: breedCount > 0 ? String(breedCount) : '30+', l: 'порід уже намальовано' },
             { n: '0 ₴', l: 'розрахунок і мокап' },
           ].map((s) => (
@@ -191,7 +191,7 @@ export default async function OptPage() {
           </div>
           {garments.length > 0 && (
             <div>
-              <p className="label-eyebrow text-surface/60">На чому — шиємо самі</p>
+              <p className="label-eyebrow text-surface/60">На чому друкуємо</p>
               <ul className="mt-6 divide-y divide-surface/15 border-y border-surface/15">
                 {garments.map((g) => (
                   <li key={g.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-4">
