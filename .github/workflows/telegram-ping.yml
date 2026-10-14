@@ -1,0 +1,31 @@
+# Коротке повідомлення в тему правок за запитом (workflow_dispatch).
+# Ним Claude шле Олексію пуші «є щось цікаве» після перевірок реклами,
+# пошти й сайту. Пише лише в TELEGRAM_EDITS_THREAD_ID через telegram.cjs —
+# тема «Реклама» (88) заблокована там само.
+# Як усе влаштовано: docs/telegram-edits.md
+name: Telegram ping
+
+on:
+  workflow_dispatch:
+    inputs:
+      text:
+        description: Текст повідомлення (до 4000 символів)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
+      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID || '3' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: _ci, sparse-checkout: .github/scripts }
+      - env:
+          TEXT: ${{ inputs.text }}
+        run: node _ci/.github/scripts/telegram.cjs send "🤖 $TEXT"
