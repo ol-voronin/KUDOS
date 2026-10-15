@@ -19,9 +19,8 @@ function readConsent(): Consent {
     const value = window.localStorage.getItem(CONSENT_KEY);
     return value === 'granted' || value === 'denied' ? value : 'unknown';
   } catch {
-    // Сховище недоступне — вважаємо, що згоди немає. Помилка на користь
-    // відвідувача, а не на користь звітів.
-    return 'denied';
+    // Сховище недоступне — плашка просто покажеться знову.
+    return 'unknown';
   }
 }
 
@@ -31,19 +30,17 @@ function readConsent(): Consent {
  *   · **власні події** пишуться завжди. Вони не ставлять cookie й не
  *     містять нічого, що дозволяє когось упізнати, — отже, згода на них не
  *     потрібна;
- *   · **GA4 і Google Ads** працюють у розширеному Consent Mode v2. Тег
- *     вантажиться одразу, але зі станом «усе заборонено»: до згоди Google не
- *     ставить і не читає cookie, а отримує лише знеособлені пінги, з яких
- *     моделює пропущені візити й конверсії. Після «Погоджуюсь» стан
- *     оновлюється до «дозволено».
+ *   · **GA4 і Google Ads** працюють одразу: внизу лише плашка «ми
+ *     аналізуємо відвідування» з кнопкою «Ок», без вибору.
  *
- * Чому не базовий режим, як було. На рекламі з телефона більшість людей
- * банер просто ігнорує — і для Google їх не існувало: кампанії вчилися на
- * кількох відсотках трафіку, а покупок не бачили зовсім. Розширений режим
- * повертає Google ці дані без cookie.
+ * Чому не банер згоди, як було з 12.10. Його ігнорувала більшість людей з
+ * реклами, а до згоди GA4 не показує візит у звітах: з 44 кліків по рекламі
+ * GA4 побачив 9 сесій, і кампанії не бачили покупок. Рішення Олексія, 15.10:
+ * плашка-повідомлення замість згоди.
  *
- * Явне «Не треба» шануємо жорсткіше, ніж вимагає Consent Mode: такій людині
- * тег не вантажиться взагалі, жоден запит на google не йде.
+ * Хто раніше натиснув «Не треба» в старому банері, тому й далі нічого не
+ * дозволяємо: тег вантажиться в режимі Consent Mode «усе заборонено» — без
+ * cookie, лише знеособлені пінги, з яких Google моделює конверсії.
  */
 export function Analytics({ config }: { config: TrackingConfigDto }) {
   const pathname = usePathname();
@@ -96,9 +93,8 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
   const tagId = config.ga4MeasurementId !== '' ? config.ga4MeasurementId : config.googleAdsId;
 
   // Стан за замовчуванням вписується в той самий скрипт, що й `config`, і
-  // стоїть перед ним: інакше перший хіт піде без стану згоди, і Google
-  // вважатиме, що згода була.
-  const level = consent === 'granted' ? 'granted' : 'denied';
+  // стоїть перед ним. «Заборонено» — лише для тих, хто колись явно відмовився.
+  const level = consent === 'denied' ? 'denied' : 'granted';
   const init = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('consent','default',{ad_storage:'${level}',ad_user_data:'${level}',ad_personalization:'${level}',analytics_storage:'${level}',wait_for_update:500});
 gtag('set','ads_data_redaction',true);
@@ -107,9 +103,9 @@ gtag('js', new Date());
 ${config.ga4MeasurementId !== '' ? `gtag('config','${config.ga4MeasurementId}');` : ''}
 ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enhanced_conversions:true});` : ''}`;
 
-  // Вирішується один раз на візит: <Script> не вивантажується, тож теги, які
-  // вже поїхали, лишаються, а після «Не треба» вони просто й далі без cookie.
-  const loadTags = wanted && tagId !== '' && (consent === 'granted' || consent === 'unknown');
+  // Вирішується один раз на візит, після читання сховища: інакше перший хіт
+  // міг би піти з «дозволено» людині, яка колись відмовилась.
+  const loadTags = wanted && tagId !== '' && consent !== 'loading';
 
   return (
     <>
@@ -120,19 +116,16 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enha
         </>
       )}
 
-      {wanted && consent === 'unknown' && <ConsentBanner onDecide={decide} />}
+      {wanted && consent === 'unknown' && <AnalyticsNotice onOk={() => decide('granted')} />}
     </>
   );
 }
 
 /**
- * Банер згоди.
- *
- * Дві однакові за вагою кнопки. Варіант, де «погоджуюсь» — велика кнопка, а
- * «ні» — сірий напис дрібним шрифтом, збирає більше згод і є маніпуляцією;
- * у ЄС за таке штрафують, а тут це просто нечесно.
+ * Плашка «ми аналізуємо» з однією кнопкою «Ок». Вибору немає (рішення
+ * Олексія, 15.10); «Ок» лише ховає плашку назавжди для цього браузера.
  */
-function ConsentBanner({ onDecide }: { onDecide: (value: 'granted' | 'denied') => void }) {
+function AnalyticsNotice({ onOk }: { onOk: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
 
   /*
@@ -161,7 +154,7 @@ function ConsentBanner({ onDecide }: { onDecide: (value: 'granted' | 'denied') =
   }, []);
 
   /*
-   * Компактна нижня плашка: 1–2 рядки тексту й дві кнопки поруч.
+   * Компактна нижня плашка: 1–2 рядки тексту й кнопка поруч.
    *
    * Попередня версія на телефоні займала ~31 % висоти екрана (пʼять рядків
    * тексту + кнопки стовпчиком) і закривала кнопку першого екрана — тобто
@@ -171,31 +164,22 @@ function ConsentBanner({ onDecide }: { onDecide: (value: 'granted' | 'denied') =
   return (
     <div
       ref={ref}
-      role="dialog"
-      aria-label="Згода на аналітику"
+      role="region"
+      aria-label="Про аналітику"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-surface px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-lg sm:px-6"
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4">
+      <div className="mx-auto flex max-w-4xl items-center gap-3 sm:gap-4">
         <p className="flex-1 text-[0.8125rem] leading-snug text-ink-muted">
-          Google Аналітика ставить cookie лише з твоєї згоди.{' '}
+          Ми аналізуємо відвідування сайту (Google Analytics, cookie), щоб робити його кращим.{' '}
           <Link href="/pryvatnist" className="font-medium text-ink underline">Деталі</Link>
         </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onDecide('denied')}
-            className="min-h-11 flex-1 rounded-card border border-line px-5 text-sm font-medium text-ink transition hover:border-ink sm:flex-none"
-          >
-            Не треба
-          </button>
-          <button
-            type="button"
-            onClick={() => onDecide('granted')}
-            className="min-h-11 flex-1 rounded-card border border-ink bg-ink px-5 text-sm font-medium text-surface transition hover:bg-ink/90 sm:flex-none"
-          >
-            Погоджуюсь
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOk}
+          className="min-h-11 rounded-card border border-ink bg-ink px-6 text-sm font-medium text-surface transition hover:bg-ink/90"
+        >
+          Ок
+        </button>
       </div>
     </div>
   );
