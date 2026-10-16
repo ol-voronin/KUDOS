@@ -232,8 +232,8 @@ export async function hashPhone(raw: string): Promise<string | null> {
  * Дані для розширених конверсій — ставиться ПЕРЕД подією конверсії.
  *
  * Згоду це не обходить: Consent Mode сам не використовує ці дані, доки
- * `ad_user_data` не `granted`, а після «Не треба» тег не завантажується
- * взагалі, і черга `sendGtag` просто згорає.
+ * `ad_user_data` не `granted` (так лишається для тих, хто колись натиснув
+ * «Не треба» в старому банері згоди).
  */
 export function setAdsUserData(sha256Phone: string | null | undefined): void {
   if (sha256Phone === null || sha256Phone === undefined || sha256Phone === '') return;

@@ -16,9 +16,16 @@ describe('applyLegalPatches', () => {
     const out = applyLegalPatches(page('pryvatnist', 'Сайт не використовує рекламні чи аналітичні cookie й не має лічильників.'));
     const text = JSON.stringify(out.blocks);
     expect(text).toContain('Google Analytics 4');
-    expect(text).toContain('Редакція від 13 жовтня 2026 року');
+    expect(text).toContain('Редакція від 15 жовтня 2026 року');
     expect(text).not.toContain('не використовує рекламні чи аналітичні cookie');
     expect(text).toContain('Telegram');
+  });
+
+  it('замінює редакцію 13.10 з банером згоди на плашку', () => {
+    const out = applyLegalPatches(page('pryvatnist', 'Поки ви не натиснули «Погоджуюсь», аналітичні й рекламні cookie не ставляться.'));
+    const text = JSON.stringify(out.blocks);
+    expect(text).toContain('плашці внизу екрана');
+    expect(text).not.toContain('Поки ви не натиснули «Погоджуюсь»');
   });
 
   it('не чіпає вже оновлену політику та інші сторінки', () => {

@@ -9,7 +9,7 @@ type LegalItems = Extract<Block, { type: 'legal' }>['items'];
  *
  * Політика конфіденційності в базі писалася, коли на сайті не було ні
  * аналітики, ні реклами, і прямо обіцяє: «не використовує рекламні чи
- * аналітичні cookie». Після Google Analytics, тегу Google Ads, банера згоди
+ * аналітичні cookie». Після Google Analytics, тегу Google Ads, плашки про аналітику
  * й розширених конверсій це вже неправда, а неправдива політика гірша за
  * відсутню. Тому розділи 5 і 8 та дату редакції підміняємо тут.
  *
@@ -18,8 +18,10 @@ type LegalItems = Extract<Block, { type: 'legal' }>['items'];
  * та сама редакція), патч перестане спрацьовувати сам.
  */
 const OUTDATED_MARKER = 'не використовує рекламні чи аналітичні cookie';
+/** Редакція 13.10 описувала банер згоди «Погоджуюсь / Не треба», якого з 15.10 немає. */
+const CONSENT_BANNER_MARKER = 'Поки ви не натиснули «Погоджуюсь»';
 
-const PRIVACY_REVISION = 'Редакція від 13 жовтня 2026 року';
+const PRIVACY_REVISION = 'Редакція від 15 жовтня 2026 року';
 
 const PRIVACY_P5_EXTRA: LegalItems = [
   {
@@ -40,21 +42,17 @@ const PRIVACY_P8: LegalItems = [
   {
     n: '8.1.',
     text:
-      'Сайт використовує **Google Analytics 4** і тег **Google Ads**, щоб рахувати відвідування '
-      + 'й розуміти, яка реклама працює. Під час першого візиту ми питаємо вашої згоди в банері внизу екрана.',
+      'Сайт використовує **Google Analytics 4** і тег **Google Ads**, щоб рахувати відвідування й розуміти, яка реклама працює. Під час першого візиту ми повідомляємо про це в плашці внизу екрана.',
   },
   {
     n: '8.2.',
     text:
-      'Поки ви не натиснули «Погоджуюсь», аналітичні й рекламні cookie не ставляться: Google отримує '
-      + 'лише знеособлені сигнали без cookie (режим Google Consent Mode), а хеш телефону не використовує. '
-      + 'Якщо натиснути «Не треба», теги Google на сайті не завантажуються взагалі.',
+      'Ці сервіси ставлять аналітичні й рекламні cookie. Хеш телефону передається лише під час заявки чи замовлення (див. п. 5.5).',
   },
   {
     n: '8.3.',
     text:
-      'Ваш вибір зберігається у вашому браузері. Щоб змінити його, очистіть дані сайту babaka.shop '
-      + 'у браузері — банер зʼявиться знову.',
+      'Щоб аналітика вас не враховувала, заблокуйте cookie сайту babaka.shop у налаштуваннях браузера. Якщо раніше ви натиснули «Не треба» в банері згоди, цей вибір і далі діє: cookie Google не ставляться, а Google отримує лише знеособлені сигнали (режим Google Consent Mode).',
   },
   {
     n: '8.4.',
@@ -65,7 +63,8 @@ const PRIVACY_P8: LegalItems = [
 
 function patchPrivacy(blocks: Block[]): Block[] {
   const p8 = blocks.find((b) => b.type === 'legal' && b.id === 'p8');
-  const outdated = p8?.type === 'legal' && p8.items.some((i) => i.text.includes(OUTDATED_MARKER));
+  const outdated = p8?.type === 'legal'
+    && p8.items.some((i) => i.text.includes(OUTDATED_MARKER) || i.text.includes(CONSENT_BANNER_MARKER));
   if (!outdated) return blocks;
 
   return blocks.map((b) => {
