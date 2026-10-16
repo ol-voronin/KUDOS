@@ -93,9 +93,6 @@ export function CartView() {
                 {q?.blockedReason != null && (
                   <p className="mt-2 text-sm text-danger">{q.blockedReason}</p>
                 )}
-                {q?.leadTimeDays != null && q.blockedReason === null && (
-                  <p className="mt-1 text-xs text-ink-subtle">Виготовлення {q.leadTimeDays} днів</p>
-                )}
 
                 <div className="mt-auto flex flex-wrap items-center gap-4 pt-3">
                   <Stepper
