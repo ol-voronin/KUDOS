@@ -170,7 +170,7 @@ function AnalyticsNotice({ onOk }: { onOk: () => void }) {
     >
       <div className="mx-auto flex max-w-4xl items-center gap-3 sm:gap-4">
         <p className="flex-1 text-[0.8125rem] leading-snug text-ink-muted">
-          Ми аналізуємо відвідування сайту (Google Analytics, cookie), щоб робити його кращим.{' '}
+          Ми використовуємо файли cookie та подібні технології, щоб забезпечувати роботу сайту, аналізувати трафік та покращувати ваш досвід користування.{' '}
           <Link href="/pryvatnist" className="font-medium text-ink underline">Деталі</Link>
         </p>
         <button
