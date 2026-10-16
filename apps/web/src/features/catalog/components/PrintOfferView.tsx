@@ -7,7 +7,6 @@ import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
 import { CARE_WARNING, paymentText, shippingText } from '@/config/product-copy';
 import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
-import { shipWindow } from '../delivery-estimate';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
@@ -607,23 +606,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
         {selectedSize && (
           <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2" aria-live="polite">
-            <AvailabilityBadge state={selectedSize.state} leadTimeDays={selectedSize.leadTimeDays} />
-            {/*
-              Дата, а не «4–7 днів».
-
-              Строк, названий днями, покупець однаково перекладає в дату —
-              просто робить це сам, у голові й з помилкою. Названий датою,
-              він читається як зобовʼязання; це найдешевший спосіб зняти
-              питання «а коли вже».
-            */}
-            {selectedSize.state !== 'UNAVAILABLE' && (
-              <span className="text-sm text-ink-muted">
-                Відправимо{' '}
-                <b className="font-medium text-ink">
-                  {shipWindow(site.productionDaysMin, site.productionDaysMax, selectedSize.leadTimeDays).label}
-                </b>
-              </span>
-            )}
+            <AvailabilityBadge state={selectedSize.state} />
           </div>
         )}
 
