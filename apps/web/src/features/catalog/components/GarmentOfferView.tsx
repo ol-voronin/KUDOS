@@ -350,7 +350,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
 
         {selectedSize && (
           <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2" aria-live="polite">
-            <AvailabilityBadge state={selectedSize.state} leadTimeDays={selectedSize.leadTimeDays} />
+            <AvailabilityBadge state={selectedSize.state} />
           </div>
         )}
 
