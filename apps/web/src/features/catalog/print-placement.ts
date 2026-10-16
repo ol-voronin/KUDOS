@@ -66,6 +66,22 @@ const TIER_SCALE: Readonly<Record<PrintSizeTier, number>> = { MINI: 0.55, MEDIUM
 
 export type PlacementSource = 'print' | 'collection' | 'fallback';
 
+/**
+ * Вісь виробу на сцені — там, де приклади розташування поставили принт не
+ * по центру. Замір по фото сцени (`garments-preview/<виріб>/*.webp`): середина
+ * корпусу на рівні грудей. Класичне худі в усіх прикладах стояло на 0,600 при
+ * осі 0,630 — принт з'їжджав ліворуч (Олексій, 16.10). Решта виробів з
+ * віссю збігаються, тому їх тут немає.
+ */
+const GARMENT_AXIS: Readonly<Record<string, number>> = {
+  'hudi-klasychnyi': 0.630,
+};
+
+function onAxis(p: Placement, garmentSlug: string): Placement {
+  const axis = GARMENT_AXIS[garmentSlug];
+  return axis === undefined ? p : { ...p, cx: axis };
+}
+
 export function placementFor(
   printSlug: string,
   collectionSlugs: readonly string[],
@@ -74,16 +90,16 @@ export function placementFor(
   aspect: number,
 ): { placement: Placement; source: PlacementSource } | null {
   const own = PRINT_PLACEMENTS[printSlug]?.[garmentSlug];
-  if (own) return { placement: own, source: 'print' };
+  if (own) return { placement: onAxis(own, garmentSlug), source: 'print' };
 
   for (const slug of collectionSlugs) {
     const fromCollection = COLLECTION_PLACEMENTS[slug]?.[garmentSlug];
-    if (fromCollection) return { placement: fromCollection, source: 'collection' };
+    if (fromCollection) return { placement: onAxis(fromCollection, garmentSlug), source: 'collection' };
   }
 
   const base = PRINT_PLACEMENTS[FALLBACK_PRINT]?.[garmentSlug];
   if (!base) return null;
-  return { placement: shrinkFromTop(base, TIER_SCALE[tier], aspect), source: 'fallback' };
+  return { placement: onAxis(shrinkFromTop(base, TIER_SCALE[tier], aspect), garmentSlug), source: 'fallback' };
 }
 
 /**
