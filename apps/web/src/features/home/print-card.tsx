@@ -13,7 +13,9 @@ import type { ListName } from '@/features/analytics/lists';
  * кладуть товар на голе тло й розділяють колонки волосінню.
  *
  * Ціна на плитці є (мобільний аудит, 01.10.2026): без неї людина не
- * розуміє бюджету до кліку. Без «від» (відгук 01.10: ціни чіткі). Число —
+ * розуміє бюджету до кліку. З «від» (аудит 17.10, C-2): на фото часто
+ * світшот чи худі, а число — найдешевший виріб, і «1 190 ₴» під худі за
+ * 2 300 ₴ читалося як обіцянка, якої сторінка товару не тримає. Число —
  * `fromPriceMinor` із каталогу: найдешевший виріб, на якому принт можна
  * надрукувати, плюс друк за його розміром — і сторінка принта відкривається
  * саме з цим виробом, тож людина бачить ту саму суму. Друк різний за
@@ -37,10 +39,17 @@ export function PrintCard(
   { print, eager = false, priority = false }:
   { print: PrintCardDto; eager?: boolean; priority?: boolean },
 ) {
+  /*
+   * Плитки першого екрана (`eager`/`priority`) без `reveal`: перша з них —
+   * LCP сторінки, і прозорість до гідратації тримала її невидимою вже
+   * завантаженою на 1–2 с (аудит 17.10, тех. п. 1). Нижчі плитки й далі
+   * зʼявляються при прокрутці.
+   */
+  const reveal = eager || priority ? '' : 'reveal ';
   return (
     <Link
       href={`/prints/${print.slug}`}
-      className="group reveal flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+      className={`group ${reveal}flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink`}
     >
       {/*
         Фото ледь наближається під курсором. Рух живе на обгортці з
@@ -66,7 +75,7 @@ export function PrintCard(
         </p>
         <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           {print.fromPriceMinor !== null && (
-            <p className="whitespace-nowrap text-sm text-ink">{formatUAH(minor(print.fromPriceMinor))}</p>
+            <p className="whitespace-nowrap text-sm text-ink">від {formatUAH(minor(print.fromPriceMinor))}</p>
           )}
           {/*
             Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
