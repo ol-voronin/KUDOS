@@ -37,7 +37,13 @@
    * тоді, коли воно не влазить у рядок (на звичайному екрані нічого не
    * змінюється), а `hyphens` з `lang="uk"` ставить дефіс там, де браузер уміє.
    */
-  h1, h2, h3 { overflow-wrap: break-word; hyphens: auto; }
+  h1, h2, h3 { overflow-wrap: break-word; }
+  /*
+   * Дефіси — лише в H1: там кегль такий, що довге слово інакше не влазить.
+   * На H2 автоматичні переноси різали звичайні слова («ПОРО-ДИ») там, де
+   * вистачило б перенести слово цілим.
+   */
+  h1 { hyphens: auto; }
   h1 { @apply font-bold; }
   h2 { @apply font-bold; }
   h3 { @apply font-semibold tracking-tight; }
