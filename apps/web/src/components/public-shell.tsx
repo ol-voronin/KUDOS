@@ -194,7 +194,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           До змісту
         </a>
       </div>
-      <div className="flex min-h-screen flex-col">
+      <div className="storefront flex min-h-screen flex-col">
         <PublicHeader />
         <main id="main" className="flex-1">
           {children}

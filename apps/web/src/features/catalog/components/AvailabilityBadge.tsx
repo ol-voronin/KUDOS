@@ -14,8 +14,9 @@ import type { Selectability } from '../variant-selection';
 export function AvailabilityBadge({ state }: { state: Selectability }) {
   if (state === 'AVAILABLE' || state === 'MADE_TO_ORDER') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-pill bg-ok-soft px-3 py-1 text-xs font-semibold text-ok">
-        <span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />
+      /* Жовта наліпка з палітри бренду замість бірюзової (аудит 17.10, U5). */
+      <span className="inline-flex items-center gap-1.5 rounded-pill bg-brand-yellow px-3 py-1 text-xs font-semibold text-ink">
+        <span className="h-1.5 w-1.5 rounded-full bg-ink" aria-hidden="true" />
         {state === 'AVAILABLE' ? 'Є в наявності' : 'Друкуємо й відправляємо швидко'}
       </span>
     );
