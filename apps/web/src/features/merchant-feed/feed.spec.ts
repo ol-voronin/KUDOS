@@ -89,9 +89,8 @@ function offer(slug: string, title: string, over: Partial<PrintOfferDto['print']
 
 const CTX: FeedContext = {
   baseUrl: 'https://babaka.shop',
+  brand: 'БАБАКА',
   cityIn: 'у Харкові',
-  productionDaysMin: 4,
-  productionDaysMax: 7,
   collections: new Map([
     ['polo-babaky', 'Polo Бабаки'],
     ['babaky-v-pabi', 'Бабаки в пабі'],
@@ -170,7 +169,7 @@ describe('фід Google Merchant', () => {
       for (const name of required) expect(fields.get(name)?.[0], name).toBeTruthy();
       expect(fields.get('g:identifier_exists')?.[0]).toBe('no');
       expect(fields.get('g:condition')?.[0]).toBe('new');
-      expect(fields.get('g:brand')?.[0]).toBe('Babaka');
+      expect(fields.get('g:brand')?.[0]).toBe('БАБАКА');
       expect(fields.get('g:availability')?.[0]).toBe('in_stock');
       expect(fields.get('g:google_product_category')?.[0]).toBe('212');
       expect(fields.get('g:link')).toBeUndefined();
@@ -284,7 +283,8 @@ describe('фід Google Merchant', () => {
     expect(d).toContain('100% органічна бавовна');
     expect(d).toContain('Друкуємо у Харкові');
     expect(d).not.toMatch(/ши[єю]/i);
-    expect(items[0]!.minHandlingTime).toBe(4);
-    expect(items[0]!.maxHandlingTime).toBe(7);
+    expect(items[0]!.minHandlingTime).toBe(1);
+    expect(items[0]!.maxHandlingTime).toBe(5);
+    expect(d).toContain('до 5 робочих днів');
   });
 });

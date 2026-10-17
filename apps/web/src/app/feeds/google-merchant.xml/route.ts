@@ -47,9 +47,8 @@ export async function GET() {
 
     const items = buildFeedItems(ok, {
       baseUrl: BASE,
+      brand: settings.brand,
       cityIn: settings.cityIn,
-      productionDaysMin: settings.productionDaysMin,
-      productionDaysMax: settings.productionDaysMax,
       collections: new Map(collections.items.map((c) => [c.slug, c.title])),
       breeds: new Map(breeds.items.map((b) => [b.slug, b.name])),
     });

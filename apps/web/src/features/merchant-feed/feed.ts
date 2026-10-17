@@ -43,8 +43,15 @@ export const FEED_SELECTION: ReadonlyArray<{ garmentSlug: string; colourCodes: r
   { garmentSlug: 'hudi-klasychnyi', colourCodes: ['chornyi'] },
 ];
 
-/** Бренд у фіді. Латиницею, як домен і як його шукають: «babaka». */
-export const FEED_BRAND = 'Babaka';
+/**
+ * Строк від замовлення до відправки, робочі дні: «до 5 днів» (рішення
+ * Олексія 17.10). Іде у фід як час обробки (handling time).
+ *
+ * Константа, а не налаштування сайту, свідомо: у налаштуваннях зараз 4–7, і
+ * фід не має мовчки змінюватися від поля, яке правлять заради текстів на
+ * сайті. Коли в адмінці поставлять 1–5, їх можна буде звʼязати.
+ */
+export const FEED_HANDLING_DAYS = { min: 1, max: 5 } as const;
 
 /**
  * Категорії Google (числові id таксономії). Футболки, світшоти й худі — це
@@ -83,11 +90,14 @@ const MAX_PRODUCT_TYPES = 5;
 export interface FeedContext {
   /** `https://babaka.shop` без слеша в кінці. */
   baseUrl: string;
+  /**
+   * Бренд — з налаштувань сайту («БАБАКА»), той самий, що в Product JSON-LD
+   * на сторінці: Google звіряє фід зі сторінкою, і два написання одного
+   * бренду там ні до чого.
+   */
+  brand: string;
   /** «у Харкові» — з налаштувань сайту. */
   cityIn: string;
-  /** Робочі дні від замовлення до відправки — з налаштувань сайту. */
-  productionDaysMin: number;
-  productionDaysMax: number;
   /** slug колекції → назва. */
   collections: ReadonlyMap<string, string>;
   /** slug породи → назва. */
@@ -274,7 +284,7 @@ export function feedItemsForOffer(offer: PrintOfferDto, ctx: FeedContext): FeedI
             + ` на виробі «${garment.name}», колір ${colourName}, розмір ${size.label}.`,
           garment.description,
           fabric ? `Тканина: ${fabric.composition.trim().replace(/([^.])$/, '$1.')} Щільність ${fabric.weightGsm} г/м².` : '',
-          `Друкуємо ${ctx.cityIn} під замовлення: ${ctx.productionDaysMin}–${ctx.productionDaysMax} робочих днів до відправки, доставка Новою поштою.`,
+          `Друкуємо ${ctx.cityIn} під замовлення: до ${FEED_HANDLING_DAYS.max} робочих днів до відправки, доставка Новою поштою.`,
         ].filter((s) => s.trim() !== '').join(' '), MAX_DESCRIPTION);
 
         items.push({
@@ -296,7 +306,7 @@ export function feedItemsForOffer(offer: PrintOfferDto, ctx: FeedContext): FeedI
            */
           availability: isOfferable(v) ? 'in_stock' : 'out_of_stock',
           price: formatPrice(v.priceMinor + offer.printPriceMinor),
-          brand: FEED_BRAND,
+          brand: ctx.brand,
           googleProductCategory: category,
           productTypes: (breedNames.length > 0 ? breedNames : [printTitle])
             .slice(0, MAX_PRODUCT_TYPES)
@@ -306,8 +316,8 @@ export function feedItemsForOffer(offer: PrintOfferDto, ctx: FeedContext): FeedI
           color: colourName,
           size: size.label,
           material: fabric ? materialOf(fabric.composition) : null,
-          minHandlingTime: ctx.productionDaysMin,
-          maxHandlingTime: Math.max(ctx.productionDaysMax, ctx.productionDaysMin),
+          minHandlingTime: FEED_HANDLING_DAYS.min,
+          maxHandlingTime: FEED_HANDLING_DAYS.max,
         });
       }
     }
