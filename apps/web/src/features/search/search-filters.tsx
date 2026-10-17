@@ -70,6 +70,9 @@ export function SearchFilters({
     const next = new URLSearchParams(params?.toString() ?? '');
     if (value === '') next.delete(key);
     else next.set(key, value);
+    // Інший фільтр — інший список: третя сторінка старого списку в новому
+    // або порожня, або не та.
+    next.delete('page');
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   }, [params, pathname, router]);
 
@@ -157,9 +160,26 @@ export function SearchFilters({
           </button>
         ))}
       </div>
-      <p className="mt-2 text-sm text-ink-muted">
-        {resultCount === 0 ? 'Жоден принт не підійшов' : `Принтів: ${resultCount}`}
-      </p>
+      {/*
+        Лічильник і порядок — на виду, а не в шторці (аудит 17.10, IA-3):
+        інакше не видно, що зараз «Спершу нові», і що сортування взагалі є.
+      */}
+      <div className="mt-2 flex items-center justify-between gap-3 text-sm text-ink-muted">
+        <span aria-live="polite">
+          {resultCount === 0 ? 'Жоден принт не підійшов' : `Принтів: ${resultCount}`}
+        </span>
+        <label className="flex items-center gap-1.5">
+          <span className="sr-only">Порядок</span>
+          <select
+            value={get('sort') === 'new' ? '' : get('sort')}
+            onChange={(e) => setParam('sort', e.target.value)}
+            className="h-11 rounded-card border-0 bg-transparent pe-1 text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-ink"
+          >
+            <option value="">Спершу нові</option>
+            {SORTS.filter((o) => o.value !== 'new').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </label>
+      </div>
     </div>
 
     <Drawer open={sheet} onClose={closeSheet} title="Фільтри">
@@ -209,7 +229,7 @@ export function SearchFilters({
 
       <div className="mt-3 flex flex-wrap items-baseline gap-3 text-sm text-ink-muted">
         {/* Лічильник рахує ПРИНТИ: фільтри не чіпають ні порід, ні колекцій. */}
-        <span>
+        <span aria-live="polite">
           {resultCount === 0 ? 'Жоден принт не підійшов' : `Принтів: ${resultCount}`}
         </span>
         {active > 0 && (

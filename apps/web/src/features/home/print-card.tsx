@@ -13,7 +13,9 @@ import type { ListName } from '@/features/analytics/lists';
  * кладуть товар на голе тло й розділяють колонки волосінню.
  *
  * Ціна на плитці є (мобільний аудит, 01.10.2026): без неї людина не
- * розуміє бюджету до кліку. Без «від» (відгук 01.10: ціни чіткі). Число —
+ * розуміє бюджету до кліку. З «від» (аудит 17.10, C-2): на фото часто
+ * світшот чи худі, а число — найдешевший виріб, і «1 190 ₴» під худі за
+ * 2 300 ₴ читалося як обіцянка, якої сторінка товару не тримає. Число —
  * `fromPriceMinor` із каталогу: найдешевший виріб, на якому принт можна
  * надрукувати, плюс друк за його розміром — і сторінка принта відкривається
  * саме з цим виробом, тож людина бачить ту саму суму. Друк різний за
@@ -37,10 +39,17 @@ export function PrintCard(
   { print, eager = false, priority = false }:
   { print: PrintCardDto; eager?: boolean; priority?: boolean },
 ) {
+  /*
+   * Плитки першого екрана (`eager`/`priority`) без `reveal`: перша з них —
+   * LCP сторінки, і прозорість до гідратації тримала її невидимою вже
+   * завантаженою на 1–2 с (аудит 17.10, тех. п. 1). Нижчі плитки й далі
+   * зʼявляються при прокрутці.
+   */
+  const reveal = eager || priority ? '' : 'reveal ';
   return (
     <Link
       href={`/prints/${print.slug}`}
-      className="group reveal flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+      className={`group ${reveal}flex flex-col px-3 pb-5 pt-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink`}
     >
       {/*
         Фото ледь наближається під курсором. Рух живе на обгортці з
@@ -60,13 +69,18 @@ export function PrintCard(
         </div>
       </div>
 
-      <div className="mt-3 border-t border-ink pt-2">
-        <p className="text-sm font-medium text-ink transition-opacity duration-200 group-hover:opacity-60">
+      {/*
+        Без товстої лінії над назвою: у сітці й так є межі рядів і колонок,
+        третя система ліній робила плитку строкатою (аудит 17.10, U7). Назва
+        й ціна розрізняються вагою: ціна жирна, назва звичайна.
+      */}
+      <div className="mt-3">
+        <p className="text-sm text-ink transition-opacity duration-200 group-hover:opacity-60">
           {print.title}
         </p>
         <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           {print.fromPriceMinor !== null && (
-            <p className="whitespace-nowrap text-sm text-ink">{formatUAH(minor(print.fromPriceMinor))}</p>
+            <p className="whitespace-nowrap text-[0.95rem] font-semibold text-ink">від {formatUAH(minor(print.fromPriceMinor))}</p>
           )}
           {/*
             Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
@@ -170,10 +184,17 @@ export function SectionHead({
         {subtitle !== undefined
           ? <p className={`max-w-prose text-sm ${body}`}>{subtitle}</p>
           : <span />}
+        {/*
+          «Дивитись усі» — дія, а не підпис: 14 px жирним із підкресленням,
+          синім бренду (на чорному — білим). Раніше 11 px капсом читалось як
+          мітка під лінією (аудит 17.10, U9).
+        */}
         {href !== undefined && (
           <Link
             href={href}
-            className={`label-eyebrow shrink-0 border-b pb-0.5 hover:opacity-70 ${rule} ${head}`}
+            className={onDark
+              ? 'shrink-0 text-sm font-semibold text-surface underline decoration-2 underline-offset-4 hover:opacity-70'
+              : 'link-brand shrink-0 text-sm'}
           >
             {hrefLabel ?? 'Дивитись усі'} →
           </Link>

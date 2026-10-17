@@ -11,6 +11,12 @@
      */
     scroll-behavior: smooth;
     scroll-padding-top: 5.5rem;
+    /*
+     * Знизу екран перекривають плашка cookie (`--consent-h`) і липка смуга
+     * «Додати в кошик» (`--buybar-h`). Без відступу Tab ставив сфокусований
+     * елемент рівно під них (аудит 17.10, WCAG 2.4.11).
+     */
+    scroll-padding-bottom: calc(var(--consent-h, 0px) + var(--buybar-h, 0px) + 1rem);
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -23,6 +29,24 @@
    * тексту, не плакат.
    */
   h1, h2 { @apply font-display tracking-tight; }
+  /*
+   * Довге слово великим кеглем не має розпирати сторінку. «КОНФІДЕНЦІЙНОСТІ»
+   * у H1 /pryvatnist було ширше за екран 360–390 px: сторінка їхала вбік, і
+   * кнопка «Ок» плашки опинялась за краєм (аудит 17.10, U2). При зумі 200 %
+   * так само обрізались заголовки секцій. `break-word` ламає слово лише
+   * тоді, коли воно саме не влазить у рядок (на звичайному екрані нічого не
+   * змінюється). Автоматичні дефіси — тільки в заголовку CMS-сторінок
+   * (`HeroPlain`): глобально вони різали слова, які мали просто перейти на
+   * новий рядок («ЩАСЛИ-ВИХ» у героях, «ПОРО-ДИ»).
+   */
+  h1, h2, h3 { overflow-wrap: break-word; }
+  /*
+   * Один регістр заголовків на всій вітрині — капс, як на «Про нас», «Опт» і
+   * в героях (аудит 17.10, U3). Раніше сусідні сторінки розходились:
+   * «ПОРОДИ» капсом, «Колекції» ні. Правило на рівні вітрини (`.storefront`
+   * у PublicShell), щоб не чіпати адмінку, де заголовки — службові.
+   */
+  .storefront h1, .storefront h2 { text-transform: uppercase; }
   h1 { @apply font-bold; }
   h2 { @apply font-bold; }
   h3 { @apply font-semibold tracking-tight; }
@@ -74,6 +98,33 @@
   .ghost-word { @apply text-ghost-ink; }
 
   /*
+   * Жовта підкладка бренду. Приглушені сірі тексту на жовтому не проходять
+   * AA (`ink.subtle` 3.5:1, привид 2.5:1), тож усередині вони темнішають до
+   * чорнила; привид лишається «тихішим» тоном, але читабельним (5.8:1).
+   */
+  .tone-yellow { background-color: theme('colors.brand.yellow'); }
+  .tone-yellow .text-ink-muted,
+  .tone-yellow .text-ink-subtle,
+  .tone-yellow .label-eyebrow { color: theme('colors.ink.DEFAULT'); }
+  .tone-yellow .ghost-word { color: #4a4a45; }
+
+  /*
+   * Наліпка — прийом із «Про нас» («раніше — Kudos print»): обведена
+   * пігулка трохи навскіс. На вітрині — для коротких фактів над заголовком.
+   */
+  .sticker {
+    @apply inline-block -rotate-2 rounded-pill border-2 border-ink bg-surface px-4 py-1.5 text-sm font-medium text-ink;
+  }
+
+  /* Посилання в тексті: синій бренду, темніший відтінок для дрібного кеглю. */
+  .link-brand {
+    @apply font-semibold text-brand-blue-ink underline decoration-2 underline-offset-4 hover:decoration-brand-blue;
+  }
+  /* На жовтому синій дає 3.8:1, на чорному зникає — там посилання чорнилом / білим. */
+  .tone-yellow .link-brand { color: theme('colors.ink.DEFAULT'); }
+  .bg-ink .link-brand { color: theme('colors.surface.DEFAULT'); }
+
+  /*
    * Хвиляста лінія під виділеним словом у заголовку на фотографії.
    *
    * Намальована, а не `text-decoration: wavy`: браузерна хвиля тонка, її
@@ -84,9 +135,13 @@
    * Лінія живе у `::after`, а не в `background` самого слова: інакше вона
    * зникала б на перенесенні рядка разом із другою половиною фону.
    */
+  /*
+   * Без `nowrap`: при зумі 200 % слово під хвилею (≈250 px) не влазило в
+   * кадр 195 px, і герой з `overflow-hidden` його обрізав (аудит 17.10,
+   * WCAG 1.4.10). Одне слово й так не переноситься без потреби.
+   */
   .wave-underline {
     position: relative;
-    white-space: nowrap;
   }
   /*
    * Лінія — намальований від руки штрих із макета (`/wave-underline.png`),
@@ -199,13 +254,23 @@
     @apply relative text-sm text-ink transition-opacity duration-200 hover:opacity-60;
   }
 
-  /* Поява при прокрутці. Клас `is-in` вішає спостерігач у `Reveal`. */
-  .reveal {
+  /*
+   * Поява при прокрутці. Клас `is-in` вішає спостерігач у `Reveal`.
+   *
+   * За замовчуванням `.reveal` ВИДИМИЙ. Ховає його лише клас `reveal-ready`
+   * на `<html>`, який ставить `Reveal` уже після того, як позначив усе, що
+   * стоїть на першому екрані, як `is-in`. Раніше `opacity: 0` діяв одразу з
+   * CSS, і перша картка каталогу (LCP) чекала на React і спостерігач: на
+   * мобільному 4G це давало LCP 7–10 с (аудит 17.10, тех. п. 1). Тепер
+   * анімується лише те, що нижче першого екрана, а без JS видно все.
+   */
+  .reveal-ready .reveal:not(.is-in) {
     opacity: 0;
     transform: translateY(14px);
-    transition: opacity .55s cubic-bezier(.22,.61,.36,1), transform .55s cubic-bezier(.22,.61,.36,1);
   }
-  .reveal.is-in { opacity: 1; transform: none; }
+  .reveal-ready .reveal {
+    transition: opacity .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1);
+  }
   /* Сходинки затримки: заголовок, текст, кнопки — саме в такому порядку. */
   .reveal-1 { transition-delay: .07s; }
   .reveal-2 { transition-delay: .14s; }
@@ -221,7 +286,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; transition: none; }
+    .reveal, .reveal-ready .reveal:not(.is-in) { opacity: 1; transform: none; transition: none; }
     .link-sweep::after { transition: none; }
     .scroll-hint { animation: none; }
   }

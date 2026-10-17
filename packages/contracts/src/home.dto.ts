@@ -28,6 +28,11 @@ export const BreedCardDto = z.object({
    * картинки; це не помилка, а «намалюємо на замовлення».
    */
   previewUrl: z.string().default(''),
+  /**
+   * «Також шукають як». Потрібні переліку порід, щоб фільтр «знайди свою
+   * породу» знаходив «йорк» і «стаф», а не лише повну назву.
+   */
+  synonyms: z.array(z.string()).optional(),
 });
 export type BreedCardDto = z.infer<typeof BreedCardDto>;
 
@@ -124,5 +129,16 @@ export const SearchResultDto = z.object({
   collections: z.array(CollectionCardDto),
   prints: z.array(PrintCardDto),
   total: z.number().int().nonnegative(),
+  /**
+   * Скільки принтів підійшло всього: `prints` обрізаний до першої сторінки,
+   * а «футболка» чи «собака» — це весь каталог, і сторінка має чесно сказати
+   * «показано 24 з 84» та дати посилання на решту.
+   */
+  printsTotal: z.number().int().nonnegative().default(0),
+  /**
+   * Вироби, названі в запиті: «худі з таксою» → HOODIE. Сервер уже звузив
+   * ними принти; сторінка показує, що саме так зрозуміла запит.
+   */
+  garmentTypes: z.array(GarmentType).default([]),
 });
 export type SearchResultDto = z.infer<typeof SearchResultDto>;

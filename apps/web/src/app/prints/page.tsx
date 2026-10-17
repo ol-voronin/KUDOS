@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { BreedListDto, CollectionListDto, PrintListDto, RangeDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintGrid } from '@/features/home/print-card';
+import { DrawYourDogCta } from '@/features/home/brand-cta';
 import { plural } from '@/features/home/blocks';
 import { SearchFilters, type FilterOption } from '@/features/search/search-filters';
 import { serverFetchOrNull } from '@/lib/server-api';
@@ -17,6 +18,12 @@ const FILTER_KEYS = ['breed', 'collection', 'garmentType', 'sizeTier', 'inStock'
 const GARMENT_LABELS: Record<string, string> = {
   TSHIRT: 'Футболка', SWEATSHIRT: 'Світшот', HOODIE: 'Худі',
   ZIP_HOODIE: 'Зіп-худі', JOGGERS: 'Джогери', TOTE_BAG: 'Шопер',
+};
+
+/** «Принти на худі»: заголовок і лічильник, коли обрано виріб. */
+const GARMENT_ON: Record<string, string> = {
+  TSHIRT: 'на футболках', SWEATSHIRT: 'на світшотах', HOODIE: 'на худі',
+  ZIP_HOODIE: 'на зіп-худі', JOGGERS: 'на джогерах', TOTE_BAG: 'на шоперах',
 };
 
 function one(value: string | string[] | undefined): string {
@@ -48,13 +55,21 @@ export default async function PrintsPage({ searchParams }: Search) {
     if (value !== '') query.set(key, value);
   }
 
-  const [data, breedList, collectionList, range] = await Promise.all([
+  const [data, breedList, collectionList, range, site] = await Promise.all([
     serverFetchOrNull(`/catalog/prints?${query.toString()}`, PrintListDto),
     serverFetchOrNull('/catalog/breeds', BreedListDto, 300),
     serverFetchOrNull('/catalog/collections', CollectionListDto, 300),
     serverFetchOrNull('/catalog/range', RangeDto, 300),
+    getSettings(),
   ]);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.perPage)) : 1;
+  /*
+   * Обраний виріб видно в заголовку, а ціни на картках сервер уже рахує саме
+   * для нього (аудит 17.10, IA-3): раніше «Худі» лишало все як було — ті
+   * самі 84 принти з ціною футболки, і здавалося, що фільтр зламаний.
+   * Принтів справді стільки ж: кожен друкуємо на будь-якому виробі.
+   */
+  const garmentOn = GARMENT_ON[one(searchParams?.['garmentType'])];
 
   const breedOptions: FilterOption[] = (breedList?.items ?? [])
     .filter((b) => b.printCount > 0)
@@ -81,12 +96,29 @@ export default async function PrintsPage({ searchParams }: Search) {
           <span className="text-ink">Усі принти</span>
         </nav>
 
-        <h1 className="mt-3 font-display text-hero font-bold text-ink">Усі принти</h1>
+        {/*
+          Перший екран посадкової каже «що, почім і як отримати» (аудит 17.10,
+          C-4): кількість — наліпкою (прийом «Про нас»), ціна й строк — рядком
+          під заголовком. Строк — з налаштувань сайту (до 5 днів, рішення 17.10).
+          З фільтром за виробом заголовок і ціни — саме про цей виріб (IA-3).
+        */}
         {data && data.total > 0 && (
-          <p className="mt-3 text-lg text-ink-muted">
-            {data.total} {plural(data.total, 'принт', 'принти', 'принтів')} у каталозі
+          <p className="sticker mt-5">
+            {data.total} {plural(data.total, 'принт', 'принти', 'принтів')}
+            {breedOptions.length > 0 && <> · {breedOptions.length} {plural(breedOptions.length, 'порода', 'породи', 'порід')}</>}
           </p>
         )}
+        <h1 className="mt-4 font-display text-hero font-bold text-ink">
+          {garmentOn
+            ? <>Принти <span className="wave-underline">{garmentOn}</span></>
+            : <>Усі <span className="wave-underline">принти</span></>}
+        </h1>
+        <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
+          {garmentOn
+            ? <>Друкуємо {garmentOn}, ціни на картках — саме за цей виріб.</>
+            : <>Футболки, світшоти й худі з собаками. Ціна залежить від виробу: на картці — найдешевший.</>}{' '}
+          Друкуємо {site.cityIn}, строк — до {site.productionDaysMax} {plural(site.productionDaysMax, 'дня', 'днів', 'днів')}.
+        </p>
 
         <Suspense fallback={null}>
           <SearchFilters
@@ -130,6 +162,8 @@ export default async function PrintsPage({ searchParams }: Search) {
             ) : <span />}
           </nav>
         )}
+
+        <DrawYourDogCta />
       </div>
     </PublicShell>
   );

@@ -78,10 +78,18 @@ export default {
         plum:   { DEFAULT: '#5e2b4a', soft: '#f5edf2', strong: '#48203a', ink: '#2e1425' },
 
         /*
-         * Жовтий бренду (Primitives/brand у Figma): декор — хвилі, дудли,
-         * підкладки. Червоний `accent` лишається тільки для подій.
+         * Палітра бренду (design.md): жовтий, червоний, синій, чорний, білий.
+         *
+         *   yellow    — декор (хвилі, дудли) і підкладка фінальних закликів;
+         *               текст на ньому лише чорний (12.8:1).
+         *   blue      — фірмовий синій #3772FF. Білий текст на ньому 4.2:1,
+         *               тобто лише великий (≥ 24 px або 19 px жирний).
+         *   blue-ink  — той самий синій, темніший для дрібного тексту й
+         *               посилань: 5.9:1 на білому, 5.4:1 на кремовому.
+         *   red       — = `accent`, подія (знижка, помилка). Поруч із синім не
+         *               ставимо (правило Олексія 02.10).
          */
-        brand: { yellow: '#fdca41' },
+        brand: { yellow: '#fdca41', blue: '#3772ff', 'blue-ink': '#2a5bd7', red: '#df2a35', black: '#080708' },
 
         info: { DEFAULT: '#3a5a85', soft: '#edf1f6' },
         danger: { DEFAULT: '#c02a12', soft: '#fdeae6' },
@@ -122,7 +130,11 @@ export default {
       },
       fontSize: {
         /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */
-        'hero': ['clamp(2.1rem, 1.1rem + 4.4vw, 6rem)', { lineHeight: '0.95', letterSpacing: '-0.01em' }],
+        /*
+         * Нижня межа 1.75rem (було 2.1): на 360 px довге слово капсом
+         * Unbounded 800 у 2.1rem ширше за колонку (аудит 17.10, U2).
+         */
+        'hero': ['clamp(1.75rem, 1rem + 4.6vw, 6rem)', { lineHeight: '0.95', letterSpacing: '-0.01em' }],
         /** Заголовок секції — той самий набір, на щабель менший. */
         'section': ['clamp(1.4rem, 1rem + 1.9vw, 2.4rem)', { lineHeight: '1.02', letterSpacing: '-0.01em' }],
       },
@@ -143,5 +155,11 @@ export default {
       animation: { marquee: 'marquee 60s linear infinite' },
     },
   },
+  /*
+   * Hover лише там, де він справді є (миша). На телефоні тап «залипав»
+   * у hover-стані: назва другої картки каталогу лишалась сірою після
+   * повернення назад (аудит 17.10, U7).
+   */
+  future: { hoverOnlyWhenSupported: true },
   plugins: [],
 } satisfies Config;

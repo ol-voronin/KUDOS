@@ -5,10 +5,11 @@ import { CollectionListDto, BreedListDto, CollectionPageDto, PageListDto } from 
 import { PublicShell } from '@/components/public-shell';
 import { ArticleGrid } from '@/features/articles/article-card';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
+import { DrawYourDogCta, WaveLastWord } from '@/features/home/brand-cta';
 import { BreedStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
-import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
+import { breadcrumbJsonLd, breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
 import { LIST } from '@/features/analytics/lists';
@@ -72,6 +73,11 @@ export default async function CollectionPage({ params }: Params) {
   return (
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(collection.title, prints, BASE)} />}
+      <JsonLd data={breadcrumbJsonLd([
+        { name: 'Головна', url: `${BASE}/` },
+        { name: 'Колекції', url: `${BASE}/collections` },
+        { name: collection.title, url: `${BASE}/collections/${collection.slug}` },
+      ])} />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
@@ -82,13 +88,24 @@ export default async function CollectionPage({ params }: Params) {
           <span className="text-ink">{collection.title}</span>
         </nav>
 
-        <h1 className="mt-3 font-display text-hero font-bold text-ink">{collection.title}</h1>
+        {/* Наліпка й хвиля — ті самі прийоми, що на «Про нас» (аудит 17.10, U1). */}
+        {prints.length > 0 && (
+          <p className="sticker mt-5">
+            Колекція · {prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')}
+          </p>
+        )}
+        <h1 className="mt-4 font-display text-hero font-bold text-ink">
+          <WaveLastWord text={collection.title} />
+        </h1>
         {collection.description && (
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">{collection.description}</p>
         )}
         {prints.length > 0 && (
-          <p className="mt-2 text-ink-subtle">
-            {prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')}
+          <p className="mt-3">
+            {/* Фільтр за породою й виробом уже є в каталозі (аудит 17.10, IA-9); кількість — у наліпці вище. */}
+            <Link href={`/prints?collection=${collection.slug}`} className="text-sm font-medium text-ink underline">
+              Фільтрувати за породою чи виробом
+            </Link>
           </p>
         )}
 
@@ -130,6 +147,8 @@ export default async function CollectionPage({ params }: Params) {
             <ArticleGrid articles={articles} />
           </section>
         )}
+
+        {prints.length > 0 && <DrawYourDogCta />}
 
         <section className="mt-16">
           <SectionHead title="Дивитись інакше" subtitle="Той самий каталог, згрупований по-іншому." />

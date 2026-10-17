@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { BreedCardDto, CollectionCardDto } from '@dt/contracts';
+import { BlobImage } from '@/components/blob-image';
 import { PrintThumb } from '@/components/print-thumb';
 
 /**
@@ -60,13 +61,13 @@ function BreedMedallion({ src, name }: { src: string; name: string }) {
     );
   }
   return (
-    <span className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-surface">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-card bg-surface">
+      {/* 56 px слот: копія ≈112 px замість оригіналу 900×900 (аудит 17.10). */}
+      <BlobImage
         src={src}
         alt={name}
-        loading="lazy"
-        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transform-none"
+        sizes="56px"
+        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transform-none"
       />
     </span>
   );

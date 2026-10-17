@@ -69,12 +69,20 @@ export function garmentsFor(print: PrintRow, ctx: OfferContext): OfferableGarmen
   return banned === undefined ? base : base.filter((g) => !banned.has(g.id));
 }
 
+/**
+ * `onlyTypes` — коли в каталозі обрано виріб («Худі»): ціна «від» і
+ * наявність рахуються лише по ньому. Інакше фільтр «Виріб» нічого не
+ * міняв на екрані: кожен принт друкується на всьому, тож список той самий,
+ * а «від 1 190 ₴» — ціна футболки на сторінці худі (аудит 17.10, IA-3).
+ */
 export function toPrintCard(
   print: PrintRow,
   ctx: OfferContext,
   printPrices: PrintPriceTable,
+  onlyTypes: readonly string[] = [],
 ): PrintCardDto {
-  const offerable = garmentsFor(print, ctx);
+  const all = garmentsFor(print, ctx);
+  const offerable = onlyTypes.length === 0 ? all : all.filter((g) => onlyTypes.includes(g.type));
   const printPrice = printPrices[print.sizeTier];
 
   // Ціни немає, коли принт нікуди не привʼязаний — і це не нуль, а «невідомо».
@@ -109,11 +117,12 @@ export function toPrintCard(
 export function matchesGarmentFilters(
   print: PrintRow,
   ctx: OfferContext,
-  filters: { readonly garmentType?: string; readonly line?: string },
+  filters: { readonly garmentType?: string; readonly garmentTypes?: readonly string[]; readonly line?: string },
 ): boolean {
-  if (filters.garmentType === undefined && filters.line === undefined) return true;
+  const types = filters.garmentTypes ?? (filters.garmentType === undefined ? [] : [filters.garmentType]);
+  if (types.length === 0 && filters.line === undefined) return true;
   return garmentsFor(print, ctx).some(
-    (g) => (filters.garmentType === undefined || g.type === filters.garmentType)
+    (g) => (types.length === 0 || types.includes(g.type))
       && (filters.line === undefined || g.line === filters.line),
   );
 }

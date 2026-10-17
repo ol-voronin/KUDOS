@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BlobImage } from '@/components/blob-image';
 import { BreedListDto, PrintListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { Section } from '@/components/section';
@@ -165,16 +166,16 @@ export default async function AboutPage() {
         </h2>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { name: 'Боня', role: 'муза · модель · контроль якості', duty: 'Перевіряє м’якість кожного худі. Методом лежання. Без її схвалення жодна партія не їде.', pay: 'смаколики', tone: 'bg-teal-soft', tilt: '-rotate-1' },
-            { name: 'Паштет', role: 'внутрішній аудит · відділ кадрів', duty: 'Єдиний кіт у бренді про собак. Сідає на кожну нову партію і досі не визнає, що це гарно.', pay: 'паштет (очевидно)', tone: 'bg-plum-soft', tilt: 'rotate-1', stamp: 'Так, він кіт' },
-            { name: 'Даша', role: 'співзасновниця', duty: 'Вирішує, що ми робимо, як це звучить і чому саме так. Остання інстанція після Боні.', pay: 'задоволення від справи', tone: 'bg-sun-soft', tilt: 'rotate-1' },
-            { name: 'Олексій', role: 'співзасновник', duty: 'Друк, сайт і все, що з проводами. Відповідає, коли щось зламалось, — навіть якщо це зробив Паштет.', pay: 'задоволення від справи', tone: 'bg-accent-soft', tilt: '-rotate-1' },
+            { name: 'Боня', role: 'муза · модель · контроль якості', duty: 'Перевіряє м’якість кожного худі. Методом лежання. Без її схвалення жодна партія не їде.', pay: 'смаколики', tone: 'tone-yellow', tilt: '-rotate-1' },
+            { name: 'Паштет', role: 'внутрішній аудит · відділ кадрів', duty: 'Єдиний кіт у бренді про собак. Сідає на кожну нову партію і досі не визнає, що це гарно.', pay: 'паштет (очевидно)', tone: 'bg-surface', tilt: 'rotate-1', stamp: 'Так, він кіт' },
+            { name: 'Даша', role: 'співзасновниця', duty: 'Вирішує, що ми робимо, як це звучить і чому саме так. Остання інстанція після Боні.', pay: 'задоволення від справи', tone: 'tone-yellow', tilt: 'rotate-1' },
+            { name: 'Олексій', role: 'співзасновник', duty: 'Друк, сайт і все, що з проводами. Відповідає, коли щось зламалось, — навіть якщо це зробив Паштет.', pay: 'задоволення від справи', tone: 'bg-surface', tilt: '-rotate-1' },
           ].map((p) => (
             <article key={p.name} className={`relative flex flex-col rounded-3xl border border-ink ${p.tone} p-6 transition-transform duration-300 hover:rotate-0 motion-reduce:transform-none ${p.tilt}`}>
               {/* Дірка під ремінець бейджа — дрібниця, через яку картка читається як посвідчення. */}
               <span aria-hidden className="mx-auto -mt-2 mb-4 block h-2 w-12 rounded-full bg-ink/80" />
               {p.stamp !== undefined && (
-                <span className="absolute -right-3 -top-3 rotate-12 rounded-md border-2 border-accent bg-plum-soft px-2 py-0.5 font-display text-[0.7rem] font-bold uppercase text-accent">
+                <span className="absolute -right-3 -top-3 rotate-12 rounded-md border-2 border-accent bg-surface px-2 py-0.5 font-display text-[0.7rem] font-bold uppercase text-accent">
                   {p.stamp}
                 </span>
               )}
@@ -202,9 +203,8 @@ export default async function AboutPage() {
             {gallery.map((b, i) => (
               <li key={b.id}>
                 <Link href={`/breeds/${b.slug}`} className="group block">
-                  <span className={`block aspect-square overflow-hidden rounded-card border border-line bg-surface transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transform-none ${i % 3 === 1 ? 'rotate-1' : i % 3 === 2 ? '-rotate-1' : ''}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={b.previewUrl} alt={b.name} loading="lazy" className="h-full w-full object-cover" />
+                  <span className={`relative block aspect-square overflow-hidden rounded-card border border-line bg-surface transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transform-none ${i % 3 === 1 ? 'rotate-1' : i % 3 === 2 ? '-rotate-1' : ''}`}>
+                    <BlobImage src={b.previewUrl} alt={b.name} sizes="(min-width: 1024px) 200px, (min-width: 640px) 25vw, 33vw" className="object-cover" />
                   </span>
                   <span className="mt-2 block truncate text-sm font-medium text-ink">{b.name}</span>
                 </Link>

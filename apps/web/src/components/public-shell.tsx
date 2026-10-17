@@ -159,7 +159,8 @@ export async function PublicFooter() {
       */}
       <div className="mt-6 border-t border-line">
         <div className="mx-auto max-w-7xl px-4 py-5 text-sm text-ink-subtle sm:px-6">
-          {site.legalEntityName}
+          {/* Коротка форма («ФОП Воронін О. П.»): повна назва живе в оферті. */}
+          {site.legalEntityShort}
           {site.taxNumber ? <> · РНОКПП {site.taxNumber}</> : null}
         </div>
       </div>
@@ -201,7 +202,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           До змісту
         </a>
       </div>
-      <div className="flex min-h-screen flex-col">
+      <div className="storefront flex min-h-screen flex-col">
         <PublicHeader />
         <main id="main" className="flex-1">
           {children}
