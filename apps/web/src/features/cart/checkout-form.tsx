@@ -5,18 +5,22 @@ import { useEffect, useRef, useState } from 'react';
 import {
   OrderDraftResponseDto, formatUAH, minor, type DeliveryMethod,
 } from '@dt/contracts';
-import { Button, ErrorBanner, FieldShell, Skeleton, inputClass } from '@/components/ui';
+import { Button, ErrorBanner, Skeleton } from '@/components/ui';
 import { attribution, hashPhone, track } from '@/features/analytics/client';
 import {
   ga4AddPaymentInfo, ga4AddShippingInfo, ga4BeginCheckout, itemFromCartLine, type Ga4Item,
 } from '@/features/analytics/ga4';
 import { rememberOrder } from '@/features/analytics/order-snapshot';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { phoneEventHandlers } from '@/features/forms/phone-input';
+import { Field, TextArea } from '@/features/forms/fields';
+import { phoneInputHandlers, phoneValueOnBlur } from '@/features/forms/phone-input';
 import { toCartItems, useCart } from './cart-store';
+import {
+  FIELD_IDS, fieldError, firstInvalid, validateCheckout,
+  type CheckoutErrors, type CheckoutField, type CheckoutValues,
+} from './checkout-validation';
+import { OrderTerms, ShippingRow, type OrderTermsSettings } from './order-terms-view';
 import { useCartQuote } from './use-cart-quote';
-
-const PHONE_PATTERN = /^\+380\d{9}$/;
 
 /**
  * Оформлення: контакти, доставка, підтвердження. Якщо Monobank підключений,
@@ -35,6 +39,15 @@ const PHONE_PATTERN = /^\+380\d{9}$/;
  * Тут — щоб сказати про помилку одразу, а не після відправлення. На сервері
  * — тому що клієнтську перевірку можна обійти, а телефон із помилкою
  * означає замовлення, на яке неможливо відповісти.
+ *
+ * ── Чому публічні поля, а не адмінські ────────────────────────────────
+ *
+ * Каса була зібрана на полях адмінки: 14 px (iOS Safari зумить сторінку на
+ * фокусі), 38 px заввишки, рамка 1.28:1, помилка — одна плашка в підсумку,
+ * без `aria-invalid` і звʼязку з полем (аудит 17.10.2026, 03-ux #11–12,
+ * 05-a11y). Публічний `Field` усе це вже вміє: 16 px, 52 px, помилка під
+ * полем через `aria-describedby`. Перевірка — на blur і при відправленні,
+ * фокус — на перше поле з помилкою (`checkout-validation.ts`).
  */
 const DELIVERY_OPTIONS: ReadonlyArray<{ value: DeliveryMethod; label: string; hint: string }> = [
   { value: 'NP_BRANCH', label: 'Відділення Нової Пошти', hint: 'Номер відділення' },
@@ -48,7 +61,9 @@ const DELIVERY_OPTIONS: ReadonlyArray<{ value: DeliveryMethod; label: string; hi
  * але кнопка неактивна. Справжній захист — у middleware.ts, кнопка лише
  * не дає натиснути й здивуватись помилці.
  */
-export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: boolean }) {
+export function CheckoutForm({
+  orderingDisabled = false, settings,
+}: { orderingDisabled?: boolean; settings: OrderTermsSettings }) {
   const router = useRouter();
   const { lines, clear, ready } = useCart();
   const { data: quote, isLoading } = useCartQuote();
@@ -62,8 +77,31 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
   const [recipientPhone, setRecipientPhone] = useState('');
   const [otherRecipient, setOtherRecipient] = useState(false);
   const [note, setNote] = useState('');
+  const [errors, setErrors] = useState<CheckoutErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+
+  const values: CheckoutValues = { name, phone, method, city, branch, otherRecipient, recipientPhone };
+
+  /*
+   * Помилка поля зʼявляється, коли людина з нього пішла (blur), а не на
+   * кожну літеру: червоне поле посеред набору номера — це докір за те, що
+   * ще не дописав. Але щойно помилку показано, вона перераховується на
+   * кожну зміну й зникає, як тільки поле стало правильним.
+   */
+  function check(field: CheckoutField, patch: Partial<CheckoutValues> = {}): void {
+    const message = fieldError(field, { ...values, ...patch });
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  }
+  function recheck(field: CheckoutField, patch: Partial<CheckoutValues>): void {
+    if (errors[field] !== undefined) check(field, patch);
+  }
+
+  const phoneField = phoneInputHandlers(phone, (v) => { setPhone(v); recheck('phone', { phone: v }); });
+  const recipientPhoneField = phoneInputHandlers(recipientPhone, (v) => {
+    setRecipientPhone(v);
+    recheck('recipientPhone', { recipientPhone: v });
+  });
 
   const payOnline = quote?.payOnline === true;
   const option = DELIVERY_OPTIONS.find((o) => o.value === method);
@@ -105,6 +143,8 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
   const shippingSent = useRef(false);
   function chooseMethod(next: DeliveryMethod): void {
     setMethod(next);
+    // Інший спосіб — інший текст помилки для адреси («номер поштомата»).
+    if (errors.branch !== undefined) check('branch', { method: next });
     if (shippingSent.current && next === method) return;
     shippingSent.current = true;
     const label = DELIVERY_OPTIONS.find((o) => o.value === next)?.label ?? next;
@@ -114,18 +154,17 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
-    if (orderingDisabled) return;
 
-    if (!PHONE_PATTERN.test(phone)) {
-      setError('Введи телефон у форматі +380XXXXXXXXX');
+    const found = validateCheckout(values);
+    setErrors(found);
+    const first = firstInvalid(found);
+    if (first !== undefined) {
+      document.getElementById(FIELD_IDS[first])?.focus();
       return;
     }
-    if (otherRecipient && recipientPhone !== '' && !PHONE_PATTERN.test(recipientPhone)) {
-      setError('Телефон одержувача теж має бути у форматі +380XXXXXXXXX');
-      return;
-    }
-    if (needsAddress && (city.trim() === '' || branch.trim() === '')) {
-      setError('Вкажи місто й відділення');
+    // Превʼю: форму можна перевірити цілком, але замовлення не йде.
+    if (orderingDisabled) {
+      setError('Це тестова версія сайту: замовлення тут вимкнене.');
       return;
     }
 
@@ -135,7 +174,7 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
         method: 'POST',
         body: JSON.stringify({
           items: toCartItems(lines),
-          customer: { name, phone, marketingConsent: false },
+          customer: { name: name.trim(), phone, marketingConsent: false },
           delivery: {
             method,
             city: needsAddress ? city.trim() : '',
@@ -185,7 +224,9 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
       }
       router.push(`/order/${result.orderId}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Не вдалося оформити замовлення');
+      setError(err instanceof ApiError
+        ? err.message
+        : 'Не вийшло оформити. Спробуй ще раз або напиши нам у Telegram, оформимо вручну.');
       setSending(false);
     }
   }
@@ -199,72 +240,82 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-10 lg:grid-cols-[1fr_minmax(0,22rem)]">
+    <form onSubmit={submit} noValidate className="grid gap-10 lg:grid-cols-[1fr_minmax(0,22rem)]">
       <div className="flex flex-col gap-8">
         <section>
           <h2 className="label-eyebrow mb-4">Хто замовляє</h2>
           <div className="flex flex-col gap-4 sm:max-w-md">
-            <FieldShell label="Імʼя" htmlFor="co-name">
-              <input
-                id="co-name" type="text" required autoComplete="name" maxLength={120}
-                value={name} onChange={(e) => setName(e.target.value)}
-                className={`${inputClass()} w-full`}
-              />
-            </FieldShell>
-            <FieldShell label="Телефон" htmlFor="co-phone" hint="+38 уже стоїть — допиши номер з нуля: 0XX XXX XX XX">
-              <input
-                id="co-phone" type="tel" required autoComplete="tel" inputMode="tel"
-                placeholder="+380XXXXXXXXX"
-                {...phoneEventHandlers(phone, setPhone)}
-                className={`${inputClass()} w-full`}
-              />
-            </FieldShell>
+            <Field
+              id={FIELD_IDS.name} label="Імʼя" required autoComplete="name" maxLength={120}
+              value={name}
+              onChange={(v) => { setName(v); recheck('name', { name: v }); }}
+              onBlur={() => check('name')}
+              error={errors.name}
+            />
+            <Field
+              id={FIELD_IDS.phone} label="Телефон" type="tel" required autoComplete="tel"
+              placeholder="+38 0XX XXX XX XX"
+              hint="+38 уже стоїть, допиши номер з 0: 0XX XXX XX XX"
+              {...phoneField}
+              onBlur={() => {
+                const v = phoneValueOnBlur(phone);
+                setPhone(v);
+                check('phone', { phone: v });
+              }}
+              error={errors.phone}
+            />
           </div>
         </section>
 
         <section>
-          <h2 className="label-eyebrow mb-4">Куди везти</h2>
+          {/*
+            `fieldset` + `legend`: без них диктор казав «Відділення Нової
+            Пошти, перемикач, 1 з 4» і не казав, про що вибір (05-a11y).
+          */}
+          <fieldset className="min-w-0">
+            <legend className="label-eyebrow mb-4">Куди везти</legend>
 
-          <div className="flex flex-col gap-2 sm:max-w-md">
-            {DELIVERY_OPTIONS.map((o) => (
-              <label
-                key={o.value}
-                className={`flex cursor-pointer items-center gap-3 rounded-card border px-4 py-3 text-sm transition-colors ${
-                  method === o.value ? 'border-ink bg-surface-sunken' : 'border-line hover:border-line-strong'
-                }`}
-              >
-                <input
-                  type="radio" name="delivery" value={o.value}
-                  checked={method === o.value}
-                  onChange={() => chooseMethod(o.value)}
-                  className="h-4 w-4 accent-ink"
-                />
-                <span className="text-ink">{o.label}</span>
-              </label>
-            ))}
-          </div>
+            <div className="flex flex-col gap-2 sm:max-w-md">
+              {DELIVERY_OPTIONS.map((o) => (
+                <label
+                  key={o.value}
+                  className={`flex min-h-13 cursor-pointer items-center gap-3 rounded-card border px-4 py-3 text-base transition-colors focus-within:ring-2 focus-within:ring-ink focus-within:ring-offset-2 ${
+                    method === o.value ? 'border-ink bg-surface-sunken' : 'border-[#868680] hover:border-ink'
+                  }`}
+                >
+                  <input
+                    type="radio" name="delivery" value={o.value}
+                    checked={method === o.value}
+                    onChange={() => chooseMethod(o.value)}
+                    className="h-5 w-5 accent-ink"
+                  />
+                  <span className="text-ink">{o.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           {needsAddress && (
             <div className="mt-4 flex flex-col gap-4 sm:max-w-md">
-              <FieldShell label="Місто" htmlFor="co-city">
-                <input
-                  id="co-city" type="text" required maxLength={120}
-                  autoComplete="address-level2" placeholder="Харків"
-                  value={city} onChange={(e) => setCity(e.target.value)}
-                  className={`${inputClass()} w-full`}
-                />
-              </FieldShell>
-              <FieldShell
-                label={option?.hint ?? 'Відділення'}
-                htmlFor="co-branch"
-                hint="Можна просто номер — решту знайдемо самі"
-              >
-                <input
-                  id="co-branch" type="text" required maxLength={200}
-                  value={branch} onChange={(e) => setBranch(e.target.value)}
-                  className={`${inputClass()} w-full`}
-                />
-              </FieldShell>
+              <Field
+                id={FIELD_IDS.city} label="Місто" required autoComplete="address-level2" maxLength={120}
+                placeholder="Харків"
+                value={city}
+                onChange={(v) => { setCity(v); recheck('city', { city: v }); }}
+                onBlur={() => check('city')}
+                error={errors.city}
+              />
+              <Field
+                id={FIELD_IDS.branch} label={option?.hint ?? 'Відділення'} required maxLength={200}
+                // Номер відділення чи поштомата — цифрова клавіатура; адреса курʼєра — звичайна.
+                inputMode={method === 'NP_COURIER' ? 'text' : 'numeric'}
+                autoComplete={method === 'NP_COURIER' ? 'street-address' : 'off'}
+                hint={method === 'NP_COURIER' ? undefined : 'Можна просто номер — решту знайдемо самі'}
+                value={branch}
+                onChange={(v) => { setBranch(v); recheck('branch', { branch: v }); }}
+                onBlur={() => check('branch')}
+                error={errors.branch}
+              />
             </div>
           )}
 
@@ -274,42 +325,45 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
             більшості вони не потрібні, а два зайві поля на касі коштують
             дорожче за одну галочку.
           */}
-          <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm text-ink">
+          <label className="mt-4 flex min-h-11 cursor-pointer items-center gap-3 text-base text-ink">
             <input
               type="checkbox" checked={otherRecipient}
-              onChange={(e) => setOtherRecipient(e.target.checked)}
-              className="h-4 w-4 accent-ink"
+              onChange={(e) => {
+                setOtherRecipient(e.target.checked);
+                if (!e.target.checked) setErrors((prev) => ({ ...prev, recipientPhone: undefined }));
+              }}
+              className="h-5 w-5 accent-ink"
             />
             Отримувати буде інша людина
           </label>
 
           {otherRecipient && (
             <div className="mt-4 flex flex-col gap-4 sm:max-w-md">
-              <FieldShell label="Імʼя одержувача" htmlFor="co-rec-name">
-                <input
-                  id="co-rec-name" type="text" maxLength={120}
-                  value={recipientName} onChange={(e) => setRecipientName(e.target.value)}
-                  className={`${inputClass()} w-full`}
-                />
-              </FieldShell>
-              <FieldShell label="Телефон одержувача" htmlFor="co-rec-phone">
-                <input
-                  id="co-rec-phone" type="tel" inputMode="tel" placeholder="+380XXXXXXXXX"
-                  {...phoneEventHandlers(recipientPhone, setRecipientPhone)}
-                  className={`${inputClass()} w-full`}
-                />
-              </FieldShell>
+              <Field
+                id="co-rec-name" label="Імʼя одержувача" maxLength={120}
+                value={recipientName} onChange={setRecipientName}
+              />
+              <Field
+                id={FIELD_IDS.recipientPhone} label="Телефон одержувача" type="tel"
+                placeholder="+38 0XX XXX XX XX"
+                {...recipientPhoneField}
+                onBlur={() => {
+                  const v = phoneValueOnBlur(recipientPhone);
+                  setRecipientPhone(v);
+                  check('recipientPhone', { recipientPhone: v });
+                }}
+                error={errors.recipientPhone}
+              />
             </div>
           )}
         </section>
 
-        <section>
+        <section className="sm:max-w-md">
           <h2 className="label-eyebrow mb-4">Побажання</h2>
-          <textarea
-            rows={3} maxLength={500}
-            value={note} onChange={(e) => setNote(e.target.value)}
+          <TextArea
+            id="co-note" label="Що нам варто знати? (необовʼязково)" rows={3} maxLength={500}
+            value={note} onChange={setNote}
             placeholder="Наприклад: подарунок, потрібно до пʼятниці"
-            className={`${inputClass()} w-full sm:max-w-md`}
           />
         </section>
       </div>
@@ -322,13 +376,21 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
             {quote === undefined && isLoading && <li><Skeleton className="h-4 w-full" /></li>}
             {quote?.lines.map((l) => (
               <li key={`${l.printSlug ?? 'blank'}-${l.variantId}`} className="flex justify-between gap-3">
-                <span className="min-w-0 text-ink-muted">
-                  {l.title} <span className="text-ink-subtle">× {l.quantity}</span>
+                <span className="min-w-0 text-ink">
+                  {l.title} <span className="text-ink-muted">× {l.quantity}</span>
+                  {/* Розмір і колір: «Амстаф × 1» без них не каже, що саме замовляєш (03-ux #15). */}
+                  <span className="mt-0.5 block text-xs text-ink-muted">
+                    {[l.printSlug === null ? null : l.garmentName, l.colourName, l.sizeLabel].filter(Boolean).join(' · ')}
+                  </span>
                 </span>
                 <span className="shrink-0 tabular-nums text-ink">{formatUAH(minor(l.lineTotalMinor))}</span>
               </li>
             ))}
           </ul>
+
+          <dl className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-sm">
+            <ShippingRow quote={quote} settings={settings} />
+          </dl>
 
           <div className="mt-4 flex items-baseline justify-between border-t border-line-strong pt-4">
             <span className="font-medium text-ink">До сплати</span>
@@ -347,21 +409,32 @@ export function CheckoutForm({ orderingDisabled = false }: { orderingDisabled?: 
             <p className="mt-4 text-sm text-ink-muted">Це тестова версія сайту: замовлення тут вимкнене.</p>
           )}
 
-          <Button type="submit" size="lg" full className="mt-5" disabled={orderingDisabled || sending || quote?.purchasable !== true}>
-            {sending ? 'Оформлюємо…' : payOnline ? 'Замовити й оплатити' : 'Замовити'}
+          {/*
+            Поки розрахунок у дорозі, кнопка каже, що відбувається, а не
+            просто сіріє (03-ux #8). Перевірку полів можна пройти й у
+            превʼю: сервер там однаково замовлення не прийме.
+          */}
+          <Button
+            type="submit" size="lg" full className="mt-5"
+            disabled={sending || quote?.purchasable !== true}
+            aria-busy={quote === undefined || sending ? true : undefined}
+          >
+            {quote === undefined || sending
+              ? (
+                <>
+                  <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-surface border-t-transparent" />
+                  {sending ? 'Оформлюємо…' : 'Рахуємо суму…'}
+                </>
+              )
+              : payOnline ? 'Замовити й оплатити' : 'Замовити'}
           </Button>
 
           {/*
             Головне, що людина мусить знати ДО натискання: що буде з
-            грошима. Несподівана платіжна форма — так само погано, як і
-            несподівано списані гроші, тому текст залежить від того, чи
-            Monobank підключений.
+            грошима, коли отримає річ і що з поверненням. Текст про оплату
+            той самий, що в кошику, на товарі й у FAQ (`config/order-terms`).
           */}
-          <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-            {payOnline
-              ? 'Оплата карткою через Monobank. Гроші лише заблокуються на картці, а спишемо їх, коли підтвердимо наявність.'
-              : 'Зараз нічого не списується. Ми звіримо наявність, напишемо тобі й надішлемо рахунок — оплатиш, коли підтвердимо.'}
-          </p>
+          <OrderTerms quote={quote} settings={settings} />
         </div>
       </aside>
     </form>

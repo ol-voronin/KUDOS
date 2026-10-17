@@ -8,6 +8,7 @@ import { RelatedPrints } from '@/features/catalog/components/RelatedRail';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
 import { breadcrumbJsonLd, JsonLd, productJsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
+import { isOfferable } from '@/features/catalog/variant-selection';
 
 const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
@@ -87,18 +88,27 @@ export default async function PrintPage({ params }: Params) {
         ? [{ name: 'Колекції', href: '/collections' }, { name: collection.title, href: `/collections/${collection.slug}` }]
         : [{ name: 'Усі принти', href: '/prints' }]),
   ];
+  // Та сама назва, що в <title>: «Шпіц» без колекції — це три різні товари
+  // з однаковою назвою (Polo, паб, зима), і Google їх не розрізняє.
+  const productName = collection ? `${offer.print.title} — ${collection.title}` : offer.print.title;
 
   // Ціни рахує сервер і кладе на кожен варіант; тут лишається взяти межі.
   // Складати «база + друк» руками означало б третю реалізацію ціни — після
   // вітрини й каси.
-  const totals = offer.variants.map((v) => v.priceMinor + offer.printPriceMinor);
-  const inStock = offer.variants.some((v) => v.availability === 'IN_STOCK');
+  //
+  // У межі йдуть лише варіанти, які можна купити: ціна в розмітці має бути
+  // ціною, за яку товар справді продається (і яку показує фід).
+  const offerable = offer.variants.filter(isOfferable);
+  const totals = (offerable.length > 0 ? offerable : offer.variants)
+    .map((v) => v.priceMinor + offer.printPriceMinor);
+  const inStock = offerable.length > 0;
 
   return (
     <PublicShell>
       {totals.length > 0 && (
         <JsonLd data={productJsonLd({
-          name: offer.print.title,
+          name: productName,
+          sku: offer.print.slug,
           description: `${offer.print.title}: друк на футболці, худі або світшоті. Друкуємо ${site.cityIn}.`,
           images: offer.images.map((i) => i.url),
           url: `${BASE}/prints/${params.slug}`,
