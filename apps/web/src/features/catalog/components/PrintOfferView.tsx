@@ -10,6 +10,7 @@ import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/ana
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
+import { resolvePreselect } from '../offer-link';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
 import { GarmentPreview } from './GarmentPreview';
@@ -208,6 +209,33 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       return remembered?.id ?? null;
     });
   }, [sizes, rememberedLabel]);
+
+  /*
+   * Передвибір з адреси: `?garment=hudi-klasychnyi&colour=chornyi&size=M`.
+   *
+   * Так приходять з фіду Merchant Center і з реклами товару: людина клацнула
+   * на худі за 2 300 ₴ і має побачити саме його, з тією ж ціною, а не
+   * найдешевшу футболку. Google перевіряє це так само, як людина.
+   *
+   * Читається один раз на принт і з `window.location`, а не через
+   * `useSearchParams`: той змусив би загорнути сторінку в Suspense і віддати
+   * пошуку порожню оболонку замість готового HTML. Ефект стоїть ПІСЛЯ
+   * переанкорень вище, тож у тому ж проході його значення перекривають
+   * «перший виріб / перша тканина», а далі ті ефекти лише підтверджують
+   * чинний вибір. Розмір з адреси — це вибір, який людина зробила в рекламі,
+   * тож він підставляється, хоча без адреси розмір свідомо не обирається.
+   */
+  const preselectedSlug = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data || preselectedSlug.current === slug || typeof window === 'undefined') return;
+    preselectedSlug.current = slug;
+    const pick = resolvePreselect(data, new URLSearchParams(window.location.search));
+    if (!pick) return;
+    setGarmentId(pick.garmentId);
+    setFabricId(pick.fabricId);
+    if (pick.colourId !== null) setColourId(pick.colourId);
+    if (pick.sizeId !== null) setSizeId(pick.sizeId);
+  }, [data, slug]);
 
   /** Кожен свідомий вибір розміру стає підказкою для наступного разу. */
   function chooseSize(id: string): void {

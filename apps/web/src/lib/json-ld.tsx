@@ -130,15 +130,21 @@ export function breadcrumbJsonLd(
  * означало б показати в пошуку суму, якої немає в кошику — а це той самий
  * дефект, що й ціна, яка не сходиться на касі, тільки помітний раніше.
  *
- * `availability` рахується з варіантів: якщо хоч щось є на складі — InStock,
- * інакше PreOrder. Писати InStock завжди — найшвидший спосіб отримати санкції
- * за невідповідність даних у Merchant Center.
+ * `availability` рахується з варіантів за тим самим правилом, що й кнопка
+ * «У кошик» і фід Merchant Center (`isOfferable`): є на складі або друкуємо
+ * під замовлення за кілька днів — InStock; купити нічого не можна —
+ * OutOfStock. Раніше друк під замовлення йшов як PreOrder, а для Google
+ * PreOrder означає «товар ще не вийшов» — фід із `in_stock` тоді розходився
+ * б зі сторінкою, і Merchant Center знімав би товари за невідповідність.
+ * Строк виготовлення Google отримує як час обробки у фіді, не тут.
  */
 export function productJsonLd(product: {
   name: string;
   description: string;
   images: readonly string[];
   url: string;
+  /** Стабільний ідентифікатор товару — слаг принта. */
+  sku?: string;
   lowPriceMinor: number;
   highPriceMinor: number;
   inStock: boolean;
@@ -151,6 +157,7 @@ export function productJsonLd(product: {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
+    ...(product.sku !== undefined ? { sku: product.sku } : {}),
     ...(product.description !== '' ? { description: product.description } : {}),
     ...(product.images.length > 0 ? { image: product.images.map(absolute) } : {}),
     brand: { '@type': 'Brand', name: site.brand },
@@ -162,7 +169,8 @@ export function productJsonLd(product: {
       offerCount: product.offerCount,
       availability: product.inStock
         ? 'https://schema.org/InStock'
-        : 'https://schema.org/PreOrder',
+        : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
       url: product.url,
       seller: { '@type': 'Organization', name: site.brand },
     },
