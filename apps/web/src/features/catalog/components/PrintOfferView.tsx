@@ -7,6 +7,7 @@ import { useCart } from '@/features/cart/cart-store';
 import { useSiteSettings } from '@/app/providers';
 import { CARE_WARNING, paymentText, shippingText } from '@/config/product-copy';
 import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
+import { track } from '@/features/analytics/client';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { usePrintOffer } from '../hooks/usePrintOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
@@ -55,6 +56,10 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
     if (!data || viewedSlug.current === slug) return;
     viewedSlug.current = slug;
     const cheapestGarment = Math.min(...data.garments.map((g) => g.basePriceMinor));
+    const viewPriceMinor = cheapestGarment + data.printPriceMinor;
+    // Наша статистика — поруч із GA4, як `checkout_started` у касі. Без
+    // виробів ціни немає (Infinity), і тоді подія йде без суми.
+    track('view_item', Number.isFinite(viewPriceMinor) ? { valueMinor: viewPriceMinor } : {});
     ga4ViewItem({
       item_id: slug,
       item_name: data.print.title,
@@ -62,7 +67,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       item_category2: joinSlugs(data.print.collectionSlugs),
       breed: joinSlugs(data.print.breedSlugs),
       collection: joinSlugs(data.print.collectionSlugs),
-      price: hryvnia(cheapestGarment + data.printPriceMinor),
+      price: hryvnia(viewPriceMinor),
       quantity: 1,
     });
   }, [data, slug]);
@@ -302,16 +307,18 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
 
   function handleAddToCart(): void {
     if (!variant) return;
+    const quantity = 1;
     if (ga4Item !== null) ga4AddToCart(ga4Item);
     add({
       printSlug: slug,
       variantId: variant.id,
       printMethod: 'DTF',
-      quantity: 1,
+      quantity,
       title: printTitle,
       previewUrl: printPreviewUrl,
     });
     setAdded(true);
+    track('add_to_cart', { valueMinor: totalMinor * quantity });
   }
 
   const photoFrames: MediaFrame[] = (data.images.length > 0
