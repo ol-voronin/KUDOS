@@ -57,8 +57,9 @@ export const site = {
    * Строк виготовлення — запасне значення на випадок, коли API мовчить.
    * Справжнє живе в налаштуваннях сайту й міняється без деплою.
    */
-  productionDaysMin: 4,
-  productionDaysMax: 7,
+  // «До 5 днів» — рішення Олексія 17.10 (так само у фіді Merchant Center).
+  productionDaysMin: 1,
+  productionDaysMax: 5,
 } as const;
 
 /** «3 000 ₴» для текстів, без залежності від @dt/contracts у клієнтських дрібницях. */
