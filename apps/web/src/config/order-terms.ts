@@ -102,10 +102,15 @@ export function freeShippingProgress(
  * виїде швидше за той, що вже лежить. Так само рахує картка товару.
  */
 export function productionLine(productionDaysMax: number, extraLeadDays = 0): string {
-  const n = productionDaysMax + Math.max(0, extraLeadDays);
-  // «до» + родовий: «до 1 робочого дня», «до 3 робочих днів», «до 5 робочих днів».
-  const days = n % 10 === 1 && n % 100 !== 11 ? 'робочого дня' : 'робочих днів';
-  return `Друкуємо до ${n} ${days} і одразу відправляємо.`;
+  const base = `Друкуємо до ${productionDaysMax} ${workingDays(productionDaysMax)} і одразу відправляємо.`;
+  if (extraLeadDays <= 0) return base;
+  const total = productionDaysMax + extraLeadDays;
+  return `${base} Цей виріб спершу шиємо під замовлення, тож разом до ${total} ${workingDays(total)}.`;
+}
+
+/** «до» + родовий: «до 1 робочого дня», «до 5 робочих днів». */
+function workingDays(n: number): string {
+  return n % 10 === 1 && n % 100 !== 11 ? 'робочого дня' : 'робочих днів';
 }
 
 /**
