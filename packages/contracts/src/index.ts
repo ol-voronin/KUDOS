@@ -21,3 +21,5 @@ export * from './checkout.dto';
 export * from './payment.dto';
 export * from './errors';
 export * from './cart.dto';
+/** Розбір пошукових запитів: спільний для API (пошук) і сайту (фільтр порід). */
+export * as searchText from './search-text';

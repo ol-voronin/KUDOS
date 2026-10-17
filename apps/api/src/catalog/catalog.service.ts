@@ -13,6 +13,7 @@ import {
   garmentTypesFor, matchesGarmentFilters, toPrintCard,
   type OfferContext, type OfferableGarment, type PrintRow,
 } from './print-card';
+import { searchText } from '@dt/contracts';
 
 /** Рядок принта в тому вигляді, у якому його вибирає `PRINT_ROW_SELECT`. */
 interface PrintSelectRow {
@@ -96,11 +97,14 @@ export class CatalogService {
     offer: OfferContext,
     printPrices: PrintPriceTable,
     query: Pick<CatalogQueryDto, 'garmentType' | 'line' | 'inStock' | 'sort'>,
+    /** Вироби, названі словами в пошуковому запиті. Явний фільтр важливіший. */
+    impliedTypes: readonly string[] = [],
   ): PrintCardDto[] {
+    const types = query.garmentType === undefined ? impliedTypes : [query.garmentType];
     const cards = rows
-      .map((p) => ({ row: CatalogService.toRow(p), card: toPrintCard(CatalogService.toRow(p), offer, printPrices) }))
+      .map((p) => ({ row: CatalogService.toRow(p), card: toPrintCard(CatalogService.toRow(p), offer, printPrices, types) }))
       .filter(({ row }) => matchesGarmentFilters(row, offer, {
-        ...(query.garmentType === undefined ? {} : { garmentType: query.garmentType }),
+        garmentTypes: types,
         ...(query.line === undefined ? {} : { line: query.line }),
       }))
       .filter(({ card }) => query.inStock !== true || card.inStock)
@@ -676,7 +680,7 @@ export class CatalogService {
 
   async listBreeds(): Promise<BreedListDto> {
     const [rows, counts, previews] = await Promise.all([
-      this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true }, orderBy: { name: 'asc' } }),
+      this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true, synonyms: true }, orderBy: { name: 'asc' } }),
       this.breedPrintCounts(),
       this.breedPreviews(),
     ]);
@@ -693,6 +697,7 @@ export class CatalogService {
           id: b.id, slug: b.slug, name: b.name,
           printCount: counts.get(b.id) ?? 0,
           previewUrl: previews.get(b.id) ?? '',
+          synonyms: b.synonyms,
         }))
         .sort((a, b) => b.printCount - a.printCount || a.name.localeCompare(b.name, 'uk')),
     };
@@ -791,23 +796,18 @@ export class CatalogService {
   /**
    * Пошук по каталогу.
    *
-   * Шукає в трьох місцях і повертає їх окремо:
-   *  • породи — за назвою і за **синонімами**: «йорк», «yorkie», «дворняга»
-   *    приводять туди ж, куди «йоркширський терʼєр» і «метис». Без цього
-   *    половина запитів не знаходить нічого, хоча сторінка існує;
-   *  • колекції — за назвою й описом;
-   *  • принти — за назвою і за slug.
+   * Повертає окремо породи, колекції й принти — це різні наміри. Сам розбір
+   * запиту (вироби, відмінки, укр./рос. форми, кілька слів) — у
+   * `@dt/contracts` (`search-text.ts`), чистою функцією з тестами на реальних запитах.
    *
-   * Регістр ігнорується (`mode: 'insensitive'`). Пошук по синонімах — через
-   * `has` по масиву: точний збіг елемента, а не підрядок, бо синоніми і так
-   * записані у формі, у якій їх набирають.
+   * Шукаємо в памʼяті, а не `contains` у SQL: опублікованих принтів сотня,
+   * порід кілька десятків, а «таксою» ≠ «такса» для `ILIKE`. Запит до бази
+   * один і той самий для будь-якого слова — і легко кешується.
    */
   async search(input: SearchQueryDto): Promise<SearchResultDto> {
     const query = input.q.trim();
-    if (query.length < 2) {
-      return { query, breeds: [], collections: [], prints: [], total: 0 };
-    }
-    const lower = query.toLowerCase();
+    const empty = { query, breeds: [], collections: [], prints: [], total: 0, printsTotal: 0, garmentTypes: [] };
+    if (query.length < 2) return empty;
 
     const [offer, printPrices, breedCounts, collectionCounts, breedPreviews] = await Promise.all([
       this.loadOfferContext(),
@@ -818,25 +818,9 @@ export class CatalogService {
     ]);
 
     const [breedRows, collectionRows, printRows] = await this.prisma.db.$transaction([
-      this.prisma.db.breed.findMany({
-        where: {
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { slug: { contains: lower } },
-            { synonyms: { has: lower } },
-          ],
-        },
-        select: { id: true, slug: true, name: true },
-        take: 8,
-      }),
+      this.prisma.db.breed.findMany({ select: { id: true, slug: true, name: true, synonyms: true } }),
       this.prisma.db.collection.findMany({
-        where: {
-          isPublished: true,
-          OR: [
-            { title: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } },
-          ],
-        },
+        where: { isPublished: true },
         orderBy: { position: 'asc' },
         select: {
           id: true, slug: true, title: true, description: true,
@@ -846,7 +830,6 @@ export class CatalogService {
             select: { print: { select: { previewUrl: true } } },
           },
         },
-        take: 8,
       }),
       this.prisma.db.print.findMany({
         where: {
@@ -854,37 +837,42 @@ export class CatalogService {
           ...(input.sizeTier ? { sizeTier: input.sizeTier } : {}),
           ...(input.collection ? { collections: { some: { collection: { slug: input.collection } } } } : {}),
           ...(input.breed ? { breeds: { some: { breed: { slug: input.breed } } } } : {}),
-          OR: [
-            { title: { contains: query, mode: 'insensitive' } },
-            { slug: { contains: lower } },
-            // Принти знайденої породи — а не лише ті, у чиїй назві є слово.
-            { breeds: { some: { breed: { OR: [
-              { name: { contains: query, mode: 'insensitive' } },
-              { synonyms: { has: lower } },
-            ] } } } },
-          ],
         },
-        select: CatalogService.PRINT_ROW_SELECT,
+        select: { ...CatalogService.PRINT_ROW_SELECT, breeds: { select: { breedId: true } } },
         orderBy: { createdAt: 'desc' },
-        /*
-         * Беремо із запасом, а не рівно стільки, скільки покажемо: фільтри за
-         * типом виробу й наявністю відсіюють уже після вибірки, і `take: 24`
-         * означав би «двадцять чотири до фільтра, шість після».
-         */
-        take: 120,
+        take: CatalogService.FILTER_SCAN_LIMIT,
       }),
     ]);
 
-    const breeds = breedRows.map((b) => ({
-      id: b.id, slug: b.slug, name: b.name,
-      printCount: breedCounts.get(b.id) ?? 0,
-      previewUrl: breedPreviews.get(b.id) ?? '',
-    }));
-    const collections = collectionRows.map((c) => ({
-      id: c.id, slug: c.slug, title: c.title, description: c.description,
-      printCount: collectionCounts.get(c.id) ?? 0,
-      previewUrls: c.prints.map((p) => p.print.previewUrl),
-    }));
+    const hit = searchText.searchCatalog(query, {
+      breeds: breedRows,
+      collections: collectionRows,
+      prints: printRows.map((p) => ({
+        id: p.id, slug: p.slug, title: p.title,
+        breedIds: p.breeds.map((b) => b.breedId),
+        collectionIds: p.collections.map((c) => c.collectionId),
+      })),
+    });
+
+    const breedById = new Map(breedRows.map((b) => [b.id, b]));
+    const breeds = hit.breedIds.slice(0, 8).flatMap((id) => {
+      const b = breedById.get(id);
+      return b ? [{
+        id: b.id, slug: b.slug, name: b.name,
+        printCount: breedCounts.get(b.id) ?? 0,
+        previewUrl: breedPreviews.get(b.id) ?? '',
+        synonyms: b.synonyms,
+      }] : [];
+    });
+    const matchedCollections = new Set(hit.collectionIds);
+    const collections = collectionRows
+      .filter((c) => matchedCollections.has(c.id))
+      .slice(0, 8)
+      .map((c) => ({
+        id: c.id, slug: c.slug, title: c.title, description: c.description,
+        printCount: collectionCounts.get(c.id) ?? 0,
+        previewUrls: c.prints.map((p) => p.print.previewUrl),
+      }));
     /*
      * Фільтри застосовуються тільки до принтів.
      *
@@ -892,10 +880,23 @@ export class CatalogService {
      * породи «Коргі» тому, що ввімкнено фільтр «худі», означало б не
      * відповісти на питання, з яким людина прийшла.
      */
-    const prints = this.applyOfferFilters(printRows, offer, printPrices, input).slice(0, 24);
+    const matchedPrints = new Set(hit.printIds);
+    const allPrints = this.applyOfferFilters(
+      printRows.filter((p) => matchedPrints.has(p.id)),
+      offer, printPrices, input, hit.garmentTypes,
+    );
+    const prints = allPrints.slice(0, CatalogService.SEARCH_PAGE);
 
-    return { query, breeds, collections, prints, total: breeds.length + collections.length + prints.length };
+    return {
+      query, breeds, collections, prints,
+      total: breeds.length + collections.length + allPrints.length,
+      printsTotal: allPrints.length,
+      garmentTypes: [...hit.garmentTypes],
+    };
   }
+
+  /** Скільки принтів пошук показує одразу; решта — посиланням у каталог. */
+  private static readonly SEARCH_PAGE = 24;
 
   /** Плоскі списки для sitemap.xml. Породи віддаємо всі — навіть порожні мають сторінку. */
   async getSitemap(): Promise<SitemapDto> {

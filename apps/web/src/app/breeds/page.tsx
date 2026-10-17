@@ -2,16 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BreedListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
-import { BreedStrip } from '@/features/home/blocks';
 import { serverFetchOrNull } from '@/lib/server-api';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink, EmptyState } from '@/components/ui';
-import { ShowMore } from '@/components/show-more';
+import { BreedIndex } from '@/features/catalog/breed-index';
 
 export const revalidate = 300;
-
-/** Скільки порід видно одразу; решта — за кнопкою «Показати всі породи». */
-const INITIAL_BREEDS = 12;
 
 /**
  * Перелік порід.
@@ -23,6 +19,10 @@ const INITIAL_BREEDS = 12;
  * Породи без принтів звідси не викидаються: сторінка породи працює й без
  * каталогу, вона пропонує намалювати з фото. Викинути їх означало б
  * відповісти «ні» там, де відповідь «так, але інакше».
+ *
+ * Усі породи видно одразу, за абеткою, з полем пошуку (аудит 17.10, IA-5):
+ * раніше 12 «найбільших» і кнопка «Показати всі», і такса — порода з
+ * найбільшим попитом у пошуку — була схована за нею.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSettings();
@@ -39,7 +39,7 @@ export default async function BreedsPage() {
 
   return (
     <PublicShell>
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -48,21 +48,15 @@ export default async function BreedsPage() {
 
         <h1 className="mt-3 font-display text-hero font-bold uppercase text-ink">Породи</h1>
         {breeds.length > 0 && (
-          <p className="mt-3 max-w-prose text-lg text-ink-muted">
+          <p className="mt-3 max-w-prose text-base text-ink-muted sm:text-lg">
             Шукай готові принти по породам, а як треба особливе — замовляй адаптацію
             або власний дизайн.
           </p>
         )}
 
-        <div className="mt-10">
+        <div className="mt-6 sm:mt-10">
           {breeds.length > 0 ? (
-            breeds.length > INITIAL_BREEDS ? (
-              <ShowMore total={breeds.length} label="Показати всі породи">
-                <BreedStrip breeds={breeds} limit={breeds.length} collapseAfter={INITIAL_BREEDS} />
-              </ShowMore>
-            ) : (
-              <BreedStrip breeds={breeds} limit={breeds.length} />
-            )
+            <BreedIndex breeds={breeds} />
           ) : (
             <EmptyState
               title="Породи ще додаємо"
