@@ -71,6 +71,34 @@ export function breedItemListJsonLd(
 }
 
 /**
+ * Тематична добірка (посадкова «Одяг з собаками»): та сама схема, що й
+ * у породи, плюс власна адреса сторінки — щоб Google не гадав, чий це список.
+ */
+export function collectionPageJsonLd(
+  page: { name: string; description: string; url: string },
+  prints: ReadonlyArray<{ slug: string; title: string }>,
+  baseUrl: string,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: page.name,
+    description: page.description,
+    url: page.url,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: prints.length,
+      itemListElement: prints.map((print, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${baseUrl}/prints/${print.slug}`,
+        name: print.title,
+      })),
+    },
+  };
+}
+
+/**
  * Стаття.
  *
  * `author` — організація, а не людина: підписувати матеріали іменем, якого
