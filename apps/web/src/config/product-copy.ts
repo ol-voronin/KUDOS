@@ -29,10 +29,7 @@ export const CARE_LINE =
 
 export const CARE_WARNING = 'УВАГА! Вказано догляд за виробом без принтів!';
 
-/** Гривні з копійок, без дробової частини: пороги в нас завжди круглі. */
-function uah(minorAmount: number): string {
-  return `${Math.round(minorAmount / 100).toLocaleString('uk-UA')}₴`;
-}
+import { NP_TARIFF_ESTIMATE, PAYMENT_TEXT, uahRound as uah } from './order-terms';
 
 export interface CopySettings {
   readonly returnDays: number;
@@ -42,13 +39,12 @@ export interface CopySettings {
 /** Розділ «Строки й доставка». */
 export function shippingText(site: CopySettings): readonly string[] {
   return [
-    'Отримавши твоє замовлення, ми звіряємо наявність на складі постачальника '
-    + 'у найближчий робочий час (Пн–Пт з 9.00 до 18.00). Повідомляємо тобі '
-    + 'конкретну дату відправки замовлення і, отримавши твій ОК, надсилаємо '
-    + 'рахунок на оплату.',
+    'Отримавши твоє замовлення, ми звіряємо деталі у найближчий робочий час '
+    + '(Пн–Пт з 9.00 до 18.00) і пишемо тобі конкретну дату відправки.',
     'Доставку здійснюємо Новою Поштою — на відділення, в поштомат або курʼєром '
-    + `за рахунок отримувача. Від ${uah(site.freeShippingFromMinor)} доставка за `
-    + 'наш рахунок. Ми завжди ставимо фактичну оголошену цінність посилки.',
+    + `за рахунок отримувача, за тарифом перевізника (орієнтовно ${NP_TARIFF_ESTIMATE.replace('~', '')}). `
+    + `Від ${uah(site.freeShippingFromMinor)} доставка за наш рахунок. `
+    + 'Ми завжди ставимо фактичну оголошену цінність посилки.',
   ];
 }
 
@@ -62,8 +58,8 @@ export function shippingText(site: CopySettings): readonly string[] {
  */
 export function paymentText(site: CopySettings, printed: boolean): readonly string[] {
   return [
-    'Отримавши твій ОК по строках відправки, ми надішлемо рахунок на оплату. '
-    + 'Всі платежі здійснюються за допомогою сервісів Monobank.',
+    // Той самий текст, що в кошику, на оформленні й у FAQ (`config/order-terms`).
+    PAYMENT_TEXT,
     'Будь-які базові вироби без принтів підлягають обміну та поверненню '
     + 'відповідно до Закону України «Про захист прав споживачів». Щось не '
     + `підійшло — маєш ${site.returnDays} днів на повернення/обмін, якщо охайно `
