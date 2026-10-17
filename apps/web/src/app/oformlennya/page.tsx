@@ -13,7 +13,14 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  // Строк, дні повернення й поріг доставки — з налаштувань сайту, не з коду.
+  const site = await getSettings();
+  const terms = {
+    productionDaysMax: site.productionDaysMax,
+    returnDays: site.returnDays,
+    freeShippingFromMinor: site.freeShippingFromMinor,
+  };
   return (
     <PublicShell>
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -24,7 +31,7 @@ export default function CheckoutPage() {
         </nav>
         <h1 className="mt-3 font-display text-hero font-bold uppercase text-ink">Оформлення</h1>
         <div className="mt-10">
-          <CheckoutForm orderingDisabled={isPreviewDeploy()} />
+          <CheckoutForm orderingDisabled={isPreviewDeploy()} settings={terms} />
         </div>
       </div>
     </PublicShell>
