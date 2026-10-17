@@ -12,16 +12,22 @@ import { useEffect } from 'react';
  *
  * Клас знімається назавжди після першої появи: елемент, який зникає, коли
  * ти гортаєш назад, — це не анімація, а миготіння.
+ *
+ * Перший екран не анімується ніколи (аудит 17.10, LCP). Порядок важливий:
+ * спершу все, що вже в полі зору, отримує `is-in`, і лише потім на `<html>`
+ * ставиться `reveal-ready`, після якого CSS починає ховати решту. Тобто
+ * видимий вміст не блимає навіть на кадр, а без JS сторінка просто видима.
+ * Під `prefers-reduced-motion` клас не ставиться зовсім.
  */
 export function Reveal() {
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const nodes = () => document.querySelectorAll<HTMLElement>('.reveal:not(.is-in)');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (typeof IntersectionObserver === 'undefined') return undefined;
 
-    if (reduced) {
-      nodes().forEach((n) => n.classList.add('is-in'));
-      return;
-    }
+    const root = document.documentElement;
+    const pending = () => document.querySelectorAll<HTMLElement>('.reveal:not(.is-in)');
+    /** Уже на екрані (або вище) — показуємо без анімації. */
+    const onScreen = (el: HTMLElement) => el.getBoundingClientRect().top < window.innerHeight;
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -31,19 +37,39 @@ export function Reveal() {
           io.unobserve(e.target);
         }
       },
-      // Спрацьовує, коли елемент увійшов на чверть висоти екрана: інакше
-      // поява починається вже після того, як людина його прочитала.
-      { rootMargin: '0px 0px -18% 0px', threshold: 0.05 },
+      // Спрацьовує трохи раніше, ніж елемент доїде до видимої зони: поява
+      // має закінчитись до того, як людина почне читати.
+      { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
     );
 
-    nodes().forEach((n) => io.observe(n));
+    const watched = new WeakSet<HTMLElement>();
+    const sweep = () => pending().forEach((n) => {
+      if (watched.has(n)) return;
+      if (onScreen(n)) { n.classList.add('is-in'); return; }
+      watched.add(n);
+      io.observe(n);
+    });
+
+    sweep();
+    root.classList.add('reveal-ready');
 
     // Вміст приїжджає частинами (серверні блоки, клієнтські запити), тож
     // самого одноразового обходу мало.
-    const mo = new MutationObserver(() => nodes().forEach((n) => io.observe(n)));
+    // Обхід — раз на кадр, а не на кожну мутацію: шапка, кошик і фільтри
+    // міняють DOM часто, а замір позиції кожного елемента не безкоштовний.
+    let frame = 0;
+    const mo = new MutationObserver(() => {
+      if (frame !== 0) return;
+      frame = requestAnimationFrame(() => { frame = 0; sweep(); });
+    });
     mo.observe(document.body, { childList: true, subtree: true });
 
-    return () => { io.disconnect(); mo.disconnect(); };
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+      if (frame !== 0) cancelAnimationFrame(frame);
+      root.classList.remove('reveal-ready');
+    };
   }, []);
 
   return null;

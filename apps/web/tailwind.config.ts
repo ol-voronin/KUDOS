@@ -122,7 +122,11 @@ export default {
       },
       fontSize: {
         /** Заголовок сторінки. Вужчий шрифт дозволяє більший кегль. */
-        'hero': ['clamp(2.1rem, 1.1rem + 4.4vw, 6rem)', { lineHeight: '0.95', letterSpacing: '-0.01em' }],
+        /*
+         * Нижня межа 1.75rem (було 2.1): на 360 px довге слово капсом
+         * Unbounded 800 у 2.1rem ширше за колонку (аудит 17.10, U2).
+         */
+        'hero': ['clamp(1.75rem, 1rem + 4.6vw, 6rem)', { lineHeight: '0.95', letterSpacing: '-0.01em' }],
         /** Заголовок секції — той самий набір, на щабель менший. */
         'section': ['clamp(1.4rem, 1rem + 1.9vw, 2.4rem)', { lineHeight: '1.02', letterSpacing: '-0.01em' }],
       },

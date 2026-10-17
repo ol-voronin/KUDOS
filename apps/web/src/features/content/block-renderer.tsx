@@ -122,7 +122,9 @@ export function BlockRenderer({ blocks }: { blocks: readonly AnyBlock[] }) {
               {group.map((block) => (
                 // id блока — це якір: кнопка «Знайти за породою» веде на `#породи`.
                 // scroll-mt — щоб липка шапка не накривала заголовок секції.
-                <div key={block.id} id={block.id} className="reveal scroll-mt-24">{renderBlock(block, onDark)}</div>
+                // Перша секція сторінки — це її перший екран: без `reveal`,
+                // щоб заголовок і кнопки малювалися одразу (аудит 17.10, LCP).
+                <div key={block.id} id={block.id} className={i === 0 ? 'scroll-mt-24' : 'reveal scroll-mt-24'}>{renderBlock(block, onDark)}</div>
               ))}
             </div>
           </Section>
