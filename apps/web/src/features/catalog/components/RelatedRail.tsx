@@ -38,7 +38,7 @@ export async function RelatedPrints({ excludeSlug, breedSlugs = [], collectionSl
 
   return (
     <section className="mt-16" aria-label="Схожі принти">
-      <SectionHead title="Вам також" ghost="може сподобатись" href="/prints" hrefLabel="Весь каталог" />
+      <SectionHead title="Вам також" ghost="може сподобатись" href="/prints" hrefLabel="Усі принти" />
       <PrintGrid prints={four} list={LIST.related} />
     </section>
   );
