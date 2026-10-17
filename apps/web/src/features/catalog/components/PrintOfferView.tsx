@@ -651,7 +651,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
                 <button
                   type="button"
                   onClick={() => setSizeChartOpen(true)}
-                  className="tap-sm text-sm text-ink underline underline-offset-4 hover:opacity-60"
+                  className="link-brand tap-sm text-sm"
                 >
                   Таблиця розмірів
                 </button>
@@ -797,15 +797,31 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           тій меншості, яка інакше не купить нічого. Стоїть ПІСЛЯ опису
           виробу (відгук 01.10): спершу «що я купую», потім «а можна інакше».
         */}
-        <div className="mt-6 rounded-card border border-line p-4">
-          <p className="text-sm font-medium text-ink">Подобається принт, але пес не той?</p>
-          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+        {/*
+          Жовта картка з наліпкою й пес-дудлом — прийоми з «Про нас» (аудит
+          17.10, U1). Тут бренд доречний: це пропозиція «для своїх», а не
+          службова інформація, і саме вона відрізняє нас від конвеєра принтів.
+        */}
+        <div className="tone-yellow relative mt-6 overflow-hidden rounded-3xl border border-ink p-5">
+          <p className="sticker">Свій пес · +200 ₴</p>
+          <p className="mt-4 font-display text-lg font-bold uppercase leading-tight text-ink">
+            Подобається принт, але пес не той?
+          </p>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
             Надішли 2–3 фото свого хвостика — зробимо цей самий принт із його мордочкою.
             Доплата 200 ₴, строк той самий.
           </p>
-          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-3">
+          <ButtonLink href="/zayavka" variant="outline" size="md" className="mt-4">
             Хочу такий, але зі своїм песом
           </ButtonLink>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-dog.svg"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute -right-2 top-4 hidden h-16 w-auto sm:block"
+          />
         </div>
       </div>
     </div>
