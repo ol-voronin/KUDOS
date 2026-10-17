@@ -70,7 +70,8 @@ function HeroPlain({ block, onDark = false }: { block: HeroBlock } & Dark) {
       {block.eyebrow.trim() !== '' && (
         <p className={`label-eyebrow mb-3 ${onDark ? 'text-surface/60' : ''}`}>{block.eyebrow}</p>
       )}
-      <h1 className={`max-w-4xl font-display text-hero font-extrabold uppercase ${c.head}`}>
+      {/* `hyphens-auto`: юридичні заголовки з довгими словами («КОНФІДЕНЦІЙНОСТІ»). */}
+      <h1 className={`max-w-4xl hyphens-auto font-display text-hero font-extrabold uppercase ${c.head}`}>
         <HeroHeading text={block.heading} onDark={onDark} />
       </h1>
       <InlineParagraph text={block.lead} className={`mt-4 max-w-prose text-lg leading-relaxed ${c.body}`} />
