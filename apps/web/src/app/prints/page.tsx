@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { BreedListDto, CollectionListDto, PrintListDto, RangeDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintGrid } from '@/features/home/print-card';
+import { DrawYourDogCta } from '@/features/home/brand-cta';
 import { plural } from '@/features/home/blocks';
 import { SearchFilters, type FilterOption } from '@/features/search/search-filters';
 import { serverFetchOrNull } from '@/lib/server-api';
@@ -54,11 +55,12 @@ export default async function PrintsPage({ searchParams }: Search) {
     if (value !== '') query.set(key, value);
   }
 
-  const [data, breedList, collectionList, range] = await Promise.all([
+  const [data, breedList, collectionList, range, site] = await Promise.all([
     serverFetchOrNull(`/catalog/prints?${query.toString()}`, PrintListDto),
     serverFetchOrNull('/catalog/breeds', BreedListDto, 300),
     serverFetchOrNull('/catalog/collections', CollectionListDto, 300),
     serverFetchOrNull('/catalog/range', RangeDto, 300),
+    getSettings(),
   ]);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.perPage)) : 1;
   /*
@@ -94,16 +96,29 @@ export default async function PrintsPage({ searchParams }: Search) {
           <span className="text-ink">Усі принти</span>
         </nav>
 
-        <h1 className="mt-3 font-display text-hero font-bold text-ink">
-          {garmentOn ? `Принти ${garmentOn}` : 'Усі принти'}
-        </h1>
+        {/*
+          Перший екран посадкової каже «що, почім і як отримати» (аудит 17.10,
+          C-4): кількість — наліпкою (прийом «Про нас»), ціна й строк — рядком
+          під заголовком. Строк — з налаштувань сайту (до 5 днів, рішення 17.10).
+          З фільтром за виробом заголовок і ціни — саме про цей виріб (IA-3).
+        */}
         {data && data.total > 0 && (
-          <p className="mt-3 text-lg text-ink-muted">
-            {garmentOn
-              ? <>{data.total} {plural(data.total, 'принт', 'принти', 'принтів')} друкуємо {garmentOn}, ціни вказані саме за цей виріб</>
-              : <>{data.total} {plural(data.total, 'принт', 'принти', 'принтів')} у каталозі</>}
+          <p className="sticker mt-5">
+            {data.total} {plural(data.total, 'принт', 'принти', 'принтів')}
+            {breedOptions.length > 0 && <> · {breedOptions.length} {plural(breedOptions.length, 'порода', 'породи', 'порід')}</>}
           </p>
         )}
+        <h1 className="mt-4 font-display text-hero font-bold text-ink">
+          {garmentOn
+            ? <>Принти <span className="wave-underline">{garmentOn}</span></>
+            : <>Усі <span className="wave-underline">принти</span></>}
+        </h1>
+        <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
+          {garmentOn
+            ? <>Друкуємо {garmentOn}, ціни на картках — саме за цей виріб.</>
+            : <>Футболки, світшоти й худі з собаками. Ціна залежить від виробу: на картці — найдешевший.</>}{' '}
+          Друкуємо {site.cityIn}, строк — до {site.productionDaysMax} {plural(site.productionDaysMax, 'дня', 'днів', 'днів')}.
+        </p>
 
         <Suspense fallback={null}>
           <SearchFilters
@@ -142,6 +157,8 @@ export default async function PrintsPage({ searchParams }: Search) {
             ) : <span />}
           </nav>
         )}
+
+        <DrawYourDogCta />
       </div>
     </PublicShell>
   );

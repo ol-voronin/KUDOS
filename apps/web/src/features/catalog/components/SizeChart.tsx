@@ -99,7 +99,7 @@ function Table({
               <tr
                 key={s.id}
                 aria-current={picked ? 'true' : undefined}
-                className={picked ? 'bg-accent-soft' : undefined}
+                className={picked ? 'bg-brand-yellow' : undefined}
               >
                 <th
                   scope="row"

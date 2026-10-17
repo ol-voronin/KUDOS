@@ -52,7 +52,7 @@ export function Inline({ text }: { text: string }): ReactNode {
           key={`l${key}`}
           href={href}
           {...(external ? { target: '_blank', rel: 'noreferrer' } : {})}
-          className="font-medium text-ink underline underline-offset-2 hover:text-accent"
+          className="link-brand"
         >
           {label}
         </a>,
