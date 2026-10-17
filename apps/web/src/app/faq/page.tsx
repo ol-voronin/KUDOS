@@ -6,6 +6,7 @@ import { ButtonLink } from '@/components/ui';
 import { faqJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { RETURN_POLICY_TEXT } from '@/config/returns';
+import { NP_TARIFF_ESTIMATE, PAYMENT_TEXT } from '@/config/order-terms';
 
 export const revalidate = 300;
 
@@ -35,7 +36,7 @@ export default async function FaqPage() {
   const shipFree = `${Math.round(site.freeShippingFromMinor / 100).toLocaleString('uk-UA')} ₴`;
   const days = `${site.productionDaysMin}–${site.productionDaysMax}`;
 
-  const groups: ReadonlyArray<{ title: string; items: ReadonlyArray<{ q: string; a: React.ReactNode; plain: string }> }> = [
+  const groups: ReadonlyArray<{ title: string; items: ReadonlyArray<{ q: string; a: React.ReactNode; plain: string; id?: string }> }> = [
     {
       title: 'Замовлення і строки',
       items: [
@@ -46,8 +47,10 @@ export default async function FaqPage() {
         },
         {
           q: 'Як оплатити?',
-          plain: 'Після оформлення ми звіряємо наявність і надсилаємо рахунок — оплата карткою через Monobank. Гроші блокуються і списуються лише після підтвердження замовлення.',
-          a: <>Після оформлення ми звіряємо наявність і надсилаємо рахунок — оплата карткою через Monobank. Картку вводиш на стороні банку, не в нас; гроші блокуються й списуються лише після того, як ми підтвердили замовлення.</>,
+          // Той самий текст, що на товарі, в кошику й на оформленні (`config/order-terms`).
+          id: 'oplata',
+          plain: `${PAYMENT_TEXT} Картку вводиш на сторінці Monobank, не в нас. Післяплати немає.`,
+          a: <>{PAYMENT_TEXT} Картку вводиш на сторінці Monobank, не в нас. Післяплати немає.</>,
         },
         {
           q: 'Чи можна купити річ без принта?',
@@ -90,8 +93,8 @@ export default async function FaqPage() {
       items: [
         {
           q: 'Як і скільки їде доставка?',
-          plain: `Нова пошта — відділення, поштомат або кур'єр, по всій Україні. Замовлення від ${shipFree} доставляємо своїм коштом, менші — за тарифами перевізника.`,
-          a: <>Нова пошта — на відділення, в поштомат або курʼєром, по всій Україні. Замовлення від {shipFree} доставляємо за свій рахунок, менші — за тарифами перевізника.</>,
+          plain: `Нова пошта — відділення, поштомат або кур'єр, по всій Україні. Замовлення від ${shipFree} доставляємо своїм коштом, менші — за тарифами перевізника (орієнтовно ${NP_TARIFF_ESTIMATE.replace('~', '')}), оплачуєш при отриманні.`,
+          a: <>Нова пошта — на відділення, в поштомат або курʼєром, по всій Україні. Замовлення від {shipFree} доставляємо за свій рахунок, менші — за тарифами перевізника (орієнтовно {NP_TARIFF_ESTIMATE.replace('~', '')}), оплачуєш при отриманні.</>,
         },
       ],
     },
@@ -100,6 +103,7 @@ export default async function FaqPage() {
       items: [
         {
           q: 'Чи можна повернути або обміняти?',
+          id: 'povernennya',
           plain: `${RETURN_POLICY_TEXT.join(' ')} Базовий одяг можна повернути протягом ${site.returnDays} днів, якщо річ не носили і збережено вигляд.`,
           a: (
             <>
@@ -165,7 +169,7 @@ export default async function FaqPage() {
           <h2 className="font-display text-2xl font-bold text-ink">{group.title}</h2>
           <div className="mt-4 max-w-3xl divide-y divide-line border-y border-line">
             {group.items.map((item) => (
-              <details key={item.q} className="group py-4">
+              <details key={item.q} id={item.id} className="group py-4">
                 <summary className="flex cursor-pointer items-center justify-between gap-3 font-medium text-ink">
                   {item.q}
                   <span aria-hidden className="text-ink-subtle transition-transform group-open:rotate-180">
