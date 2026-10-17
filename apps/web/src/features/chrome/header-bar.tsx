@@ -27,6 +27,14 @@ import { useCart } from '@/features/cart/cart-store';
  *      це доказ, що по той бік є люди. Ховати номер за кнопкою означає
  *      просити довіру й нічого не давати натомість.
  */
+/**
+ * `inert` для згорнутого блока: React 18 не знає цей атрибут, тож він іде
+ * рядком (порожній рядок = увімкнено), а не булевим пропом.
+ */
+function inertWhen(collapsed: boolean): Record<string, string> {
+  return collapsed ? { inert: '' } : {};
+}
+
 export interface HeaderNavItem {
   readonly id: string;
   readonly href: string;
@@ -52,6 +60,8 @@ export function HeaderBar({
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const lastY = useRef(0);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function onScroll(): void {
@@ -68,7 +78,17 @@ export function HeaderBar({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') { setOpen(false); setMenu(false); }
+      if (e.key !== 'Escape') return;
+      /*
+       * Фокус повертається на кнопку, яка відкрила блок: інакше він лишався
+       * всередині щойно схованого (тепер `inert`) рядка і губився — наступний
+       * Tab починав зі сторінки згори (аудит 17.10, A11Y п. 1).
+       */
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active.closest('#header-search')) searchButton.current?.focus();
+      if (active instanceof HTMLElement && active.closest('#header-menu')) menuButton.current?.focus();
+      setOpen(false);
+      setMenu(false);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -79,7 +99,10 @@ export function HeaderBar({
       className={[
         'sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur',
         'transition-transform duration-300 ease-out motion-reduce:transition-none',
-        hidden ? '-translate-y-full' : 'translate-y-0',
+        // Схована шапка повертається, щойно фокус клавіатури заходить у неї
+        // (Shift+Tab): інакше сфокусований пункт лишався за краєм екрана
+        // (аудит 17.10, WCAG 2.4.11).
+        hidden ? '-translate-y-full focus-within:translate-y-0' : 'translate-y-0',
       ].join(' ')}
     >
       <div className="mx-auto grid h-[4.4rem] max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:gap-4 sm:px-6">
@@ -135,9 +158,11 @@ export function HeaderBar({
         </nav>
 
         <button
+          ref={menuButton}
           type="button"
           aria-label="Меню"
           aria-expanded={menu}
+          aria-controls="header-menu"
           onClick={() => setMenu((v) => !v)}
           className="-ml-2.5 flex h-11 w-11 items-center justify-center md:hidden"
         >
@@ -172,9 +197,11 @@ export function HeaderBar({
         */}
         <div className="-mr-2.5 flex items-center justify-end gap-0 sm:mr-0 sm:gap-5">
           <button
+            ref={searchButton}
             type="button"
             aria-label="Пошук"
             aria-expanded={open}
+            aria-controls="header-search"
             onClick={() => setOpen((v) => !v)}
             className="nav-link inline-flex min-h-11 min-w-11 items-center justify-center gap-2"
           >
@@ -227,11 +254,18 @@ export function HeaderBar({
         мусить обрізати свій вміст, інакше поле стирчить із-під шапки. Але
         щойно він розгорнувся, обрізання треба зняти — інакше воно обрізає й
         випадайку з підказками, яка висить нижче межі рядка.
+
+        Згорнутий рядок — `inert` і `invisible`: висота 0 ховала його лише
+        очима, а поле й «Знайти» лишались у Tab-послідовності й читались
+        диктором (аудит 17.10, A11Y п. 1). `visibility` вмикається після
+        закриття (дискретний перехід разом із висотою), тож анімація лишилась.
       */}
       <div
+        id="header-search"
+        {...inertWhen(!open)}
         className={[
-          'border-t border-line transition-[max-height] duration-300 ease-out motion-reduce:transition-none',
-          open ? 'max-h-24 overflow-visible' : 'max-h-0 overflow-hidden border-t-0',
+          'border-t border-line transition-[max-height,visibility] duration-300 ease-out motion-reduce:transition-none',
+          open ? 'visible max-h-24 overflow-visible' : 'invisible max-h-0 overflow-hidden border-t-0',
         ].join(' ')}
       >
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
@@ -239,13 +273,15 @@ export function HeaderBar({
         </div>
       </div>
 
-      {/* Мобільне меню. */}
+      {/* Мобільне меню. Згорнуте — `inert` + `invisible`, як і рядок пошуку. */}
       <div
+        id="header-menu"
+        {...inertWhen(!menu)}
         className={[
-          'overflow-hidden border-t border-line transition-[max-height] duration-300 ease-out md:hidden motion-reduce:transition-none',
+          'overflow-hidden border-t border-line transition-[max-height,visibility] duration-300 ease-out md:hidden motion-reduce:transition-none',
           // 36rem, а не 96 (24rem): пункт «Колекції» тепер веде за собою
           // список колекцій, і на 24rem меню обрізалося б посередині.
-          menu ? 'max-h-[36rem] overflow-y-auto' : 'max-h-0 border-t-0',
+          menu ? 'visible max-h-[36rem] overflow-y-auto' : 'invisible max-h-0 border-t-0',
         ].join(' ')}
       >
         <nav aria-label="Мобільна навігація" className="flex flex-col px-4 py-2 sm:px-6">

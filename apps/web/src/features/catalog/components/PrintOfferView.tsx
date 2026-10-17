@@ -81,8 +81,35 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
    * як «цей варіант уже в кошику», хоча в кошику попередній.
    */
   const [added, setAdded] = useState(false);
+  /**
+   * Текст для диктора (`role="status"`): «додано в кошик» чи «обери розмір».
+   * Зміна напису на кнопці сама по собі не озвучується (аудит 17.10, WCAG 4.1.3).
+   */
+  const [notice, setNotice] = useState('');
+  const sizesRef = useRef<HTMLFieldSetElement>(null);
+  const buyBarRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setAdded(false); }, [garmentId, fabricId, colourId, sizeId]);
+  useEffect(() => { setAdded(false); setNotice(''); }, [garmentId, fabricId, colourId, sizeId]);
+
+  /*
+   * Висота липкої смуги купівлі → `--buybar-h` на `<html>`. З неї рахується
+   * `scroll-padding-bottom` (globals.css): без нього Tab ставив сфокусований
+   * розмір рівно під смугу, і його не було видно (аудит 17.10, WCAG 2.4.11).
+   * Смуга липка лише на телефоні; на десктопі змінна нульова.
+   */
+  useEffect(() => {
+    const el = buyBarRef.current;
+    if (el === null || typeof ResizeObserver === 'undefined') return undefined;
+    const root = document.documentElement;
+    const apply = () => {
+      const sticky = getComputedStyle(el).position === 'sticky';
+      root.style.setProperty('--buybar-h', sticky ? `${Math.ceil(el.getBoundingClientRect().height)}px` : '0px');
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => { observer.disconnect(); root.style.removeProperty('--buybar-h'); };
+  }, [data]);
 
   /*
    * Вибір кольору й галерея (ТЗ «Вибір кольору», аудит 01.10.2026).
@@ -255,6 +282,8 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
   const variant = garment && fabricId && colourId && sizeId
     ? findVariant(data?.variants ?? [], garment.id, fabricId, colourId, sizeId)
     : undefined;
+  /** Купити не можна: варіанта немає або розмір недоступний. */
+  const buyBlocked = !variant || selectedSize?.state === 'UNAVAILABLE';
 
   if (isLoading) {
     // Каркас тієї самої форми, що й готова сторінка: інакше вміст стрибає
@@ -346,7 +375,26 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       previewUrl: printPreviewUrl,
     });
     setAdded(true);
+    setNotice(`Додано в кошик: ${printTitle}${garment ? `, ${garment.name}` : ''}${selectedSize ? `, розмір ${selectedSize.label}` : ''}.`);
     track('add_to_cart', { valueMinor: totalMinor * quantity });
+  }
+
+  /**
+   * Кнопка без обраного розміру не вимкнена, а веде до розмірів: прокрутка,
+   * фокус на першому доступному розмірі й підказка для диктора. `disabled`
+   * викидав її з Tab-послідовності, і людина з клавіатурою не дізнавалась,
+   * чому купити не виходить (аудит 17.10, A11Y п. 2).
+   */
+  function handleBuyClick(): void {
+    if (sizeId === null) {
+      const fieldset = sizesRef.current;
+      fieldset?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      fieldset?.querySelector<HTMLButtonElement>('button[role="radio"]:not([disabled])')?.focus({ preventScroll: true });
+      setNotice('Спершу обери розмір.');
+      return;
+    }
+    if (buyBlocked) return;
+    handleAddToCart();
   }
 
   const photoFrames: MediaFrame[] = (data.images.length > 0
@@ -589,7 +637,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
         )}
 
         {sizes.length > 0 && (
-          <fieldset className="mt-5">
+          <fieldset ref={sizesRef} className="mt-5 scroll-mt-24">
             {/*
               Таблиця розмірів відкривається ЗВІДСИ, а не з окремого блока
               внизу картки. Baymard знаходить це в кожному тесті одягу:
@@ -652,7 +700,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           полем зору саме тоді, коли вибір нарешті зроблено. На широкому
           екрані вона нікуди не липне — там усе видно й так.
         */}
-        <div className="sticky bottom-[var(--consent-h,0px)] z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <div ref={buyBarRef} className="sticky bottom-[var(--consent-h,0px)] z-10 mt-8 -mx-4 border-t border-ink bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
           {/*
             Кнопка кладе товар у кошик, а не веде на оплату.
 
@@ -668,16 +716,22 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           <Button
             size="lg"
             full
-            disabled={!variant || selectedSize?.state === 'UNAVAILABLE'}
-            onClick={handleAddToCart}
+            aria-disabled={buyBlocked || sizeId === null ? true : undefined}
+            onClick={handleBuyClick}
+            className={buyBlocked && sizeId !== null ? 'cursor-not-allowed opacity-40 hover:translate-y-0' : undefined}
           >
             {/*
               Вимкнена кнопка без пояснення — окремий гріх: людина тисне,
               нічого не відбувається, і незрозуміло чому. Напис називає
               причину прямо на кнопці.
             */}
+            {/*
+              Без розміру кнопка не сіра й не вимкнена, а веде до розмірів і
+              одразу показує ціну: на першому екрані телефона це єдине місце,
+              де її видно (аудит 17.10, U6).
+            */}
             {sizeId === null
-              ? 'Спершу обери розмір'
+              ? `Обери розмір · ${priceIsExact ? '' : 'від '}${formatUAH(minor(totalMinor))}`
               : added ? 'У кошику ✓' : `Додати в кошик · ${formatUAH(minor(totalMinor))}`}
           </Button>
           {added ? (
@@ -685,6 +739,7 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
               Перейти в кошик →
             </ButtonLink>
           ) : null}
+          <p role="status" className="sr-only">{notice}</p>
         </div>
 
       </div>

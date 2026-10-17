@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BlobImage } from '@/components/blob-image';
 import { BreedListDto, PrintListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { Section } from '@/components/section';
@@ -202,9 +203,8 @@ export default async function AboutPage() {
             {gallery.map((b, i) => (
               <li key={b.id}>
                 <Link href={`/breeds/${b.slug}`} className="group block">
-                  <span className={`block aspect-square overflow-hidden rounded-card border border-line bg-surface transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transform-none ${i % 3 === 1 ? 'rotate-1' : i % 3 === 2 ? '-rotate-1' : ''}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={b.previewUrl} alt={b.name} loading="lazy" className="h-full w-full object-cover" />
+                  <span className={`relative block aspect-square overflow-hidden rounded-card border border-line bg-surface transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transform-none ${i % 3 === 1 ? 'rotate-1' : i % 3 === 2 ? '-rotate-1' : ''}`}>
+                    <BlobImage src={b.previewUrl} alt={b.name} sizes="(min-width: 1024px) 200px, (min-width: 640px) 25vw, 33vw" className="object-cover" />
                   </span>
                   <span className="mt-2 block truncate text-sm font-medium text-ink">{b.name}</span>
                 </Link>
