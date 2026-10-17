@@ -145,10 +145,10 @@ posts.append(('03 Портрет з фото — Твій пес твій при
 def p04():
     img, d = new(INK); chrome(img, d, INK, WHITE, 'ЗАКУЛІССЯ', YEL, INK)
     y, _ = head(d, 'Друкуємо в Харкові', 'Від файлу принта до коробки на Новій пошті.', WHITE, (201, 201, 194))
-    f = font('disp', 200); txt(d, (P - 6, y + 30), '4–7', f, YEL)
-    f2 = font('b', 40); d.text((P, y + 30 + 230), 'робочих днів на кожне замовлення', font=f2, fill=WHITE)
+    f = font('disp', 200); txt(d, (P - 6, y + 30), 'ДО 5', f, YEL)
+    f2 = font('b', 40); d.text((P, y + 30 + 262), 'робочих днів на кожне замовлення', font=f2, fill=WHITE)
     steps = ['Принт', 'Друк', 'Перевірка', 'Пакування']
-    top = y + 30 + 320; bottom = H - P - 70; gap = 16; cw = (W - 2 * P - 3 * gap) // 4
+    top = y + 30 + 350; bottom = H - P - 70; gap = 16; cw = (W - 2 * P - 3 * gap) // 4
     for i, s in enumerate(steps):
         x = P + i * (cw + gap); d.rounded_rectangle([x, top, x + cw, bottom], radius=28, fill=(30, 30, 28))
         txt(d, (x + 24, top + 22), f'0{i+1}', font('disp', 48), RED)
@@ -182,9 +182,9 @@ posts.append(('06 Боня і Паштет — Так він кіт', p06))
 def p07():
     img, d = new(PAPER); chrome(img, d, PAPER, INK, 'FAQ', INK, WHITE)
     y, _ = head(d, 'Питаєте — відповідаємо', 'Три питання, які нам ставлять найчастіше.', INK, GREY)
-    items = [('ОПЛАТА', 'Спишемо гроші, лише коли підтвердимо наявність', RED),
+    items = [('ОПЛАТА', 'Сума блокується на картці, а спишемо її, коли підтвердимо замовлення', RED),
              ('ДОСТАВКА', 'Новою поштою по всій Україні', YEL),
-             ('ТЕРМІН', '4–7 робочих днів на виготовлення', INK)]
+             ('ТЕРМІН', 'До 5 робочих днів на виготовлення', INK)]
     top = y + 40; bottom = H - P - 70; gap = 18; ch = (bottom - top - 2 * gap) // 3
     for i, (k, v, c) in enumerate(items):
         cy = top + i * (ch + gap); d.rounded_rectangle([P, cy, W - P, cy + ch], radius=28, fill=WHITE, outline=LINE, width=3)
