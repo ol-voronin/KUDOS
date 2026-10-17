@@ -166,16 +166,16 @@ export default async function AboutPage() {
         </h2>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { name: 'Боня', role: 'муза · модель · контроль якості', duty: 'Перевіряє м’якість кожного худі. Методом лежання. Без її схвалення жодна партія не їде.', pay: 'смаколики', tone: 'bg-teal-soft', tilt: '-rotate-1' },
-            { name: 'Паштет', role: 'внутрішній аудит · відділ кадрів', duty: 'Єдиний кіт у бренді про собак. Сідає на кожну нову партію і досі не визнає, що це гарно.', pay: 'паштет (очевидно)', tone: 'bg-plum-soft', tilt: 'rotate-1', stamp: 'Так, він кіт' },
-            { name: 'Даша', role: 'співзасновниця', duty: 'Вирішує, що ми робимо, як це звучить і чому саме так. Остання інстанція після Боні.', pay: 'задоволення від справи', tone: 'bg-sun-soft', tilt: 'rotate-1' },
-            { name: 'Олексій', role: 'співзасновник', duty: 'Друк, сайт і все, що з проводами. Відповідає, коли щось зламалось, — навіть якщо це зробив Паштет.', pay: 'задоволення від справи', tone: 'bg-accent-soft', tilt: '-rotate-1' },
+            { name: 'Боня', role: 'муза · модель · контроль якості', duty: 'Перевіряє м’якість кожного худі. Методом лежання. Без її схвалення жодна партія не їде.', pay: 'смаколики', tone: 'tone-yellow', tilt: '-rotate-1' },
+            { name: 'Паштет', role: 'внутрішній аудит · відділ кадрів', duty: 'Єдиний кіт у бренді про собак. Сідає на кожну нову партію і досі не визнає, що це гарно.', pay: 'паштет (очевидно)', tone: 'bg-surface', tilt: 'rotate-1', stamp: 'Так, він кіт' },
+            { name: 'Даша', role: 'співзасновниця', duty: 'Вирішує, що ми робимо, як це звучить і чому саме так. Остання інстанція після Боні.', pay: 'задоволення від справи', tone: 'tone-yellow', tilt: 'rotate-1' },
+            { name: 'Олексій', role: 'співзасновник', duty: 'Друк, сайт і все, що з проводами. Відповідає, коли щось зламалось, — навіть якщо це зробив Паштет.', pay: 'задоволення від справи', tone: 'bg-surface', tilt: '-rotate-1' },
           ].map((p) => (
             <article key={p.name} className={`relative flex flex-col rounded-3xl border border-ink ${p.tone} p-6 transition-transform duration-300 hover:rotate-0 motion-reduce:transform-none ${p.tilt}`}>
               {/* Дірка під ремінець бейджа — дрібниця, через яку картка читається як посвідчення. */}
               <span aria-hidden className="mx-auto -mt-2 mb-4 block h-2 w-12 rounded-full bg-ink/80" />
               {p.stamp !== undefined && (
-                <span className="absolute -right-3 -top-3 rotate-12 rounded-md border-2 border-accent bg-plum-soft px-2 py-0.5 font-display text-[0.7rem] font-bold uppercase text-accent">
+                <span className="absolute -right-3 -top-3 rotate-12 rounded-md border-2 border-accent bg-surface px-2 py-0.5 font-display text-[0.7rem] font-bold uppercase text-accent">
                   {p.stamp}
                 </span>
               )}

@@ -11,13 +11,21 @@ import type { ReactNode } from 'react';
  */
 export type Tone = 'plain' | 'cream' | 'accent' | 'teal' | 'sun' | 'plum' | 'ink';
 
+/*
+ * Ключі тонів ті самі (їх зберігає редактор блоків), а кольори — з палітри
+ * бренду (аудит 17.10, U5). М'ятна, рожева, пісочна й персикова підкладки
+ * сайт колись підібрав сам, у бренді їх немає. Тепер:
+ *   teal / sun   → жовтий бренду (фінальні заклики «Лишилось питання?»,
+ *                  цифри на «Про нас»), текст на ньому чорний;
+ *   plum / accent → кремовий, як `cream` (майже білий).
+ */
 const TONES: Record<Tone, string> = {
   plain: 'bg-surface',
   cream: 'bg-surface-sunken',
-  accent: 'bg-accent-soft',
-  teal: 'bg-teal-soft',
-  sun: 'bg-sun-soft',
-  plum: 'bg-plum-soft',
+  accent: 'bg-surface-sunken',
+  teal: 'tone-yellow',
+  sun: 'tone-yellow',
+  plum: 'bg-surface-sunken',
   ink: 'bg-ink text-surface',
 };
 
