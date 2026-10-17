@@ -86,6 +86,14 @@ export async function PublicFooter() {
           <p className="mt-2 leading-relaxed text-ink-muted">
             Виготовляємо й друкуємо {site.cityIn}. Відправляємо по всій Україні.
           </p>
+          {/*
+            Посадкова під загальний запит «одяг з собаками». Пункти колонок
+            приходять з адмінки меню, а це посилання потрібне на кожній
+            сторінці незалежно від того, що там налаштували.
+          */}
+          <Link href="/odyag-z-sobakamy" className="link-sweep mt-2 inline-block w-fit text-ink-muted">
+            Одяг з собаками
+          </Link>
         </div>
 
         {columns.map(([title, items]) => (
