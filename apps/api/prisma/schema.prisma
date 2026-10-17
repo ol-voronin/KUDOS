@@ -936,7 +936,8 @@ model AnalyticsEvent {
   siteId String @db.Uuid
   site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-  /// page_view, lead_submitted, checkout_started, purchase, telegram_click.
+  /// page_view, view_item, add_to_cart, lead_submitted, checkout_started,
+  /// purchase, telegram_click.
   name String
   path String
 
