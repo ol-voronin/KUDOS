@@ -25,6 +25,19 @@ export interface SelectableSize extends SizeDto {
 
 const MAX_CART_LEAD_TIME_DAYS = 21;
 
+/**
+ * Чи можна цей варіант покласти в кошик просто зараз.
+ *
+ * Те саме правило, що й у `stateOf` нижче (і `isPurchasable` у ціновому домені
+ * API): є на складі або шиється під замовлення не довше за три тижні. Винесене
+ * окремо, бо ним же користуються розмітка товару й фід Merchant Center — а
+ * «в наявності» в Google мусить означати рівно те, що кнопка «У кошик» працює.
+ */
+export function isOfferable(v: Pick<VariantDto, 'availability' | 'leadTimeDays'>): boolean {
+  if (v.availability === 'IN_STOCK') return true;
+  return v.availability === 'MADE_TO_ORDER' && v.leadTimeDays !== null && v.leadTimeDays <= MAX_CART_LEAD_TIME_DAYS;
+}
+
 function stateOf(variants: readonly VariantDto[]): { state: Selectability; leadTimeDays: number | null } {
   if (variants.some((v) => v.availability === 'IN_STOCK')) {
     return { state: 'AVAILABLE', leadTimeDays: null };

@@ -18,6 +18,14 @@ const FIELD_BASE =
   'block w-full rounded-card border bg-surface-raised px-4 text-base text-ink ' +
   'placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-surface';
 
+/*
+ * Рамка поля без помилки. `border-line` (#e4e4df) на білому — 1.28:1, а
+ * межа поля мусить мати ≥ 3:1 (WCAG 1.4.11): на скрінах каси поля ледь
+ * читались (аудит 17.10.2026, 05-a11y). #868680 — 3.66:1 на білому й
+ * 3.38:1 на кремовому, той самий теплий сірий.
+ */
+const FIELD_BORDER = 'border-[#868680]';
+
 function ErrorLine({ id, children }: { id: string; children: ReactNode }) {
   return (
     <p id={id} className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-danger">
@@ -41,12 +49,16 @@ interface FieldProps {
   placeholder?: string | undefined;
   required?: boolean;
   autoComplete?: string;
+  /** За замовчуванням `tel` для телефону; для номера відділення — `numeric` тощо. */
+  inputMode?: 'text' | 'tel' | 'email' | 'numeric' | undefined;
+  maxLength?: number;
   onFocus?: () => void;
   onBlur?: () => void;
 }
 
 export function Field({
-  id, label, value, onChange, error, hint, type = 'text', placeholder, required, autoComplete, onFocus, onBlur,
+  id, label, value, onChange, error, hint, type = 'text', placeholder, required, autoComplete, inputMode, maxLength,
+  onFocus, onBlur,
 }: FieldProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -64,13 +76,13 @@ export function Field({
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         onBlur={onBlur}
-        inputMode={type === 'tel' ? 'tel' : undefined}
+        inputMode={inputMode ?? (type === 'tel' ? 'tel' : undefined)}
+        maxLength={maxLength}
         placeholder={placeholder}
         autoComplete={autoComplete}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className={[FIELD_BASE, 'h-13 py-3', error ? 'border-danger border-2' : 'border-line'].join(' ')}
-       
+        className={[FIELD_BASE, 'h-13 py-3', error ? 'border-danger border-2' : FIELD_BORDER].join(' ')}
       />
       {hint && !error && <p id={hintId} className="mt-1.5 text-sm text-ink-muted">{hint}</p>}
       {error && <ErrorLine id={errorId}>{error}</ErrorLine>}
@@ -88,9 +100,12 @@ interface TextAreaProps {
   placeholder?: string | undefined;
   rows?: number;
   required?: boolean;
+  maxLength?: number;
 }
 
-export function TextArea({ id, label, value, onChange, error, hint, placeholder, rows = 4, required }: TextAreaProps) {
+export function TextArea({
+  id, label, value, onChange, error, hint, placeholder, rows = 4, required, maxLength,
+}: TextAreaProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ');
@@ -103,12 +118,13 @@ export function TextArea({ id, label, value, onChange, error, hint, placeholder,
       <textarea
         id={id}
         rows={rows}
+        maxLength={maxLength}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className={[FIELD_BASE, 'py-3 leading-relaxed', error ? 'border-danger border-2' : 'border-line'].join(' ')}
+        className={[FIELD_BASE, 'py-3 leading-relaxed', error ? 'border-danger border-2' : FIELD_BORDER].join(' ')}
       />
       {hint && !error && <p id={hintId} className="mt-1.5 text-sm text-ink-muted">{hint}</p>}
       {error && <ErrorLine id={errorId}>{error}</ErrorLine>}
@@ -131,7 +147,7 @@ export function Select({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={[FIELD_BASE, 'h-13', 'border-line'].join(' ')}
+        className={[FIELD_BASE, 'h-13', FIELD_BORDER].join(' ')}
       >
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
