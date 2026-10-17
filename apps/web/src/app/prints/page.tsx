@@ -19,6 +19,12 @@ const GARMENT_LABELS: Record<string, string> = {
   ZIP_HOODIE: 'Зіп-худі', JOGGERS: 'Джогери', TOTE_BAG: 'Шопер',
 };
 
+/** «Принти на худі»: заголовок і лічильник, коли обрано виріб. */
+const GARMENT_ON: Record<string, string> = {
+  TSHIRT: 'на футболках', SWEATSHIRT: 'на світшотах', HOODIE: 'на худі',
+  ZIP_HOODIE: 'на зіп-худі', JOGGERS: 'на джогерах', TOTE_BAG: 'на шоперах',
+};
+
 function one(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
@@ -55,6 +61,13 @@ export default async function PrintsPage({ searchParams }: Search) {
     serverFetchOrNull('/catalog/range', RangeDto, 300),
   ]);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.perPage)) : 1;
+  /*
+   * Обраний виріб видно в заголовку, а ціни на картках сервер уже рахує саме
+   * для нього (аудит 17.10, IA-3): раніше «Худі» лишало все як було — ті
+   * самі 84 принти з ціною футболки, і здавалося, що фільтр зламаний.
+   * Принтів справді стільки ж: кожен друкуємо на будь-якому виробі.
+   */
+  const garmentOn = GARMENT_ON[one(searchParams?.['garmentType'])];
 
   const breedOptions: FilterOption[] = (breedList?.items ?? [])
     .filter((b) => b.printCount > 0)
@@ -81,10 +94,14 @@ export default async function PrintsPage({ searchParams }: Search) {
           <span className="text-ink">Усі принти</span>
         </nav>
 
-        <h1 className="mt-3 font-display text-hero font-bold text-ink">Усі принти</h1>
+        <h1 className="mt-3 font-display text-hero font-bold text-ink">
+          {garmentOn ? `Принти ${garmentOn}` : 'Усі принти'}
+        </h1>
         {data && data.total > 0 && (
           <p className="mt-3 text-lg text-ink-muted">
-            {data.total} {plural(data.total, 'принт', 'принти', 'принтів')} у каталозі
+            {garmentOn
+              ? <>{data.total} {plural(data.total, 'принт', 'принти', 'принтів')} друкуємо {garmentOn}, ціни вказані саме за цей виріб</>
+              : <>{data.total} {plural(data.total, 'принт', 'принти', 'принтів')} у каталозі</>}
           </p>
         )}
 
