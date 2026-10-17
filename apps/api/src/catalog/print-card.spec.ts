@@ -160,3 +160,23 @@ describe('matchesGarmentFilters', () => {
     expect(matchesGarmentFilters(print(), banned, { garmentType: 'HOODIE' })).toBe(true);
   });
 });
+
+describe('toPrintCard з обраним виробом', () => {
+  it('ціна «від» і наявність рахуються лише по обраному типу', () => {
+    // Худі 1600 + друк 600 = 2200, а не 1190 футболки; худі не на складі.
+    const card = toPrintCard(print(), ctx(), PRICES, ['HOODIE']);
+    expect(card.fromPriceMinor).toBe(fromUAH(2200));
+    expect(card.inStock).toBe(false);
+  });
+
+  it('обраного виробу в принта немає — ціни немає', () => {
+    expect(toPrintCard(print({ collectionIds: [] }), ctx({ garments: [tee] }), PRICES, ['HOODIE']).fromPriceMinor).toBeNull();
+  });
+});
+
+describe('matchesGarmentFilters з кількома типами', () => {
+  it('«кофта» = худі або світшот: досить одного з них', () => {
+    expect(matchesGarmentFilters(print(), ctx(), { garmentTypes: ['SWEATSHIRT', 'HOODIE'] })).toBe(true);
+    expect(matchesGarmentFilters(print(), ctx(), { garmentTypes: ['SWEATSHIRT'] })).toBe(false);
+  });
+});
