@@ -9,6 +9,7 @@ import {
   CARE_LINE, CARE_WARNING, paymentText, shippingText,
 } from '@/config/product-copy';
 import { ga4AddToCart, ga4ViewItem, hryvnia, type Ga4Item } from '@/features/analytics/ga4';
+import { track } from '@/features/analytics/client';
 import { garmentPhoto } from '../garment-photos';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { useGarmentOffer } from '../hooks/useGarmentOffer';
@@ -61,6 +62,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
   useEffect(() => {
     if (!data || viewedSlug.current === slug) return;
     viewedSlug.current = slug;
+    track('view_item', { valueMinor: data.garment.basePriceMinor });
     ga4ViewItem({
       item_id: slug,
       item_name: data.garment.name,
@@ -181,16 +183,18 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
 
   function handleAddToCart(): void {
     if (!variant) return;
+    const quantity = 1;
     ga4AddToCart(ga4Item);
     add({
       printSlug: null,
       variantId: variant.id,
       printMethod: null,
-      quantity: 1,
+      quantity,
       title: garmentName,
       previewUrl: photo ?? '',
     });
     setAdded(true);
+    track('add_to_cart', { valueMinor: priceMinor * quantity });
   }
 
   // Кадри обраного кольору: знімальні у своїй пропорції, схема крою —

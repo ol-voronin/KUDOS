@@ -26,6 +26,11 @@ const ShortText = z.string().max(200);
  */
 export const AnalyticsEventName = z.enum([
   'page_view',
+  // Воронка товару: без цих двох кроків між «зайшов» і «почав оформлення»
+  // не видно, де саме відвалюються люди з реклами — на картці чи в кошику.
+  // Назви ті самі, що в GA4, щоб звіти двох джерел читалися однаково.
+  'view_item',
+  'add_to_cart',
   'lead_submitted',
   'checkout_started',
   'purchase',
@@ -35,6 +40,8 @@ export type AnalyticsEventName = z.infer<typeof AnalyticsEventName>;
 
 export const EVENT_LABELS: Readonly<Record<AnalyticsEventName, string>> = {
   page_view: 'Перегляд сторінки',
+  view_item: 'Перегляд товару',
+  add_to_cart: 'Додавання в кошик',
   lead_submitted: 'Заявка з форми',
   checkout_started: 'Початок оформлення',
   purchase: 'Оплачене замовлення',
@@ -73,7 +80,10 @@ export const EMPTY_ATTRIBUTION: AttributionDto = {
 export const TrackEventDto = AttributionDto.extend({
   name: AnalyticsEventName,
   path: z.string().max(500),
-  /** Тільки для purchase. Копійки. */
+  /**
+   * Копійки. Для purchase і checkout_started — сума; для view_item — ціна
+   * товару; для add_to_cart — ціна × кількість.
+   */
   valueMinor: z.number().int().nonnegative().nullable().default(null),
 });
 export type TrackEventDto = z.infer<typeof TrackEventDto>;
