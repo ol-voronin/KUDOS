@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Suspense } from 'react';
-import { BreedListDto, CollectionListDto, RangeDto, SearchResultDto } from '@dt/contracts';
+import { type BreedCardDto, BreedListDto, CollectionListDto, RangeDto, SearchResultDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { BreedStrip, CollectionStrip, plural } from '@/features/home/blocks';
@@ -22,6 +23,11 @@ interface Search {
 const GARMENT_LABELS: Record<string, string> = {
   TSHIRT: 'Футболка', SWEATSHIRT: 'Світшот', HOODIE: 'Худі',
   ZIP_HOODIE: 'Зіп-худі', JOGGERS: 'Джогери', TOTE_BAG: 'Шопер',
+};
+
+const GARMENT_ON: Record<string, string> = {
+  TSHIRT: 'на футболках', SWEATSHIRT: 'на світшотах', HOODIE: 'на худі',
+  ZIP_HOODIE: 'на зіп-худі', JOGGERS: 'на джогерах', TOTE_BAG: 'на шоперах',
 };
 
 function one(value: string | string[] | undefined): string {
@@ -81,9 +87,28 @@ export default async function SearchPage({ searchParams }: Search) {
   const garmentOptions: FilterOption[] = [...new Set((range?.garments ?? []).map((g) => g.type))]
     .map((type) => ({ value: type, label: GARMENT_LABELS[type] ?? type }));
 
+  /*
+   * «Футболка», «собака» — це весь каталог: показуємо першу сторінку і
+   * ведемо в каталог з уже обраним виробом, де є сортування й пагінація.
+   */
+  const printsTotal = data ? Math.max(data.printsTotal, data.prints.length) : 0;
+  const explicitGarment = one(searchParams?.['garmentType']);
+  const impliedGarment = explicitGarment === '' && data?.garmentTypes.length === 1 ? data.garmentTypes[0] : undefined;
+  const catalogHref = (() => {
+    const next = new URLSearchParams();
+    for (const key of FILTER_KEYS) {
+      const value = one(searchParams?.[key]);
+      if (value !== '') next.set(key, value);
+    }
+    if (impliedGarment) next.set('garmentType', impliedGarment);
+    const qs = next.toString();
+    return qs === '' ? '/prints' : `/prints?${qs}`;
+  })();
+  const popularBreeds = (breedList?.items ?? []).filter((b) => b.printCount > 0).slice(0, 8);
+
   return (
     <PublicShell>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12">
         <h1 className="font-display text-3xl font-bold uppercase text-ink">
           {q ? <>Пошук: <span className="text-ink-muted">{q}</span></> : 'Пошук'}
         </h1>
@@ -106,34 +131,50 @@ export default async function SearchPage({ searchParams }: Search) {
               breeds={breedOptions}
               collections={collectionOptions}
               garmentTypes={garmentOptions}
-              resultCount={data.prints.length}
+              resultCount={printsTotal}
             />
           </Suspense>
         )}
 
-        {data && data.total === 0 && <NothingFound query={q} />}
+        {/* Як зрозуміли запит: «худі з таксою» — це такса, і ціни за худі. */}
+        {impliedGarment && printsTotal > 0 && (
+          <p className="mt-4 text-sm text-ink-muted">
+            Показуємо принти, які друкуємо {GARMENT_ON[impliedGarment] ?? impliedGarment}; ціни — саме за цей виріб.
+          </p>
+        )}
+
+        {data && data.total === 0 && <NothingFound query={q} breeds={popularBreeds} />}
 
         {data && data.breeds.length > 0 && (
-          <section className="mt-12">
+          <section className="mt-8 sm:mt-12">
             <SectionHead title="Породи" subtitle="Найімовірніше ви шукали саме це." />
             <BreedStrip breeds={data.breeds} />
           </section>
         )}
 
         {data && data.collections.length > 0 && (
-          <section className="mt-12">
+          <section className="mt-8 sm:mt-12">
             <SectionHead title="Колекції" />
             <CollectionStrip collections={data.collections} />
           </section>
         )}
 
         {data && data.prints.length > 0 && (
-          <section className="mt-12">
+          <section className="mt-8 sm:mt-12">
             <SectionHead
               title="Принти"
-              subtitle={`${data.prints.length} ${plural(data.prints.length, 'принт', 'принти', 'принтів')}`}
+              subtitle={printsTotal > data.prints.length
+                ? `Показано ${data.prints.length} з ${printsTotal}`
+                : `${printsTotal} ${plural(printsTotal, 'принт', 'принти', 'принтів')}`}
             />
             <PrintGrid prints={data.prints} list={LIST.search} />
+            {printsTotal > data.prints.length && (
+              <div className="mt-8 text-center">
+                <ButtonLink href={catalogHref} size="lg">
+                  Усі {printsTotal} {plural(printsTotal, 'принт', 'принти', 'принтів')} у каталозі →
+                </ButtonLink>
+              </div>
+            )}
           </section>
         )}
 
@@ -160,23 +201,51 @@ export default async function SearchPage({ searchParams }: Search) {
 
 /**
  * Порожній результат — найчастіший момент, коли людина йде з сайту.
- * Тому тут не «нічого не знайдено», а пропозиція: породи, якої немає в
- * каталозі, ми й так малюємо з нуля.
+ *
+ * Раніше тут була лише кнопка «Замовити свій принт» — довший і дорожчий
+ * сценарій — замість 84 готових принтів (аудит 17.10, IA-2). Тепер спершу
+ * готове: популярні породи й усі принти, і вже потім — намалювати своє.
  */
-function NothingFound({ query }: { query: string }) {
+function NothingFound({ query, breeds }: { query: string; breeds: readonly BreedCardDto[] }) {
   return (
-    <div className="mt-10 rounded-card border border-dashed border-line-strong bg-surface-sunken p-8 text-center">
+    <div className="mt-8 rounded-card border border-dashed border-line-strong bg-surface-sunken p-6 sm:p-8">
       <p className="font-medium text-ink">За запитом «{query}» нічого не знайшли</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-        Якщо це порода твоєї собаки — просто напиши нам. Готового принта може
-        не бути, але намалювати з фото ми можемо будь-кого.
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
+        Спробуй назву породи, наприклад «такса» чи «мопс», або подивись готові принти.
       </p>
-      <div className="mt-5 flex flex-wrap justify-center gap-3">
-        <ButtonLink href="/svoya-ideya">
-          Замовити свій принт
+
+      {breeds.length > 0 && (
+        <nav aria-label="Популярні породи" className="mt-5">
+          <p className="label-eyebrow">Популярні породи</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {breeds.map((b) => (
+              <li key={b.id}>
+                <Link
+                  href={`/breeds/${b.slug}`}
+                  className="inline-flex min-h-11 items-center rounded-pill border border-line bg-surface px-4 text-sm font-medium text-ink hover:border-ink"
+                >
+                  {b.name}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link
+                href="/breeds"
+                className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-ink underline"
+              >
+                Усі породи →
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <ButtonLink href="/prints">
+          Усі принти
         </ButtonLink>
-        <ButtonLink href="/prints" variant="quiet">
-          Дивитись усі принти
+        <ButtonLink href="/svoya-ideya" variant="quiet">
+          Замовити свій принт
         </ButtonLink>
       </div>
     </div>

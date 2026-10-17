@@ -8,7 +8,7 @@ import { PrintGrid, SectionHead } from '@/features/home/print-card';
 import { BreedStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
-import { breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
+import { breadcrumbJsonLd, breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
 import { LIST } from '@/features/analytics/lists';
@@ -72,6 +72,11 @@ export default async function CollectionPage({ params }: Params) {
   return (
     <PublicShell>
       {prints.length > 0 && <JsonLd data={breedItemListJsonLd(collection.title, prints, BASE)} />}
+      <JsonLd data={breadcrumbJsonLd([
+        { name: 'Головна', url: `${BASE}/` },
+        { name: 'Колекції', url: `${BASE}/collections` },
+        { name: collection.title, url: `${BASE}/collections/${collection.slug}` },
+      ])} />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
@@ -87,8 +92,12 @@ export default async function CollectionPage({ params }: Params) {
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">{collection.description}</p>
         )}
         {prints.length > 0 && (
-          <p className="mt-2 text-ink-subtle">
-            {prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')}
+          <p className="mt-2 flex flex-wrap items-baseline gap-x-3 text-ink-subtle">
+            <span>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')}</span>
+            {/* Фільтр за породою й виробом уже є в каталозі (аудит 17.10, IA-9). */}
+            <Link href={`/prints?collection=${collection.slug}`} className="text-sm font-medium text-ink underline">
+              Фільтрувати за породою чи виробом
+            </Link>
           </p>
         )}
 

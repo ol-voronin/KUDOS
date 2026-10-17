@@ -19,6 +19,12 @@ interface Params { params: { slug: string } }
 
 const BASE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000';
 
+/** Підписи для переходу в каталог за виробом. */
+const GARMENT_PLURAL: Record<string, string> = {
+  TSHIRT: 'Футболки', SWEATSHIRT: 'Світшоти', HOODIE: 'Худі',
+  ZIP_HOODIE: 'Зіп-худі', JOGGERS: 'Джогери', TOTE_BAG: 'Шопери',
+};
+
 /**
  * Породна сторінка — головний вхід із пошуку.
  *
@@ -102,7 +108,7 @@ export default async function BreedPage({ params }: Params) {
         { name: breed.name, url: `${BASE}/breeds/${breed.slug}` },
       ])} />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-12">
         <nav aria-label="Хлібні крихти" className="text-sm text-ink-muted">
           <Link href="/" className="hover:underline">Головна</Link>
           <span className="px-1.5">·</span>
@@ -112,49 +118,64 @@ export default async function BreedPage({ params }: Params) {
         </nav>
 
         {/*
-          Фото породи стоїть ПОРУЧ із заголовком, а не банером на всю ширину.
-          Це не герой сторінки: людина прийшла по принти, фото лише підтверджує,
-          що вона потрапила до своєї собаки. Немає фото — колонка просто не
-          малюється, і текст займає всю ширину, як раніше.
+          Перший екран — товари (аудит 17.10.2026, IA-6). Раніше фото породи
+          на телефоні стояло квадратом на всю ширину над заголовком, і перша
+          картка принта починалася на 833 px при видимих 664. Сторінка породи —
+          посадкова для «футболка з таксою»: людина має одразу бачити футболки.
+          Тепер фото — аватар поруч із заголовком, опис коротший, а синоніми
+          («Також шукають як») переїхали під сітку: для пошуковика вони там
+          так само є, а покупцеві не заважають.
         */}
-        <div className={breed.photoUrl ? 'mt-3 grid gap-6 md:grid-cols-[1fr_18rem] md:items-start' : 'mt-3'}>
-          <div>
-            <h1 className="font-display text-hero font-bold text-ink">
-              {breed.name}: футболки й худі з принтом
-            </h1>
-
-            <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
-              {prints.length > 0
-                ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} на вибір. Обери принт, а далі — виріб, на якому його надрукувати. Друкуємо {site.cityIn}.</>
-                : <>Готового принта для цієї породи ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
-            </p>
-
-            {/* Синоніми — те, за чим реально гуглять. Поле в схемі було завжди. */}
-            {breed.synonyms.length > 0 && (
-              <p className="mt-3 max-w-prose text-sm text-ink-subtle">
-                Також шукають як: {breed.synonyms.join(', ')}.
-              </p>
-            )}
-          </div>
-
+        <div className="mt-3 flex items-center gap-3 sm:gap-5">
           {breed.photoUrl && (
-            <figure className="order-first md:order-none">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={breed.photoUrl}
-                alt={breed.name}
-                className="aspect-square w-full rounded-card object-cover"
-              />
-              <figcaption className="mt-2 text-xs text-ink-subtle">{breed.name}</figcaption>
-            </figure>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={breed.photoUrl}
+              alt={breed.name}
+              className="h-16 w-16 shrink-0 rounded-full object-cover sm:h-24 sm:w-24"
+            />
           )}
+          <h1 className="min-w-0 font-display text-2xl font-bold leading-tight text-ink sm:text-hero">
+            {breed.name}: футболки й худі з принтом
+          </h1>
         </div>
 
-        <div className="mt-10">
+        <p className="mt-3 max-w-prose text-sm leading-relaxed text-ink-muted sm:text-lg">
           {prints.length > 0
-            ? <PrintGrid prints={prints} list={LIST.breed} listId={breed.slug} />
+            ? <>{prints.length} {plural(prints.length, 'принт', 'принти', 'принтів')} на вибір. Обери принт, далі — виріб. Друкуємо {site.cityIn}.</>
+            : <>Готового принта для цієї породи ще немає — але це не проблема. Намалюємо саме твого пса з фото.</>}
+        </p>
+
+        {/*
+          Перехід у каталог із уже обраною породою й виробом: там і сортування,
+          і ціна «від» саме для худі чи світшота.
+        */}
+        {prints.length > 0 && data.garmentTypes.length > 1 && (
+          <nav aria-label="Дивитись за виробом" className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4" style={{ scrollbarWidth: 'none' }}>
+            {data.garmentTypes.map((type) => (
+              <Link
+                key={type}
+                href={`/prints?breed=${breed.slug}&garmentType=${type}`}
+                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-pill border border-line px-4 text-sm font-medium text-ink hover:border-ink"
+              >
+                {GARMENT_PLURAL[type] ?? type} →
+              </Link>
+            ))}
+          </nav>
+        )}
+
+        <div className="mt-5 sm:mt-10">
+          {prints.length > 0
+            ? <PrintGrid prints={prints} list={LIST.breed} listId={breed.slug} aboveFold />
             : <EmptyBreed name={breed.name} collections={collections} />}
         </div>
+
+        {/* Синоніми — те, за чим реально гуглять. Поле в схемі було завжди. */}
+        {breed.synonyms.length > 0 && (
+          <p className="mt-6 max-w-prose text-sm text-ink-subtle">
+            Також шукають як: {breed.synonyms.join(', ')}.
+          </p>
+        )}
 
         {articles.length > 0 && (
           <section className="mt-14">
