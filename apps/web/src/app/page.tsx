@@ -65,6 +65,18 @@ export default async function HomePage() {
       {page === null
         ? <MissingHome />
         : <BlockRenderer blocks={page.blocks} />}
+
+      {/*
+        Вміст головної — з CMS, а це посилання живе в коді навмисно: посадкова
+        «Одяг з собаками» має отримувати посилання з головної незалежно від
+        того, як переставлять блоки в адмінці.
+      */}
+      <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+        <p className="max-w-prose text-ink-muted">
+          Футболки, худі й світшоти за породою і виробом в одному місці:{' '}
+          <Link href="/odyag-z-sobakamy" className="font-medium text-ink underline underline-offset-4">одяг з собаками</Link>.
+        </p>
+      </div>
     </PublicShell>
   );
 }

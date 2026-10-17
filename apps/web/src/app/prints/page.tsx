@@ -141,6 +141,11 @@ export default async function PrintsPage({ searchParams }: Search) {
           )}
         </div>
 
+        <p className="mt-8 text-sm text-ink-muted">
+          Шукаєш за породою чи виробом? Зібрали все на одній сторінці:{' '}
+          <Link href="/odyag-z-sobakamy" className="font-medium text-ink underline underline-offset-4">одяг з собаками</Link>.
+        </p>
+
         {/* Пагінація посиланнями, а не кнопками: сторінки мають індексуватись. */}
         {pages > 1 && (
           <nav aria-label="Сторінки каталогу" className="mt-10 flex items-center justify-between text-sm">
