@@ -97,15 +97,15 @@ export function freeShippingProgress(
 }
 
 /**
- * Строк. `extraLeadDays` — найдовше пошиття серед позицій під замовлення
- * (`maxLeadTimeDays` з розрахунку кошика): виріб, який спершу шиють, не
+ * Строк. `extraLeadDays` — найдовший строк серед позицій під замовлення
+ * (`maxLeadTimeDays` з розрахунку кошика): колір чи виріб, який готуємо під замовлення, не
  * виїде швидше за той, що вже лежить. Так само рахує картка товару.
  */
 export function productionLine(productionDaysMax: number, extraLeadDays = 0): string {
   const base = `Друкуємо до ${productionDaysMax} ${workingDays(productionDaysMax)} і одразу відправляємо.`;
   if (extraLeadDays <= 0) return base;
   const total = productionDaysMax + extraLeadDays;
-  return `${base} Цей виріб спершу шиємо під замовлення, тож разом до ${total} ${workingDays(total)}.`;
+  return `${base} Цей колір готуємо під замовлення, тож разом до ${total} ${workingDays(total)}.`;
 }
 
 /** «до» + родовий: «до 1 робочого дня», «до 5 робочих днів». */
