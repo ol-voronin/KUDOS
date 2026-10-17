@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { SiteChromeDto, type MenuItemDto, type SiteSettingsDto } from '@dt/contracts';
 import { site } from '@/config/site';
 import { serverFetchOrNull } from './server-api';
+import { withLegalEntity } from './legal-entity';
 
 /**
  * Реквізити й меню сайту — з бази, із запасним варіантом у коді.
@@ -63,7 +64,8 @@ const FALLBACK_MENU: MenuItemDto[] = [
 
 export const getChrome = cache(async (): Promise<SiteChromeDto> => {
   const data = await serverFetchOrNull('/content/site', SiteChromeDto, 300);
-  return data ?? { settings: FALLBACK_SETTINGS, menu: FALLBACK_MENU };
+  if (data === null) return { settings: FALLBACK_SETTINGS, menu: FALLBACK_MENU };
+  return { ...data, settings: withLegalEntity(data.settings) };
 });
 
 export const getSettings = cache(async (): Promise<SiteSettingsDto> => (await getChrome()).settings);

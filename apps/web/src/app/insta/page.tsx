@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BlobImage } from '@/components/blob-image';
 import { notFound } from 'next/navigation';
 import { BreedListDto } from '@dt/contracts';
 import { PublicShell } from '@/components/public-shell';
@@ -64,9 +65,8 @@ export default async function InstaPage() {
             {gallery.map((b) => (
               <li key={b.id}>
                 <Link href={`/breeds/${b.slug}`} className="group block">
-                  <span className="block aspect-square overflow-hidden rounded-card border border-line bg-surface">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={b.previewUrl} alt={`Принт ${b.name}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none" />
+                  <span className="relative block aspect-square overflow-hidden rounded-card border border-line bg-surface">
+                    <BlobImage src={b.previewUrl} alt={`Принт ${b.name}`} sizes="33vw" className="object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none" />
                   </span>
                   <span className="mt-2 block truncate text-sm font-medium text-ink">{b.name}</span>
                 </Link>

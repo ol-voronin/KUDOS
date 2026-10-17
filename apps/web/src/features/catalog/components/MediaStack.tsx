@@ -1,7 +1,52 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { IMAGE_QUALITY } from '@/components/blob-image';
+import { canOptimizeImage } from '@/lib/image-source';
+
+/**
+ * Ширина кадру: на телефоні стрічка на весь екран, з 768 px галерея — ліва
+ * колонка. Одне значення і для мобільної стрічки, і для десктопного кадру:
+ * обидві розмітки є в DOM (одна схована CSS), і з однаковим `sizes` браузер
+ * обирає ту саму копію — вона вантажиться один раз, а не двічі.
+ */
+const FRAME_SIZES = '(min-width: 1280px) 600px, (min-width: 768px) 50vw, 100vw';
+
+/**
+ * Кадр галереї. Фото з нашого Blob (`prints/…`) — через `next/image`: замість
+ * оригіналу 1200×1800 (до 220 КБ) телефон отримує копію під ширину екрана.
+ * Лише перший кадр `priority` (він LCP товару); решта ледачі — раніше обидва
+ * фото вантажились одразу, хоча другий кадр видно тільки після свайпу.
+ */
+function FrameImage({
+  src, alt, className, first, sizes = FRAME_SIZES, natural = false,
+}: {
+  src: string; alt: string; className: string; first: boolean; sizes?: string;
+  /** Кадр у своїй пропорції (стос): висоту задає сама картинка, а не обгортка. */
+  natural?: boolean;
+}) {
+  if (!canOptimizeImage(src)) {
+    const box = natural ? className : `absolute inset-0 h-full w-full ${className}`;
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className={box} draggable={false} loading={first ? 'eager' : 'lazy'} />;
+  }
+  if (natural) {
+    return (
+      <Image
+        src={src} alt={alt} width={1200} height={1600} sizes={sizes} quality={IMAGE_QUALITY}
+        priority={first} className={className} draggable={false}
+      />
+    );
+  }
+  return (
+    <Image
+      src={src} alt={alt} fill sizes={sizes} quality={IMAGE_QUALITY}
+      priority={first} className={className} draggable={false}
+    />
+  );
+}
 
 export interface MediaFrame {
   readonly key: string;
@@ -115,14 +160,14 @@ export function MediaStack({
         </div>
       );
     }
+    const src = f.src ?? '';
+    const first = index === 0;
     const img = f.kind === 'scheme'
       // eslint-disable-next-line @next/next/no-img-element
-      ? <img src={f.src} alt={f.alt} className={`mx-auto aspect-square w-full max-w-md object-contain p-8 ${fit ? 'max-h-full' : ''}`} draggable={false} />
+      ? <img src={src} alt={f.alt} className={`mx-auto aspect-square w-full max-w-md object-contain p-8 ${fit ? 'max-h-full' : ''}`} draggable={false} loading={first ? 'eager' : 'lazy'} />
       : fit
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={f.src} alt={f.alt} className="h-full w-full object-contain" draggable={false} />
-        // eslint-disable-next-line @next/next/no-img-element
-        : <img src={f.src} alt={f.alt} className="h-auto w-full" draggable={false} />;
+        ? <span className="relative block h-full w-full"><FrameImage src={src} alt={f.alt} first={first} className="object-contain" /></span>
+        : <FrameImage src={src} alt={f.alt} first={first} natural className="h-auto w-full" />;
     return (
       <button
         type="button"
@@ -178,8 +223,7 @@ export function MediaStack({
                   ].join(' ')}
                 >
                   {f.src !== undefined
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={f.src} alt="" className="h-full w-full object-cover" draggable={false} />
+                    ? <span className="relative block h-full w-full"><FrameImage src={f.src} alt="" first={false} sizes="56px" className="h-full w-full object-cover" /></span>
                     : <span className="flex h-full w-full items-center justify-center text-[0.6rem] leading-tight text-ink-muted">Вигляд</span>}
                 </button>
               ))}
@@ -220,8 +264,10 @@ export function MediaStack({
           className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/90 animate-[fade-in_.15s_ease-out]"
           onClick={() => setZoom(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={zoomed.src} alt={zoomed.alt} className="max-h-[92vh] max-w-[92vw] cursor-zoom-out object-contain" />
+          <FrameImage
+            src={zoomed.src ?? ''} alt={zoomed.alt} first={false} natural sizes="92vw"
+            className="h-auto max-h-[92vh] w-auto max-w-[92vw] cursor-zoom-out object-contain"
+          />
           {zoomable.length > 1 && (
             <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm tabular-nums text-white/80">
               {zoomable.indexOf(zoom ?? 0) + 1} / {zoomable.length} · гортай стрілками

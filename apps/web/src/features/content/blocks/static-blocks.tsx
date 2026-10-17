@@ -4,6 +4,7 @@ import type {
   ImageTextBlock, LegalBlock, QuoteBlock, SplitBlock, StepsBlock, TextBlock,
 } from '@dt/contracts';
 import { isSafeHref, type BlockIcon } from '@dt/contracts';
+import { BlobImage } from '@/components/blob-image';
 import { ButtonLink } from '@/components/ui';
 import { Inline, InlineParagraph } from '../inline';
 import { BlockHeading, BlockLinks, palette } from './shared';
@@ -69,7 +70,8 @@ function HeroPlain({ block, onDark = false }: { block: HeroBlock } & Dark) {
       {block.eyebrow.trim() !== '' && (
         <p className={`label-eyebrow mb-3 ${onDark ? 'text-surface/60' : ''}`}>{block.eyebrow}</p>
       )}
-      <h1 className={`max-w-4xl font-display text-hero font-extrabold uppercase ${c.head}`}>
+      {/* `hyphens-auto`: юридичні заголовки з довгими словами («КОНФІДЕНЦІЙНОСТІ»). */}
+      <h1 className={`max-w-4xl hyphens-auto font-display text-hero font-extrabold uppercase ${c.head}`}>
         <HeroHeading text={block.heading} onDark={onDark} />
       </h1>
       <InlineParagraph text={block.lead} className={`mt-4 max-w-prose text-lg leading-relaxed ${c.body}`} />
@@ -95,11 +97,16 @@ function HeroPlain({ block, onDark = false }: { block: HeroBlock } & Dark) {
 function HeroFull({ block }: { block: HeroBlock }) {
   return (
     <section className="relative -mt-px flex min-h-[calc(100svh-4.4rem)] items-center overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      {/*
+        Герой — LCP головної: `priority` (preload + fetchpriority=high) і копія
+        під ширину екрана замість оригіналу 2000×997 з Blob (аудит 17.10).
+      */}
+      <BlobImage
         src={block.image.url}
         alt={block.image.alt}
-        className="absolute inset-0 h-full w-full object-cover object-[62%_28%] md:object-[70%_30%]"
+        sizes="100vw"
+        priority
+        className="object-cover object-[62%_28%] md:object-[70%_30%]"
       />
       {/*
         Затемнення тепер СПРЯМОВАНЕ: густе ліворуч, де лежить текст, і
@@ -116,26 +123,24 @@ function HeroFull({ block }: { block: HeroBlock }) {
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-20 sm:px-6">
         <div className="flex max-w-xl flex-col items-start text-left">
           {block.eyebrow.trim() !== '' && (
-            <p className="reveal label-eyebrow mb-4 text-white/75">{block.eyebrow}</p>
+            <p className="label-eyebrow mb-4 text-white/75">{block.eyebrow}</p>
           )}
           {/*
             Заголовок на фотографії на щабель менший за той, що на світлому:
             там він єдиний елемент і може бути скільки завгодно великим, а
             тут конкурує зі знімком і мусить лишити його видимим.
           */}
-          <h1 className="reveal reveal-1 font-display text-[clamp(2rem,4.6vw,3.8rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm">
+          <h1 className="font-display text-[clamp(2rem,4.6vw,3.8rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm">
             <HeroHeading text={block.heading} onDark />
           </h1>
           <InlineParagraph
             text={block.lead}
-            className="reveal reveal-2 mt-5 max-w-md text-base leading-relaxed text-white/85 sm:text-lg"
+            className="mt-5 max-w-md text-base leading-relaxed text-white/85 sm:text-lg"
           />
           {block.footnote.trim() !== '' && (
-            <p className="reveal reveal-2 mt-3 text-sm text-white/65">{block.footnote}</p>
+            <p className="mt-3 text-sm text-white/65">{block.footnote}</p>
           )}
-          <div className="reveal reveal-3">
-            <BlockLinks links={block.links} className="mt-9" onDark />
-          </div>
+          <BlockLinks links={block.links} className="mt-9" onDark />
         </div>
       </div>
 
@@ -441,6 +446,8 @@ export function ImageText({ block, onDark = false }: { block: ImageTextBlock } &
       <img
         src={block.image.url}
         alt={block.image.alt}
+        loading="lazy"
+        decoding="async"
         className="w-full object-cover"
       />
       {block.image.caption.trim() !== '' && (
@@ -473,12 +480,14 @@ export function Gallery({ block, onDark = false }: { block: GalleryBlock } & Dar
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {block.items.map((img, i) => (
           <figure key={i} className="m-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={img.url}
-              alt={img.alt}
-              className="aspect-square w-full bg-surface-sunken object-cover"
-            />
+            <div className="relative aspect-square w-full overflow-hidden bg-surface-sunken">
+              <BlobImage
+                src={img.url}
+                alt={img.alt}
+                sizes="(min-width: 1280px) 400px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
             {img.caption.trim() !== '' && (
               <figcaption className={`mt-2 text-sm ${c.faint}`}>{img.caption}</figcaption>
             )}

@@ -53,11 +53,17 @@ const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
  * ліміт Blob Data Transfer. `next/image` віддає зменшену копію під розмір
  * картки й кешує її на CDN сайту, тож Blob бачить лише перше звернення за картинкою.
  *
- * Хост і шлях вужчі навмисно: оптимізатор не має працювати для чужих сховищ
- * і для `media/` (картинки сторінок), інакше на наш рахунок можна гнати чужі
- * картинки. Хост не секрет (його видно в HTML), але його ім'я дублює
- * `src/lib/image-source.ts`; розбіжність ловить `image-source.spec.ts`.
+ * Хост вужчий навмисно: оптимізатор не має працювати для чужих сховищ,
+ * інакше на наш рахунок можна гнати чужі картинки. Шляхи — лише ті, куди
+ * пише наша адмінка: `prints/` (обкладинки й фото принтів), `breeds/`
+ * (іконки порід 900×900, які стоять у слотах 56–112 px) і `media/` (фото
+ * сторінок, зокрема герой головної 2000×997). Раніше `breeds/` і `media/`
+ * йшли з Blob в оригіналі: ≈300 КБ на перегляд головної, і кожен байт —
+ * Blob Data Transfer (аудит 17.10, тех. п. 2). Хост не секрет (його видно в
+ * HTML), але його ім'я дублює `src/lib/image-source.ts`; розбіжність ловить
+ * `image-source.spec.ts`.
  */
+export const BLOB_PATHS = ['prints', 'breeds', 'media'];
 export const BLOB_HOST = '57fwtlsqujgnycet.public.blob.vercel-storage.com';
 
 /** @type {import('next').NextConfig} */
@@ -66,7 +72,7 @@ const nextConfig = {
   transpilePackages: ['@dt/contracts'],
   poweredByHeader: false,
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: BLOB_HOST, pathname: '/prints/**' }],
+    remotePatterns: BLOB_PATHS.map((dir) => ({ protocol: 'https', hostname: BLOB_HOST, pathname: `/${dir}/**` })),
     /*
      * 30 днів. Адреса обкладинки містить хеш (`cover-<hash>.webp`), тож нова
      * картинка = нова адреса = нова копія; стара не «застрягне». Кожне
