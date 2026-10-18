@@ -76,6 +76,17 @@ export class MonobankService {
     return Boolean(token) && token !== '__replace_me__';
   }
 
+  /**
+   * Чи виставляти рахунок одразу при оформленні. За замовчуванням — ні
+   * (рішення Олексія, 18.10): спершу заявка, менеджер пише протягом години,
+   * уточнює деталі й сам надсилає рахунок (реквізити або посилання Monobank
+   * з адмінки — `isConfigured` для цього лишається). Увімкнути оплату на
+   * касі знову: `CHECKOUT_PAY_ONLINE=true` у змінних API.
+   */
+  payAtCheckout(): boolean {
+    return this.isConfigured() && process.env['CHECKOUT_PAY_ONLINE'] === 'true';
+  }
+
   private token(): string {
     const token = process.env['MONOBANK_TOKEN'];
     if (!token || token === '__replace_me__') {

@@ -35,7 +35,7 @@ export class OrdersController {
   @UsePipes(new ZodValidationPipe(CartQuoteRequestDto))
   async quote(@Body() dto: CartQuoteRequestDto) {
     // `payOnline` — лише для чесного тексту біля кнопки «Замовити».
-    return { ...toCartQuote(await this.cart.price(dto.items)), payOnline: this.monobank.isConfigured() };
+    return { ...toCartQuote(await this.cart.price(dto.items)), payOnline: this.monobank.payAtCheckout() };
   }
 
   /**
