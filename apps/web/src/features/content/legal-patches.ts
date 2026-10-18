@@ -82,8 +82,27 @@ function patchPrivacy(blocks: Block[]): Block[] {
   });
 }
 
+/**
+ * Оферта, п. 4.3: з 18.10 оплата не лише карткою через Monobank, а й за
+ * реквізитами — рахунок надсилає менеджер після розмови (рішення Олексія).
+ */
+const OFERTA_PAYMENT_OLD = 'Оплата — карткою через платіжний сервіс Monobank';
+const OFERTA_PAYMENT_NEW =
+  'Оплата — після підтвердження замовлення менеджером: на рахунок ФОП за реквізитами або карткою '
+  + 'через платіжний сервіс Monobank (АТ «Універсал Банк») за посиланням, яке ми надсилаємо. '
+  + 'Дані картки вводяться на стороні банку; ми їх не бачимо й не зберігаємо.';
+
+function patchOferta(blocks: Block[]): Block[] {
+  const outdated = blocks.some((b) => b.type === 'legal' && b.items.some((i) => i.text.startsWith(OFERTA_PAYMENT_OLD)));
+  if (!outdated) return blocks;
+  return blocks.map((b) => (b.type === 'legal'
+    ? { ...b, items: b.items.map((i) => (i.text.startsWith(OFERTA_PAYMENT_OLD) ? { ...i, text: OFERTA_PAYMENT_NEW } : i)) }
+    : b));
+}
+
 export function applyLegalPatches(page: PageDto): PageDto {
-  if (page.slug !== 'pryvatnist') return page;
-  const blocks = patchPrivacy(page.blocks);
+  const patch = page.slug === 'pryvatnist' ? patchPrivacy : page.slug === 'oferta' ? patchOferta : null;
+  if (patch === null) return page;
+  const blocks = patch(page.blocks);
   return blocks === page.blocks ? page : { ...page, blocks };
 }

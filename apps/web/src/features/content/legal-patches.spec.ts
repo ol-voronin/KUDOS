@@ -35,3 +35,11 @@ describe('applyLegalPatches', () => {
     expect(applyLegalPatches(other)).toBe(other);
   });
 });
+
+describe('applyLegalPatches — оферта', () => {
+  it('замінює п. 4.3 про оплату лише карткою', () => {
+    const out = applyLegalPatches(page('oferta', 'Оплата — карткою через платіжний сервіс Monobank (АТ «Універсал Банк»).'));
+    const text = JSON.stringify(out.blocks);
+    expect(text).toContain('за реквізитами');
+  });
+});
