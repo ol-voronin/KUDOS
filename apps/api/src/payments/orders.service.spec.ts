@@ -60,7 +60,7 @@ function setup(opts: {
   const ordersAdmin = {
     createInvoice: vi.fn(opts.invoice ?? (async () => ({ pageUrl: PAGE_URL, invoiceId: 'inv-1' }))),
   };
-  const monobank = { isConfigured: vi.fn(() => opts.configured) };
+  const monobank = { payAtCheckout: vi.fn(() => opts.configured) };
   const service = new OrdersService(prisma as never, cart as never, ordersAdmin as never, monobank as never);
   return { service, ordersAdmin, orderCreate };
 }

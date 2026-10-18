@@ -6,7 +6,7 @@ import { ButtonLink } from '@/components/ui';
 import { faqJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { RETURN_POLICY_TEXT } from '@/config/returns';
-import { NP_TARIFF_ESTIMATE, PAYMENT_TEXT } from '@/config/order-terms';
+import { NP_TARIFF_ESTIMATE, PAYMENT_TEXT_LATER } from '@/config/order-terms';
 
 export const revalidate = 300;
 
@@ -49,8 +49,8 @@ export default async function FaqPage() {
           q: 'Як оплатити?',
           // Той самий текст, що на товарі, в кошику й на оформленні (`config/order-terms`).
           id: 'oplata',
-          plain: `${PAYMENT_TEXT} Картку вводиш на сторінці Monobank, не в нас. Післяплати немає.`,
-          a: <>{PAYMENT_TEXT} Картку вводиш на сторінці Monobank, не в нас. Післяплати немає.</>,
+          plain: `${PAYMENT_TEXT_LATER} Післяплати немає.`,
+          a: <>{PAYMENT_TEXT_LATER} Післяплати немає.</>,
         },
         {
           q: 'Чи можна купити річ без принта?',

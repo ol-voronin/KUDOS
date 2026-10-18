@@ -41,7 +41,7 @@ export function canPayAtCheckout(stream: string, lines: readonly CheckoutLine[])
  *
  * ── Коли рахунку одразу НЕ буде ───────────────────────────────────────
  *
- * - `MONOBANK_TOKEN` не задано;
+ * - `MONOBANK_TOKEN` не задано або оплату на касі вимкнено (`CHECKOUT_PAY_ONLINE`, за замовчуванням вимкнено з 18.10);
  * - Monobank (чи будь-що дорогою) відповів помилкою;
  * - у замовленні щось, крім базового одягу й готових принтів.
  *
@@ -177,7 +177,7 @@ export class OrdersService {
     order: { id: string; number: number; stream: string },
     lines: readonly CheckoutLine[],
   ): Promise<string | undefined> {
-    if (!this.monobank.isConfigured()) return undefined;
+    if (!this.monobank.payAtCheckout()) return undefined;
     if (!canPayAtCheckout(order.stream, lines)) return undefined;
     try {
       const { pageUrl } = await this.ordersAdmin.createInvoice(order.id);

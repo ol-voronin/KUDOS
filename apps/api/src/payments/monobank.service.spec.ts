@@ -94,3 +94,19 @@ describe('MonobankService.createInvoice', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 });
+
+describe('MonobankService.payAtCheckout', () => {
+  it('за замовчуванням вимкнено, навіть із токеном (спершу заявка, 18.10)', () => {
+    vi.stubEnv('MONOBANK_TOKEN', 'token');
+    vi.stubEnv('CHECKOUT_PAY_ONLINE', '');
+    expect(new MonobankService().payAtCheckout()).toBe(false);
+  });
+
+  it('вмикається прапорцем, лише коли є токен', () => {
+    vi.stubEnv('CHECKOUT_PAY_ONLINE', 'true');
+    vi.stubEnv('MONOBANK_TOKEN', 'token');
+    expect(new MonobankService().payAtCheckout()).toBe(true);
+    vi.stubEnv('MONOBANK_TOKEN', '');
+    expect(new MonobankService().payAtCheckout()).toBe(false);
+  });
+});
