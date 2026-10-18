@@ -6,9 +6,9 @@ import {
   OrderDraftResponseDto, formatUAH, minor, type DeliveryMethod,
 } from '@dt/contracts';
 import { Button, ErrorBanner, Skeleton } from '@/components/ui';
-import { attribution, hashPhone, track } from '@/features/analytics/client';
+import { attribution, hashPhone, setAdsUserData, track } from '@/features/analytics/client';
 import {
-  ga4AddPaymentInfo, ga4AddShippingInfo, ga4BeginCheckout, itemFromCartLine, type Ga4Item,
+  ga4AddPaymentInfo, ga4AddShippingInfo, ga4BeginCheckout, ga4GenerateLead, itemFromCartLine, type Ga4Item,
 } from '@/features/analytics/ga4';
 import { rememberOrder } from '@/features/analytics/order-snapshot';
 import { ApiError, apiFetch } from '@/lib/api-client';
@@ -192,7 +192,7 @@ export function CheckoutForm({
        * порівнювати з оплатою. Назва каже, чи пішов він платити одразу.
        */
       ga4AddPaymentInfo(
-        result.paymentPageUrl === undefined ? 'Monobank (рахунок після підтвердження)' : 'Monobank (hold при оформленні)',
+        result.paymentPageUrl === undefined ? 'Рахунок від менеджера' : 'Monobank (hold при оформленні)',
         items,
       );
 
@@ -216,6 +216,17 @@ export function CheckoutForm({
       // Кошик чистимо тільки після того, як сервер підтвердив замовлення:
       // помилка мережі не має коштувати людині зібраного кошика.
       clear();
+      /*
+       * Без оплати на касі (з 18.10) заявка — і є конверсія: Google Ads
+       * інакше не побачив би нічого, бо «покупка» тепер настає вручну,
+       * днями пізніше. `lead_submitted` — та сама дія «BBK Заявка», що й у
+       * формах; покупку після оплати й далі ловить сторінка замовлення.
+       */
+      if (result.paymentPageUrl === undefined) {
+        setAdsUserData(await hashPhone(phone));
+        track('lead_submitted', { valueMinor: result.totalMinor });
+        ga4GenerateLead('Замовлення з кошика');
+      }
       if (result.paymentPageUrl !== undefined) {
         // Сторінка Monobank — інший сайт, тож повний перехід, а не router.
         // Після оплати Monobank поверне на `/order/:id`.
@@ -426,7 +437,7 @@ export function CheckoutForm({
                   {sending ? 'Оформлюємо…' : 'Рахуємо суму…'}
                 </>
               )
-              : payOnline ? 'Замовити й оплатити' : 'Замовити'}
+              : payOnline ? 'Замовити й оплатити' : 'Оформити замовлення'}
           </Button>
 
           {/*
