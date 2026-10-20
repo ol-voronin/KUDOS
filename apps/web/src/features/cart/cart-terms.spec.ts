@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  PAYMENT_TEXT, freeShippingProgress, productionLine, returnLine, shippingSummary,
+  PAYMENT_TEXT, PAYMENT_TEXT_LATER, freeShippingProgress, productionLine, returnLine, shippingSummary,
 } from '@/config/order-terms';
 import { paymentText } from '@/config/product-copy';
 import { cartCtaState } from './cart-cta';
@@ -62,7 +62,7 @@ describe('строк і повернення', () => {
 describe('оплата: один текст', () => {
   it('картка товару бере той самий текст, що кошик і оформлення', () => {
     for (const printed of [true, false]) {
-      expect(paymentText({ returnDays: 14, freeShippingFromMinor: 300_000 }, printed)[0]).toBe(PAYMENT_TEXT);
+      expect(paymentText({ returnDays: 14, freeShippingFromMinor: 300_000 }, printed)[0]).toBe(PAYMENT_TEXT_LATER);
     }
   });
   it('текст не обіцяє рахунку потім і післяплати', () => {
