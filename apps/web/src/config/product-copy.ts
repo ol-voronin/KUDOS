@@ -29,7 +29,7 @@ export const CARE_LINE =
 
 export const CARE_WARNING = 'УВАГА! Вказано догляд за виробом без принтів!';
 
-import { NP_TARIFF_ESTIMATE, PAYMENT_TEXT, uahRound as uah } from './order-terms';
+import { NP_TARIFF_ESTIMATE, PAYMENT_TEXT_LATER, uahRound as uah } from './order-terms';
 
 export interface CopySettings {
   readonly returnDays: number;
@@ -59,7 +59,8 @@ export function shippingText(site: CopySettings): readonly string[] {
 export function paymentText(site: CopySettings, printed: boolean): readonly string[] {
   return [
     // Той самий текст, що в кошику, на оформленні й у FAQ (`config/order-terms`).
-    PAYMENT_TEXT,
+    // З 18.10 оплати на касі немає: спершу заявка, рахунок надсилає менеджер.
+    PAYMENT_TEXT_LATER,
     'Будь-які базові вироби без принтів підлягають обміну та поверненню '
     + 'відповідно до Закону України «Про захист прав споживачів». Щось не '
     + `підійшло — маєш ${site.returnDays} днів на повернення/обмін, якщо охайно `
