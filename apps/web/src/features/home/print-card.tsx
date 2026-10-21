@@ -32,6 +32,14 @@ import type { ListName } from '@/features/analytics/lists';
 const CARD_IMAGE_SIZES =
   '(min-width: 1280px) 284px, (min-width: 1024px) calc(25vw - 36px), (min-width: 640px) calc(33vw - 40px), calc(50vw - 40px)';
 
+/**
+ * Те саме, що `CARD_IMAGE_SIZES`, але для наближеної плитки: фото
+ * розтягнуте в `zoom` разів, тож браузеру потрібна більша копія, інакше
+ * принт розмивається. Множник — під зум 2.2 колекції «Бабака UA».
+ */
+const ZOOMED_CARD_IMAGE_SIZES =
+  '(min-width: 1280px) 625px, (min-width: 1024px) calc(55vw - 80px), (min-width: 640px) calc(73vw - 88px), calc(110vw - 88px)';
+
 /** Скільком першим плиткам сітки на першому екрані не потрібен lazy. */
 const EAGER_CARDS = 8;
 
@@ -59,12 +67,12 @@ export function PrintCard(
       <div className="relative overflow-hidden bg-surface-sunken">
         <div className="transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none">
           {/* Зум: у колекції важливий принт, а не виріб, тож фото наближене до грудей. */}
-          <div style={zoom > 1 ? { transform: `scale(${zoom})`, transformOrigin: '50% 48%' } : undefined}>
+          <div style={zoom > 1 ? { transform: `scale(${zoom})`, transformOrigin: '50% 44%' } : undefined}>
             <PrintThumb
               src={print.previewUrl}
               alt={print.title}
               ratio="portrait"
-              sizes={CARD_IMAGE_SIZES}
+              sizes={zoom > 1 ? ZOOMED_CARD_IMAGE_SIZES : CARD_IMAGE_SIZES}
               eager={eager}
               priority={priority}
             />
