@@ -36,8 +36,8 @@ const CARD_IMAGE_SIZES =
 const EAGER_CARDS = 8;
 
 export function PrintCard(
-  { print, eager = false, priority = false }:
-  { print: PrintCardDto; eager?: boolean; priority?: boolean },
+  { print, eager = false, priority = false, zoom = 1 }:
+  { print: PrintCardDto; eager?: boolean; priority?: boolean; zoom?: number },
 ) {
   /*
    * Плитки першого екрана (`eager`/`priority`) без `reveal`: перша з них —
@@ -58,14 +58,17 @@ export function PrintCard(
       */}
       <div className="relative overflow-hidden bg-surface-sunken">
         <div className="transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none">
-          <PrintThumb
-            src={print.previewUrl}
-            alt={print.title}
-            ratio="portrait"
-            sizes={CARD_IMAGE_SIZES}
-            eager={eager}
-            priority={priority}
-          />
+          {/* Зум: у колекції важливий принт, а не виріб, тож фото наближене до грудей. */}
+          <div style={zoom > 1 ? { transform: `scale(${zoom})`, transformOrigin: '50% 48%' } : undefined}>
+            <PrintThumb
+              src={print.previewUrl}
+              alt={print.title}
+              ratio="portrait"
+              sizes={CARD_IMAGE_SIZES}
+              eager={eager}
+              priority={priority}
+            />
+          </div>
         </div>
       </div>
 
@@ -108,8 +111,10 @@ export function PrintCard(
  * перетворився б на сірі плями там, де товарів забракло.
  */
 export function PrintGrid(
-  { prints, list, listId, aboveFold = false }:
+  { prints, list, listId, aboveFold = false, zoom = 1 }:
   {
+    /** Наближення фото в плитках (1 — без зуму). */
+    zoom?: number;
     prints: readonly PrintCardDto[]; list?: ListName; listId?: string;
     /**
      * Сітка — головний вміст сторінки і починається на першому екрані
@@ -137,6 +142,7 @@ export function PrintGrid(
           print={print}
           eager={aboveFold && i < EAGER_CARDS}
           priority={aboveFold && i === 0}
+          zoom={zoom}
         />
       ))}
     </div>
