@@ -14,7 +14,7 @@ import { garmentPhoto } from '../garment-photos';
 import { readRememberedSize, rememberSize } from '../remembered-size';
 import { useGarmentOffer } from '../hooks/useGarmentOffer';
 import { findVariant, selectableColours, selectableSizes } from '../variant-selection';
-import { garmentViews, viewLabel } from '../garment-photos';
+import { garmentCardPhoto, garmentViews, viewLabel } from '../garment-photos';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { ColourSwatch } from './ColourSwatch';
 import { MediaStack, type MediaFrame } from './MediaStack';
@@ -162,8 +162,15 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
 
   // Фото — по кольору: складеного «каталожного» кадру без принта в нас
   // рівно один на колір, і саме він тут головний.
+  //
+  // `colour.imageUrl` — обкладинка кольору, тобто кадр ІНШОГО виробу (першого,
+  // що шиється в цьому кольорі). Схемою крою його показувати не можна: у худі
+  // оверсайз паспортного кадру немає, і на місці схеми стала б футболка.
+  // Тому схема — лише власний паспортний кадр, а для кошика, якщо його
+  // немає, беремо перший знімальний кадр цього ж виробу.
+  const passport = selectedColour ? garmentPhoto(garment.slug, selectedColour.supplierCode) : null;
   const photo = selectedColour
-    ? garmentPhoto(garment.slug, selectedColour.supplierCode) ?? selectedColour.imageUrl
+    ? passport ?? garmentCardPhoto(garment.slug, selectedColour.supplierCode) ?? selectedColour.imageUrl
     : null;
 
   const garmentName = garment.name;
@@ -206,8 +213,8 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
       src: s.src,
       alt: `${garment.name}, ${colourName} — ${viewLabel(s.view).toLowerCase()}`,
     })),
-    ...(photo !== null ? [{
-      key: 'scheme', src: photo, alt: `${garment.name}, ${colourName} — схема крою`, kind: 'scheme' as const,
+    ...(passport !== null ? [{
+      key: 'scheme', src: passport, alt: `${garment.name}, ${colourName} — схема крою`, kind: 'scheme' as const,
     }] : []),
   ] : [];
 
@@ -225,7 +232,7 @@ export function GarmentOfferView({ slug, initialData }: { slug: string; initialD
             {priceIsExact ? '' : 'від '}{formatUAH(minor(priceMinor))}
           </p>
           {/*
-            Перший рядок однаковий на всіх семи виробах і стоїть тут
+            Перший рядок однаковий на всіх виробах і стоїть тут
             навмисно: сторінка базового одягу відкривається з каталогу
             принтів, і перше питання до неї — «а це взагалі з малюнком чи
             без». Другий рядок — паспорт конкретного виробу.
