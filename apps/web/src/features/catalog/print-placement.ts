@@ -75,6 +75,10 @@ export type PlacementSource = 'print' | 'collection' | 'fallback';
  */
 const GARMENT_AXIS: Readonly<Record<string, number>> = {
   'hudi-klasychnyi': 0.630,
+  // Худі оверсайз (21.10): прикладів розташування для нього ще немає, рамки
+  // перенесено з гібрид-худі (див. tools/fixtures/print-placements.json), а
+  // вісь знято з його власного кадру — середина корпусу на рівні грудей.
+  'hudi-oversayz': 0.503,
 };
 
 function onAxis(p: Placement, garmentSlug: string): Placement {

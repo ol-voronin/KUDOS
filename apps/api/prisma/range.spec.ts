@@ -126,6 +126,7 @@ describe('довідник виробів', () => {
       'hibryd-hudi': 'XS 51/67 S 54/69 M 57/71 L 60/73 XL 63/75 2XL 66/77',
       'svitshot-klasychnyi': 'XS 48/68 S 51/70 M 54/72 L 57/74 XL 60/76 2XL 63/78',
       'hudi-klasychnyi': 'XS 49/68 S 52/70 M 55/72 L 58/74 XL 61/76 2XL 64/78',
+      'hudi-oversayz': 'XS 52/67 S 55/69 M 58/71 L 61/73 XL 64/75 2XL 67/77',
     };
     for (const g of GARMENTS) {
       const actual = g.sizes.map((s) => `${s.label} ${s.width}/${s.length}`).join(' ');
