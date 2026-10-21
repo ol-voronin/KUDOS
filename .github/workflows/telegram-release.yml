@@ -1,12 +1,46 @@
-# /випуск з Telegram (лише Олексій): PR dasha-edits → main зі списком правок.
-# БЕЗ автозлиття — зливає Олексій руками. Гілку dasha-edits не чіпаємо.
+# Випуск правок з Telegram на сайт (docs/telegram-edits.md, «Випуск»).
+#
+#   prepare — «/випуск» чи «викладай на сайт» від будь-якого редактора:
+#             PR dasha-edits → main зі списком правок і питання в тему
+#             «Олексій, випускаємо? так / ні» (з номером PR і версією).
+#   merge   — лише «так» Олексія реплаєм на це питання (перевіряє вебхук:
+#             перший id у TELEGRAM_EDITORS). Зливаємо ТІЛЬКИ той коміт, про
+#             який питали, лише на зеленому CI і без конфлікту. CI ще йде —
+#             чекаємо; червоний — не зливаємо й пояснюємо.
+#   cancel  — «ні» Олексія: PR закривається, правки лишаються на тесті.
+#
+# Автозлиття в main немає: без «так» Олексія в Telegram цей воркфлоу main не
+# чіпає. Гілку dasha-edits не видаляємо.
 name: Telegram release
+run-name: "Випуск: ${{ inputs.action || 'prepare' }} ${{ inputs.pr }}"
 
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: prepare / merge / cancel
+        required: false
+        default: prepare
+        type: choice
+        options: [prepare, merge, cancel]
       reply_to:
         description: message_id у Telegram, на яке відповісти
+        required: false
+        default: ''
+      owner_id:
+        description: user_id Олексія в Telegram — для тегу в питанні «Випускаємо?»
+        required: false
+        default: ''
+      requested_by:
+        description: хто попросив випуск
+        required: false
+        default: ''
+      pr:
+        description: номер PR випуску (merge / cancel)
+        required: false
+        default: ''
+      sha:
+        description: версія (коміт dasha-edits), про яку питали (merge)
         required: false
         default: ''
 
@@ -17,19 +51,23 @@ concurrency:
   group: telegram-release
   cancel-in-progress: false
 
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
+  TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID || '3' }}
+
 jobs:
-  release:
+  prepare:
+    if: inputs.action == 'prepare' || inputs.action == ''
     runs-on: ubuntu-latest
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_EDITS_CHAT_ID: ${{ vars.TELEGRAM_EDITS_CHAT_ID || '-1004296608260' }}
-      TELEGRAM_EDITS_THREAD_ID: ${{ vars.TELEGRAM_EDITS_THREAD_ID || '3' }}
     steps:
       - uses: actions/checkout@v4
         with: { path: _ci, sparse-checkout: .github/scripts }
       - uses: actions/github-script@v7
         env:
           REPLY_TO: ${{ inputs.reply_to }}
+          OWNER_ID: ${{ inputs.owner_id }}
+          REQUESTED_BY: ${{ inputs.requested_by }}
         with:
           # PAT: PR, створений GITHUB_TOKEN, не запускає CI.
           github-token: ${{ secrets.EDITS_GH_PAT }}
@@ -46,6 +84,7 @@ jobs:
 
             // Що саме їде: PR, влиті в dasha-edits, чиї коміти ще не в main.
             const lines = [];
+            const short = [];
             const closes = [];
             const seen = new Set();
             for (const commit of cmp.data.commits) {
@@ -57,31 +96,131 @@ jobs:
                   const n = Number(pr.head.ref.split('/')[1]);
                   const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: n });
                   lines.push(`- #${n} ${issue.title} (PR #${pr.number})`);
+                  short.push(`• ${issue.title}`);
                   closes.push(`Closes #${n}`);
                 } else if (pr.head.ref.startsWith('revert/')) {
                   lines.push(`- ⏪ ${pr.title} (PR #${pr.number})`);
+                  short.push(`• ⏪ ${pr.title}`);
                 }
               }
             }
 
             const today = new Date().toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });
+            const requested = process.env.REQUESTED_BY ? `Попросив(ла): ${process.env.REQUESTED_BY}.` : '';
             const body = [
               'Випуск правок з Telegram на сайт.',
+              requested,
               '',
               lines.length > 0 ? lines.join('\n') : '- (без правок з Telegram — лише синхронізація)',
               '',
-              'Зливає лише Олексій, вручну. Бажано «Create a merge commit», щоб dasha-edits і main не розходились.',
+              'Зливає воркфлоу Telegram release лише після «так» Олексія в Telegram, на зеленому CI і без конфліктів',
+              '(merge commit, щоб dasha-edits і main не розходились). Можна злити й руками.',
               'Гілку dasha-edits після злиття НЕ видаляти.',
               '',
               ...[...new Set(closes)],
             ].join('\n');
 
             const open = await github.rest.pulls.list({ owner, repo, base: 'main', head: `${owner}:dasha-edits`, state: 'open' });
-            let pr;
+            let number;
             if (open.data.length > 0) {
-              pr = open.data[0];
-              await github.rest.pulls.update({ owner, repo, pull_number: pr.number, body });
+              number = open.data[0].number;
+              await github.rest.pulls.update({ owner, repo, pull_number: number, body });
             } else {
-              pr = (await github.rest.pulls.create({ owner, repo, base: 'main', head: 'dasha-edits', title: `Випуск правок з Telegram — ${today}`, body })).data;
+              number = (await github.rest.pulls.create({ owner, repo, base: 'main', head: 'dasha-edits', title: `Випуск правок з Telegram — ${today}`, body })).data.number;
             }
-            await tg.send(`📦 Випуск готовий до перевірки: ${pr.html_url}\nПравок: ${lines.length}. На сайт вийде, коли Олексій зіллє PR.`, replyTo);
+            // Версія — саме той коміт, про який питаємо: якщо після питання на
+            // тест доїде ще щось, «так» на старе питання нічого не зіллє.
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            const sha = pr.head.sha.slice(0, 7);
+
+            const list = short.length > 0 ? short.slice(0, 15).join('\n') + (short.length > 15 ? `\n…і ще ${short.length - 15}` : '') : '• лише синхронізація з main';
+            await tg.send(
+              `🚀 На сайт піде:\n${list}\n\n{{owner}}, випускаємо? Відповідай реплаєм «так» або «ні».\n(PR #${number}, версія ${sha})`,
+              replyTo,
+              process.env.OWNER_ID,
+            );
+
+  merge:
+    if: inputs.action == 'merge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
+      REPO: ${{ github.repository }}
+      PR: ${{ inputs.pr }}
+      SHA: ${{ inputs.sha }}
+      REPLY_TO: ${{ inputs.reply_to }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: _ci, sparse-checkout: .github/scripts }
+      - name: Перевірити й злити PR випуску
+        run: |
+          say() { node _ci/.github/scripts/telegram.cjs send "$1" "$REPLY_TO"; }
+          [[ "$PR" =~ ^[0-9]+$ ]] && [[ "$SHA" =~ ^[0-9a-f]{7,40}$ ]] || { echo "Погані вхідні дані"; exit 1; }
+
+          IFS=$'\t' read -r state base head_ref head_repo head <<<"$(gh api "repos/$REPO/pulls/$PR" \
+            --jq '[.state, .base.ref, .head.ref, .head.repo.full_name, .head.sha] | @tsv')"
+          if [ "$state" != "open" ] || [ "$base" != "main" ] || [ "$head_ref" != "dasha-edits" ] || [ "$head_repo" != "$REPO" ]; then
+            say "Цей випуск уже не актуальний 🤷 Напиши «випускай» ще раз — покажу свіжий список."
+            exit 0
+          fi
+          case "$head" in
+            "$SHA"*) ;;
+            *) say "Після питання на тест доїхали нові правки, тож не зливаю 🙂 Напиши «випускай» ще раз — покажу свіжий список."
+               exit 0 ;;
+          esac
+
+          # CI на PR: чекаємо до ~30 хв, зливаємо лише на зеленому.
+          ci=""
+          for _ in $(seq 1 60); do
+            ci=$(gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=50" \
+              --jq '[.workflow_runs[] | select(.name == "CI")] | sort_by(.created_at) | last | if . == null then "" else "\(.status) \(.conclusion)" end')
+            case "$ci" in
+              "completed success") break ;;
+              completed*) say "Не зливаю: автоматичні перевірки впали ❌ Значить, якась правка щось зламала — Олексій подивиться, сайт не змінився."
+                          exit 0 ;;
+            esac
+            sleep 30
+          done
+          if [ "$ci" != "completed success" ]; then
+            say "Перевірки йдуть задовго, тож поки не зливаю ⏳ Відповідай «так» на питання про випуск ще раз трохи згодом."
+            exit 0
+          fi
+
+          mergeable=""
+          for _ in $(seq 1 10); do
+            mergeable=$(gh api "repos/$REPO/pulls/$PR" --jq '.mergeable | tostring')
+            [ "$mergeable" != "null" ] && break
+            sleep 6
+          done
+          if [ "$mergeable" != "true" ]; then
+            say "Не зливаю: тест і сайт розійшлися (конфлікт) 🙈 Олексій має розвʼязати це руками."
+            exit 0
+          fi
+
+          # Лише той коміт, про який питали і на якому позеленів CI.
+          if ! gh api -X PUT "repos/$REPO/pulls/$PR/merge" -f merge_method=merge -f sha="$head" --jq .message; then
+            say "GitHub не дав злити випуск 🙈 Олексій подивиться."
+            exit 1
+          fi
+          say "Злив 🚀 Деплою на сайт — за кілька хвилин буде на babaka.shop."
+
+  cancel:
+    if: inputs.action == 'cancel'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.EDITS_GH_PAT }}
+      REPO: ${{ github.repository }}
+      PR: ${{ inputs.pr }}
+      REPLY_TO: ${{ inputs.reply_to }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: _ci, sparse-checkout: .github/scripts }
+      - name: Закрити PR випуску
+        run: |
+          [[ "$PR" =~ ^[0-9]+$ ]] || { echo "Поганий номер PR"; exit 1; }
+          IFS=$'\t' read -r state base head_ref <<<"$(gh api "repos/$REPO/pulls/$PR" --jq '[.state, .base.ref, .head.ref] | @tsv')"
+          if [ "$state" = "open" ] && [ "$base" = "main" ] && [ "$head_ref" = "dasha-edits" ]; then
+            gh pr close "$PR" --repo "$REPO" --comment "Випуск скасовано в Telegram."
+          fi
+          node _ci/.github/scripts/telegram.cjs send "Ок, випуск скасовано. Правки лишаються на тесті 👌" "$REPLY_TO"

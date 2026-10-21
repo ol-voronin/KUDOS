@@ -1,0 +1,2 @@
+# Розшифровка голосових з Telegram у воркфлоу telegram-edit.yml (CPU раннера).
+faster-whisper==1.1.1

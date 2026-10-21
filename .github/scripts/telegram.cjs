@@ -8,7 +8,10 @@
  * Тема «Реклама» (88) сюди не потрапляє ніколи: thread береться тільки з
  * TELEGRAM_EDITS_THREAD_ID, і якщо він збігається з 88 — відмова.
  *
- *   node .github/scripts/telegram.cjs send "текст" [reply_to_message_id]
+ *   node .github/scripts/telegram.cjs send "текст" [reply_to_message_id] [owner_user_id]
+ *
+ * `{{owner}}` у тексті стає «Олексій» — з тегом (text_mention), якщо
+ * відомий його user_id: тоді Telegram його сповістить.
  *
  * або з actions/github-script:  require(`${process.env.GITHUB_WORKSPACE}/_ci/.github/scripts/telegram.cjs`)
  */
@@ -24,18 +27,38 @@ function config() {
   return { token, chat, thread };
 }
 
-async function send(text, replyTo) {
+const OWNER_NAME = 'Олексій';
+
+/** `{{owner}}` → «Олексій» + сутність text_mention (offset у UTF-16, як рахує JS). */
+function withMention(text, ownerId) {
+  let out = String(text).slice(0, 4000);
+  const entities = [];
+  const id = Number(ownerId);
+  let at = out.indexOf('{{owner}}');
+  while (at !== -1) {
+    out = out.slice(0, at) + OWNER_NAME + out.slice(at + '{{owner}}'.length);
+    if (Number.isInteger(id) && id > 0) {
+      entities.push({ type: 'text_mention', offset: at, length: OWNER_NAME.length, user: { id } });
+    }
+    at = out.indexOf('{{owner}}', at + OWNER_NAME.length);
+  }
+  return { text: out, entities };
+}
+
+async function send(text, replyTo, ownerId) {
   const cfg = config();
   if (cfg === null) {
     console.log('Telegram не налаштований (TELEGRAM_* у secrets/vars) — пропускаю повідомлення.');
-    return;
+    return undefined;
   }
+  const message = withMention(text, ownerId);
   const payload = {
     chat_id: cfg.chat,
     message_thread_id: cfg.thread,
-    text: String(text).slice(0, 4000),
+    text: message.text,
     link_preview_options: { is_disabled: true },
   };
+  if (message.entities.length > 0) payload.entities = message.entities;
   const reply = Number(replyTo);
   if (Number.isInteger(reply) && reply > 0) {
     payload.reply_parameters = { message_id: reply, allow_sending_without_reply: true };
@@ -49,6 +72,7 @@ async function send(text, replyTo) {
   if (!res.ok || body.ok !== true) {
     throw new Error(`Telegram sendMessage: ${body.error_code || res.status} ${body.description || ''}`.trim());
   }
+  return body.result;
 }
 
 /** Усі `<!-- tg:{…} -->` у тексті, по порядку. */
@@ -72,18 +96,29 @@ async function lastTgMessage(github, owner, repo, issueNumber) {
   return undefined;
 }
 
+/** user_id Олексія з tg-блоків issue (його кладе вебхук), або undefined. */
+async function tgOwner(github, owner, repo, issueNumber) {
+  const issue = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+  return tgBlocks(issue.data.body).find((b) => Number.isInteger(b.owner))?.owner;
+}
+
+/** «cc @ol-voronin» від агента → «{{owner}} 👀», щоб у Telegram був тег. */
+function ownerTag(text) {
+  return String(text).replace(/^\s*cc\s+@ol-voronin\s*$/gimu, '{{owner}}, глянь, будь ласка 👀');
+}
+
 /** Прибрати приховані HTML-коментарі й зайві порожні рядки. */
 function visibleText(markdown) {
   return String(markdown || '').replace(/<!--[\s\S]*?-->/g, '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-module.exports = { send, tgBlocks, lastTgMessage, visibleText };
+module.exports = { send, withMention, tgBlocks, lastTgMessage, tgOwner, ownerTag, visibleText };
 
 if (require.main === module) {
-  const [cmd, text, replyTo] = process.argv.slice(2);
+  const [cmd, text, replyTo, ownerId] = process.argv.slice(2);
   if (cmd !== 'send' || !text) {
-    console.error('Використання: node telegram.cjs send "текст" [reply_to]');
+    console.error('Використання: node telegram.cjs send "текст" [reply_to] [owner_id]');
     process.exit(2);
   }
-  send(text, replyTo).catch((err) => { console.error(err.message); process.exit(1); });
+  send(text, replyTo, ownerId).catch((err) => { console.error(err.message); process.exit(1); });
 }
