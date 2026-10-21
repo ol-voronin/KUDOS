@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const collection = collections?.items.find((c) => offer.print.collectionSlugs.includes(c.slug))?.title;
   const name = collection ? `${offer.print.title} — ${collection}` : offer.print.title;
   const title = `${name}: футболка й худі з принтом | ${site.brand}`;
-  const description = `${name}: принт на футболці, худі або світшоті. Друкуємо ${site.cityIn}, виготовляємо самі, доставка Новою поштою.`;
+  const description = `${name}: принт на футболці, худі або світшоті. Друкуємо ${site.cityIn}, доставка Новою поштою.`;
 
   return {
     title,
