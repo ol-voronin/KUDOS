@@ -111,7 +111,8 @@ export default async function CollectionPage({ params }: Params) {
 
         <div className="mt-10">
           {prints.length > 0 ? (
-            <PrintGrid prints={prints} list={LIST.collection} listId={collection.slug} aboveFold />
+            <PrintGrid prints={prints} list={LIST.collection} listId={collection.slug} aboveFold
+              zoom={collection.slug === 'babaka-ua' ? 1.7 : 1} />
           ) : (
             <div className="space-y-10">
               <div className="border-t border-ink pt-6">
