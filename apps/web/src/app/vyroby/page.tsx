@@ -88,7 +88,7 @@ export default async function RangePage() {
       <Section tone="teal">
         <h2 className="font-display text-2xl font-bold text-ink">Не знайшли свій розмір або колір?</h2>
         <p className="mt-3 max-w-2xl text-ink-muted">
-          Виготовляємо самі, тому багато що можемо зробити під тебе. Напиши — порахуємо.
+          Напиши, що шукаєш, — підберемо й порахуємо.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <ButtonLink href="/prints" size="lg">Обрати принт</ButtonLink>

@@ -140,7 +140,7 @@ export function CustomRequestForm() {
         <legend className="mb-1 font-display text-lg font-bold text-ink">Виріб</legend>
         <div className="grid gap-5 sm:grid-cols-2">
           <Select
-            id="garment-type" label="Що виготовляємо" required
+            id="garment-type" label="На чому друкуємо" required
             value={garmentType} onChange={setGarmentType} options={GARMENTS}
           />
           <Field
