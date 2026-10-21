@@ -7,5 +7,6 @@ export const PREVIEW_PHOTOS: Readonly<Record<string, readonly string[]>> = {
   'hibryd-hudi': ['chornyi', 'slonova-kistka'],
   'hibryd-svitshot': ['chornyi', 'slonova-kistka', 'temno-synii'],
   'hudi-klasychnyi': ['akvamaryn', 'ananasovyi', 'antychna-troianda', 'blakytnyi-safir', 'chervonyi', 'chornyi', 'khaki', 'mokryi-pisok', 'molochnyi-shokolad', 'slonova-kistka', 'smarahdovyi', 'stalevyi-siryi', 'svitlo-biriuzovyi', 'svitlyi-buzok', 'temna-vyshnia', 'temno-synii', 'zelenyi-marmur', 'zelenyi-nefryt'],
+  'hudi-oversayz': ['chornyi', 'slonova-kistka'],
   'svitshot-klasychnyi': ['akvamaryn', 'ananasovyi', 'antychna-troianda', 'blakytnyi-safir', 'chervonyi', 'chornyi', 'khaki', 'mokryi-pisok', 'molochnyi-shokolad', 'slonova-kistka', 'smarahdovyi', 'stalevyi-siryi', 'svitlo-biriuzovyi', 'svitlyi-buzok', 'temna-vyshnia', 'temno-synii', 'zelenyi-marmur', 'zelenyi-nefryt'],
 };

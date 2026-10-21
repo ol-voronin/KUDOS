@@ -11,7 +11,8 @@
 Колір шукається за НАЗВОЮ в базі, не за транслітом — саме для цього
 кольори й названо по-людськи. Кожне фото стискається до 1200 px і лягає в
 `apps/web/public/garments-preview/<виріб>/<код кольору>.webp`, а реєстр
-того, що є, — у `preview-photos.generated.ts`.
+того, що є (усе, що лежить у теці, а не лише цей прогін), — у
+`preview-photos.generated.ts`.
 
 Класичну футболку (fcu) навмисно не чіпаємо: її плоскі фото лишаються
 основою мокапа, бо виглядають нормально (рішення власника, вересень 2026).
@@ -60,6 +61,7 @@ GARMENTS = {
     'gfh': 'hibryd-hudi',
     'scu': 'svitshot-klasychnyi',
     'hcu': 'hudi-klasychnyi',
+    'hou': 'hudi-oversayz',
 }
 COLLECTION_PREFIXES = {
     'babaka_v_pabi': 'babaky-v-pabi',
@@ -159,6 +161,12 @@ def cmd_photos(src):
 
 
 def write_photos_ts(registry):
+    # Реєстр — те, що лежить на диску, а не лише те, що прийшло цим прогоном:
+    # теку з новим виробом можна прогнати окремо, не відкотивши решту.
+    if PREVIEW_DIR.exists():
+        for d in PREVIEW_DIR.iterdir():
+            if d.is_dir():
+                registry.setdefault(d.name, []).extend(f.stem for f in d.glob('*.webp'))
     lines = [
         '/* ЗГЕНЕРОВАНО tools/print-preview.py photos. Не редагувати руками. */',
         '',

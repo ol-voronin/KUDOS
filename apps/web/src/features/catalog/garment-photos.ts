@@ -19,6 +19,7 @@ const PHOTOS: Readonly<Record<string, readonly string[]>> = {
   'hibryd-hudi': ['chornyi', 'slonova-kistka'],
   'hibryd-svitshot': ['chornyi', 'slonova-kistka', 'temno-synii'],
   'hudi-klasychnyi': ['akvamaryn', 'ananasovyi', 'antychna-troianda', 'blakytnyi-safir', 'chervonyi', 'chornyi', 'khaki', 'mokryi-pisok', 'molochnyi-shokolad', 'slonova-kistka', 'smarahdovyi', 'stalevyi-siryi', 'svitlo-biriuzovyi', 'svitlyi-buzok', 'temna-vyshnia', 'temno-synii', 'zelenyi-marmur', 'zelenyi-nefryt'],
+  'hudi-oversayz': [],
   'svitshot-klasychnyi': ['akvamaryn', 'ananasovyi', 'antychna-troianda', 'blakytnyi-safir', 'chervonyi', 'chornyi', 'khaki', 'mokryi-pisok', 'molochnyi-shokolad', 'slonova-kistka', 'smarahdovyi', 'stalevyi-siryi', 'svitlo-biriuzovyi', 'svitlyi-buzok', 'temna-vyshnia', 'temno-synii', 'zelenyi-marmur', 'zelenyi-nefryt'],
 };
 
@@ -81,6 +82,10 @@ const VIEWS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>
     'temno-synii': ['man', 'lady', 'nopeople'],
     'zelenyi-marmur': ['man', 'lady', 'nopeople'],
     'zelenyi-nefryt': ['man', 'lady', 'nopeople'],
+  },
+  'hudi-oversayz': {
+    'chornyi': ['manfront', 'back', 'nopeople'],
+    'slonova-kistka': ['ladyfront', 'back', 'nopeople'],
   },
   'svitshot-klasychnyi': {
     'akvamaryn': ['man', 'lady', 'nopeople'],
