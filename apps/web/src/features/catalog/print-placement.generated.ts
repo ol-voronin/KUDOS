@@ -11,6 +11,7 @@ export const COLLECTION_PLACEMENTS: Readonly<Record<string, Readonly<Record<stri
     'hibryd-hudi': { cx: 0.4993, cy: 0.4429, w: 0.2950, h: 0.2086, rot: 0.0178 },
     'hibryd-svitshot': { cx: 0.5433, cy: 0.3085, w: 0.2683, h: 0.1897, rot: 14.9877 },
     'hudi-klasychnyi': { cx: 0.6001, cy: 0.4610, w: 0.1898, h: 0.1342, rot: 0.0128 },
+    'hudi-oversayz': { cx: 0.5005, cy: 0.4051, w: 0.3098, h: 0.2191, rot: 0.0178 },
     'svitshot-klasychnyi': { cx: 0.6686, cy: 0.4567, w: 0.1897, h: 0.1342, rot: 0.0017 },
   },
   'fck-winter': {
@@ -20,6 +21,7 @@ export const COLLECTION_PLACEMENTS: Readonly<Record<string, Readonly<Record<stri
     'hibryd-hudi': { cx: 0.4965, cy: 0.4659, w: 0.2848, h: 0.2669, rot: -0.0104 },
     'hibryd-svitshot': { cx: 0.5267, cy: 0.3380, w: 0.2589, h: 0.2427, rot: 16.8346 },
     'hudi-klasychnyi': { cx: 0.5992, cy: 0.4828, w: 0.1824, h: 0.1709, rot: -0.0088 },
+    'hudi-oversayz': { cx: 0.4975, cy: 0.4292, w: 0.2990, h: 0.2803, rot: -0.0104 },
     'svitshot-klasychnyi': { cx: 0.6639, cy: 0.4743, w: 0.1973, h: 0.1850, rot: -0.0084 },
   },
   'polo-babaky': {
@@ -29,6 +31,7 @@ export const COLLECTION_PLACEMENTS: Readonly<Record<string, Readonly<Record<stri
     'hibryd-hudi': { cx: 0.4998, cy: 0.4914, w: 0.3547, h: 0.2931, rot: 0.0122 },
     'hibryd-svitshot': { cx: 0.5302, cy: 0.3427, w: 0.3225, h: 0.2666, rot: 14.0003 },
     'hudi-klasychnyi': { cx: 0.6009, cy: 0.4854, w: 0.2003, h: 0.1655, rot: -0.0330 },
+    'hudi-oversayz': { cx: 0.5010, cy: 0.4560, w: 0.3724, h: 0.3078, rot: 0.0122 },
     'svitshot-klasychnyi': { cx: 0.6664, cy: 0.4721, w: 0.2178, h: 0.1800, rot: 0.0107 },
   },
 };
@@ -42,6 +45,7 @@ export const PRINT_PLACEMENTS: Readonly<Record<string, Readonly<Record<string, P
     'hibryd-hudi': { cx: 0.4857, cy: 0.4868, w: 0.2888, h: 0.2989, rot: 0.0033 },
     'hibryd-svitshot': { cx: 0.5315, cy: 0.3621, w: 0.2947, h: 0.3050, rot: 14.1824 },
     'hudi-klasychnyi': { cx: 0.6050, cy: 0.4844, w: 0.1832, h: 0.1896, rot: 0.0066 },
+    'hudi-oversayz': { cx: 0.4862, cy: 0.4511, w: 0.3032, h: 0.3138, rot: 0.0033 },
     'svitshot-klasychnyi': { cx: 0.6616, cy: 0.4820, w: 0.1999, h: 0.2069, rot: -0.0645 },
   },
 };

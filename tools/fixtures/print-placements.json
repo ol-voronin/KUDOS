@@ -390,5 +390,61 @@
   "example": "КОЛЕКЦІЯ_F_CK WINTER_fou_ex.png",
   "base": "fou_derevianyi.png",
   "mtime": null
+ },
+ "babaka_polo_hou_ex.png": {
+  "slug": "polo-levretka",
+  "cx": 0.5010034786726412,
+  "cy": 0.45595304358599476,
+  "w": 0.37239591208580075,
+  "h": 0.307782803183641,
+  "rot": 0.012201834827934991,
+  "err": null,
+  "collection": "polo-babaky",
+  "garment": "hudi-oversayz",
+  "example": "babaka_polo_hou_ex.png",
+  "base": "hou_nopeople (перенесено з gfh_nopeople_upd, 21.10.2026: виріз капюшона 497→420 px, масштаб 1.05)",
+  "mtime": null
+ },
+ "babaka_v_pabi_hou_ex.png": {
+  "slug": "pab-labrador",
+  "cx": 0.5004703271397605,
+  "cy": 0.40506684023123585,
+  "w": 0.30978301858893464,
+  "h": 0.21905101447777553,
+  "rot": 0.01781463988405823,
+  "err": null,
+  "collection": "babaky-v-pabi",
+  "garment": "hudi-oversayz",
+  "example": "babaka_v_pabi_hou_ex.png",
+  "base": "hou_nopeople (перенесено з gfh_nopeople_upd, 21.10.2026: виріз капюшона 497→420 px, масштаб 1.05)",
+  "mtime": null
+ },
+ "Семюел Джексон_hou_ex.png": {
+  "slug": "zirky-semiuel",
+  "cx": 0.486194815359964,
+  "cy": 0.4510819597100594,
+  "w": 0.30324121957720224,
+  "h": 0.3137930278681813,
+  "rot": 0.0032881398932280894,
+  "err": null,
+  "print": "zirky-semiuel",
+  "garment": "hudi-oversayz",
+  "example": "Семюел Джексон_hou_ex.png",
+  "base": "hou_nopeople (перенесено з gfh_nopeople_upd, 21.10.2026: виріз капюшона 497→420 px, масштаб 1.05)",
+  "mtime": null
+ },
+ "КОЛЕКЦІЯ_F_CK WINTER_hou_ex.png": {
+  "slug": "winter-samoid",
+  "cx": 0.4975283923060339,
+  "cy": 0.4291950594426338,
+  "w": 0.2990181523521873,
+  "h": 0.2802579560485007,
+  "rot": -0.010416307496915751,
+  "err": null,
+  "collection": "fck-winter",
+  "garment": "hudi-oversayz",
+  "example": "КОЛЕКЦІЯ_F_CK WINTER_hou_ex.png",
+  "base": "hou_nopeople (перенесено з gfh_nopeople_upd, 21.10.2026: виріз капюшона 497→420 px, масштаб 1.05)",
+  "mtime": null
  }
 }
