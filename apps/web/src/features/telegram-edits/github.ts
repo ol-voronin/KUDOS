@@ -36,13 +36,44 @@ export async function finishIssue(ctx: Ctx, issue: number, body: string): Promis
   await gh(ctx, 'POST', `/issues/${issue}/labels`, { labels: ['telegram-edit'] });
 }
 
-export async function issueExists(ctx: Ctx, issue: number): Promise<boolean> {
+/** Issue з Telegram, відкрита, — у неї можна дописувати. */
+export async function issueOpen(ctx: Ctx, issue: number): Promise<boolean> {
   try {
-    const found = await gh<{ labels: { name: string }[]; pull_request?: unknown }>(ctx, 'GET', `/issues/${issue}`);
-    return found.pull_request === undefined && found.labels.some((l) => l.name === 'telegram-edit');
+    const found = await gh<{ state: string; labels: { name: string }[]; pull_request?: unknown }>(ctx, 'GET', `/issues/${issue}`);
+    return found.pull_request === undefined && found.state === 'open' && found.labels.some((l) => l.name === 'telegram-edit');
   } catch {
     return false;
   }
+}
+
+export interface OpenIssueRaw {
+  number: number;
+  updated_at: string;
+  body: string | null;
+  comments: number;
+  pull_request?: unknown;
+}
+
+/** Відкриті правки з Telegram, найсвіжіші першими (без PR). */
+export async function listOpenEditIssues(ctx: Ctx): Promise<OpenIssueRaw[]> {
+  const items = await gh<OpenIssueRaw[]>(ctx, 'GET', '/issues?labels=telegram-edit&state=open&sort=updated&direction=desc&per_page=20');
+  return items.filter((i) => i.pull_request === undefined);
+}
+
+/**
+ * Тіло останнього коментаря issue (або null, якщо коментарів нема). Лише
+ * коментар власника репо: репо публічне, і чужий коментар не має впливати на
+ * те, куди піде повідомлення з Telegram.
+ */
+export async function lastCommentBody(ctx: Ctx, issue: number, count?: number): Promise<string | null> {
+  let total = count;
+  if (total === undefined) total = (await gh<{ comments: number }>(ctx, 'GET', `/issues/${issue}`)).comments;
+  if (total <= 0) return null;
+  const page = await gh<{ body: string | null; author_association?: string }[]>(
+    ctx, 'GET', `/issues/${issue}/comments?per_page=1&page=${total}`,
+  );
+  const last = page[0];
+  return last?.author_association === 'OWNER' ? (last.body ?? null) : null;
 }
 
 export async function commentIssue(ctx: Ctx, issue: number, body: string): Promise<void> {
