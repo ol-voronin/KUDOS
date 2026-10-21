@@ -25,7 +25,10 @@ env:
 
 jobs:
   push-main:
-    if: github.event_name == 'push'
+    # Випуск з Telegram (злиття dasha-edits → main) про себе вже сказав сам.
+    if: >-
+      github.event_name == 'push' &&
+      !contains(github.event.head_commit.message, '/dasha-edits')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +65,7 @@ jobs:
 
             if (/^production/i.test(env)) {
               if (status.state === 'success') {
-                if (isWeb) await tg.send(`✅ На сайті: ${process.env.SITE_URL}`);
+                if (isWeb) await tg.send(`Вийшло на сайт ✅ ${process.env.SITE_URL}`);
               } else {
                 await tg.send(`❌ Деплой упав (${env}): ${link}`);
               }
@@ -121,8 +124,11 @@ jobs:
             const { owner, repo } = context.repo;
             const issue = context.payload.issue.number;
             const msg = await tg.lastTgMessage(github, owner, repo, issue);
-            const text = tg.visibleText(context.payload.comment.body);
-            await tg.send(`#${issue} ${text}\n\n↩️ Відповідай реплаєм на це повідомлення.`, msg);
+            const ownerId = await tg.tgOwner(github, owner, repo, issue);
+            // Відповідати можна просто наступним повідомленням у темі: вебхук
+            // сам допише його в цю правку, поки бот чекає відповіді.
+            const text = tg.ownerTag(tg.visibleText(context.payload.comment.body));
+            await tg.send(`#${issue} ${text}`, msg, ownerId);
 
   ci-failed:
     # CI на PR правки червоний — автозлиття не відбудеться.

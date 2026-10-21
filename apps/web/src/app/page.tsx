@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
     : `Футболки та худі з собаками — принти порід і портрет твого пса | ${settings.brand}`;
   const description = page?.seo.description.trim() !== ''
     ? page?.seo.description
-    : `Готові принти за породами або власний портрет із фото. Виготовляємо й друкуємо ${settings.cityIn}.`;
+    : `Готові принти за породами або власний портрет із фото. Друкуємо ${settings.cityIn}.`;
 
   return {
     title,
