@@ -61,6 +61,13 @@ export interface PricingPrint {
   readonly id: string;
   readonly sizeTier: PrintSizeTier;
   readonly isPublished: boolean;
+  /**
+   * Фіксована ціна «принт + виріб». Коли задана, тариф за розміром не
+   * діє: ціна друку — це різниця між нею і базовою ціною виробу, тож
+   * надбавки за розмір чи тканину лягають поверх фіксованої так само, як
+   * поверх звичайної. null — звичайна схема.
+   */
+  readonly fixedPriceMinor: Minor | null;
 }
 
 export type PrintPriceTable = Readonly<Record<PrintSizeTier, Minor>>;
@@ -140,6 +147,19 @@ export function printPriceFor(print: PricingPrint, table: PrintPriceTable): Mino
 }
 
 /**
+ * Ціна друку на конкретному виробі.
+ *
+ * Звичайний принт — тариф за розміром, виріб ні до чого. Принт із
+ * фіксованою ціною — різниця між нею і базою виробу, не менше нуля: якщо
+ * хтось підніме ціну виробу вище за фіксовану, принт стане «безкоштовним»,
+ * а не від'ємним; кошик при цьому бере базу виробу, і сума не ламається.
+ */
+export function printPriceOn(print: PricingPrint, garmentBaseMinor: Minor, table: PrintPriceTable): Minor {
+  if (print.fixedPriceMinor === null) return printPriceFor(print, table);
+  return minor(Math.max(0, print.fixedPriceMinor - garmentBaseMinor));
+}
+
+/**
  * Why a variant cannot be bought, or null when it can.
  *
  * `MISSING_LEAD_TIME` should never fire in production — the database has a
@@ -184,7 +204,7 @@ export function priceOffer(
 ): PricedOffer {
   const garmentPrice = garmentPriceFor(garment, variant, modifiers);
   const garmentPriceMinor = garmentPrice.amountMinor;
-  const printPriceMinor = printPriceFor(print, table);
+  const printPriceMinor = printPriceOn(print, garment.basePriceMinor, table);
   const reason = blockReasonFor(garment, print, variant, offered);
 
   return {

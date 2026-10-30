@@ -47,6 +47,8 @@ export interface PrintRow {
   readonly title: string;
   readonly sizeTier: PrintSizeTier;
   readonly previewUrl: string;
+  /** Ціна «принт + виріб», коли принт продається з одним виробом. */
+  readonly fixedPriceMinor: number | null;
   readonly collectionIds: readonly string[];
 }
 
@@ -97,7 +99,12 @@ export function toPrintCard(
     title: print.title,
     sizeTier: print.sizeTier,
     previewUrl: print.previewUrl,
-    fromPriceMinor: cheapest === null || printPrice === undefined ? null : cheapest + printPrice,
+    // Фіксована ціна — це вже «виріб + друк», тож «від» дорівнює їй. Але
+    // лише коли є на чому друкувати: принт без виробів і з фіксованою ціною
+    // так само не купується.
+    fromPriceMinor: cheapest === null || printPrice === undefined
+      ? null
+      : (print.fixedPriceMinor ?? cheapest + printPrice),
     inStock: offerable.some((g) => g.hasStock),
   };
 }

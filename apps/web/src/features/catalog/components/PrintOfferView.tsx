@@ -516,6 +516,16 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
           </p>
         </div>
 
+        {/*
+          Абзац про сам принт — на місці, де в звичайного принта стоїть вибір
+          виробу. «Благодійна Бабака»: виріб один, вибирати нічого, і саме тут
+          людина має прочитати, куди йде половина прибутку, — до кольору й
+          розміру, а не в згорнутому розділі під фото.
+        */}
+        {data.print.description !== '' && (
+          <p className="mt-5 text-ink leading-relaxed">{data.print.description}</p>
+        )}
+
         {garments.length > 1 && (
           /* `min-w-0`: у fieldset за замовчуванням min-width: min-content. */
           <fieldset className="mt-5 min-w-0">
@@ -756,15 +766,26 @@ export function PrintOfferView({ slug, initialData }: { slug: string; initialDat
       <div className="min-w-0 md:col-start-1">
         <div className="divide-y divide-line border-y border-line">
           <Section title="Виріб і друк" open>
-            <p>
-              {garment?.description !== undefined && garment.description !== ''
-                ? garment.description
-                : 'Друкуємо на базових футболках, світшотах і худі та на речах еко-бренду Native Spirit (Франція).'}
-            </p>
-            <p>
-              Друк DTF або DTG на промисловому обладнанні. Принт не тріскається й не злазить
-              після прання; трісне з нашої вини — переробимо або повернемо гроші.
-            </p>
+            {/*
+              Свій текст принта має пріоритет: він уже називає склад тканини
+              й метод друку для конкретного виробу, тож загальний абзац про
+              DTF/DTG поруч із ним був би повтором.
+            */}
+            {data.print.productNote !== '' ? (
+              <p>{data.print.productNote}</p>
+            ) : (
+              <>
+                <p>
+                  {garment?.description !== undefined && garment.description !== ''
+                    ? garment.description
+                    : 'Друкуємо на базових футболках, світшотах і худі та на речах еко-бренду Native Spirit (Франція).'}
+                </p>
+                <p>
+                  Друк DTF або DTG на промисловому обладнанні. Принт не тріскається й не злазить
+                  після прання; трісне з нашої вини — переробимо або повернемо гроші.
+                </p>
+              </>
+            )}
           </Section>
 
           <Section title="Догляд">

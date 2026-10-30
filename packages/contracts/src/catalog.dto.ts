@@ -117,6 +117,13 @@ export const PrintDto = z.object({
    * мокапів у цього принта немає, сторінка показує превʼю як раніше.
    */
   mockupUrl: ImageRef,
+  /**
+   * Абзац про сам принт (навіщо він, кому допомагає). Порожньо — картка
+   * його не малює. Зʼявився з «Благодійною Бабакою».
+   */
+  description: z.string(),
+  /** Свій текст розділу «Виріб і друк». Порожньо — беремо опис виробу. */
+  productNote: z.string(),
   isPublished: z.boolean(),
 });
 export type PrintDto = z.infer<typeof PrintDto>;

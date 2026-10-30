@@ -5,7 +5,7 @@ import { CollectionListDto, BreedListDto, CollectionPageDto, PageListDto } from 
 import { PublicShell } from '@/components/public-shell';
 import { ArticleGrid } from '@/features/articles/article-card';
 import { PrintGrid, SectionHead } from '@/features/home/print-card';
-import { DrawYourDogCta, WaveLastWord } from '@/features/home/brand-cta';
+import { DrawYourDogCta, WaveFirstWord, WaveLastWord } from '@/features/home/brand-cta';
 import { BreedStrip } from '@/features/home/blocks';
 import { plural } from '@/features/home/blocks';
 import { serverFetch, serverFetchOrNull } from '@/lib/server-api';
@@ -13,6 +13,9 @@ import { breadcrumbJsonLd, breedItemListJsonLd, JsonLd } from '@/lib/json-ld';
 import { getSettings } from '@/lib/site-settings';
 import { ButtonLink } from '@/components/ui';
 import { LIST } from '@/features/analytics/lists';
+
+/** Колекції, у назві яких хвилею підкреслюється перше слово, а не останнє. */
+const WAVE_FIRST_WORD: ReadonlySet<string> = new Set(['blahodiina-babaka']);
 
 interface Params { params: { slug: string } }
 
@@ -95,7 +98,14 @@ export default async function CollectionPage({ params }: Params) {
           </p>
         )}
         <h1 className="mt-4 font-display text-hero font-bold text-ink">
-          <WaveLastWord text={collection.title} />
+          {/*
+            Хвиля під першим словом — лише для благодійної колекції (інструкція
+            Даші: «підкреслюємо слово Благодійна»). Для решти — під останнім,
+            як усюди на сайті.
+          */}
+          {WAVE_FIRST_WORD.has(collection.slug)
+            ? <WaveFirstWord text={collection.title} />
+            : <WaveLastWord text={collection.title} />}
         </h1>
         {collection.description && (
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">{collection.description}</p>
