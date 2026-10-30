@@ -8,7 +8,7 @@ import type {
 import { ErrorCode, minor } from '@dt/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { PriceBookService } from '../pricing/price-book.service';
-import { blockReasonFor, garmentPriceFor, printPriceFor, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
+import { blockReasonFor, garmentPriceFor, printPriceOn, type PricingGarment, type PricingPrint, type PricingVariant, type PrintPriceTable } from '../pricing/pricing.domain';
 import {
   garmentTypesFor, matchesGarmentFilters, toPrintCard,
   type OfferContext, type OfferableGarment, type PrintRow,
@@ -22,6 +22,7 @@ interface PrintSelectRow {
   readonly title: string;
   readonly sizeTier: string;
   readonly previewUrl: string;
+  readonly fixedPriceMinor: number | null;
   readonly collections: ReadonlyArray<{ collectionId: string }>;
 }
 
@@ -131,6 +132,7 @@ export class CatalogService {
       where: { slug, isPublished: true },
       select: {
         id: true, slug: true, title: true, sizeTier: true, previewUrl: true, mockupUrl: true, isPublished: true,
+        description: true, productNote: true, fixedPriceMinor: true,
         images: {
           select: { url: true, alt: true },
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
@@ -225,8 +227,16 @@ export class CatalogService {
       printPriceRows.map((r: { tier: string; priceMinor: number }) => [r.tier, r.priceMinor]),
     ) as PrintPriceTable;
 
-    const pricingPrint: PricingPrint = { id: print.id, sizeTier: print.sizeTier, isPublished: print.isPublished };
-    const printPriceMinor = printPriceFor(pricingPrint, priceTable);
+    const pricingPrint: PricingPrint = {
+      id: print.id, sizeTier: print.sizeTier, isPublished: print.isPublished,
+      fixedPriceMinor: print.fixedPriceMinor === null ? null : minor(print.fixedPriceMinor),
+    };
+    // Одна цифра «друк» на всю сторінку. Для принта з фіксованою ціною вона
+    // рахується від найдешевшого виробу (список уже впорядкований за ціною):
+    // такий принт продається з одним виробом, тож «найдешевший» — єдиний, і
+    // на кнопках вибору виробу ця сама цифра дає саме фіксовану суму.
+    const cheapestBase = minor(garments[0]?.basePriceMinor ?? 0);
+    const printPriceMinor = printPriceOn(pricingPrint, cheapestBase, priceTable);
 
     // Defensive pass through the pricing domain: drop a variant only for a
     // structural reason (unpublished garment/print, print not offered on this
@@ -277,6 +287,8 @@ export class CatalogService {
         breedSlugs: print.breeds.map((b: { breed: { slug: string } }) => b.breed.slug),
         previewUrl: print.previewUrl,
         mockupUrl: print.mockupUrl,
+        description: print.description,
+        productNote: print.productNote,
         isPublished: print.isPublished,
       },
       images: print.images.map((img: { url: string; alt: string }) => ({
@@ -577,7 +589,7 @@ export class CatalogService {
   }
 
   private static readonly PRINT_ROW_SELECT = {
-    id: true, slug: true, title: true, sizeTier: true, previewUrl: true,
+    id: true, slug: true, title: true, sizeTier: true, previewUrl: true, fixedPriceMinor: true,
     collections: { select: { collectionId: true } },
   } as const satisfies Prisma.PrintSelect;
 
@@ -586,6 +598,7 @@ export class CatalogService {
       id: p.id, slug: p.slug, title: p.title,
       sizeTier: p.sizeTier as PrintRow['sizeTier'],
       previewUrl: p.previewUrl,
+      fixedPriceMinor: p.fixedPriceMinor,
       collectionIds: p.collections.map((c) => c.collectionId),
     };
   }

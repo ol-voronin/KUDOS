@@ -12,6 +12,20 @@ export function WaveLastWord({ text }: { text: string }) {
 }
 
 /**
+ * Та сама хвиля, але під першим словом.
+ *
+ * «Благодійна Бабака»: наголос має бути на «Благодійна», а не на бренді —
+ * у решти колекцій хвиля стоїть під останнім словом, і саме це робить
+ * «Бабаку» впізнаваною. Тут навпаки: слово «Бабака» вже в назві сайту,
+ * а що колекція благодійна — ні.
+ */
+export function WaveFirstWord({ text }: { text: string }) {
+  const at = text.trimStart().indexOf(' ');
+  if (at === -1) return <span className="wave-underline">{text}</span>;
+  return <><span className="wave-underline">{text.slice(0, at)}</span>{text.slice(at)}</>;
+}
+
+/**
  * Заклик під сіткою каталогу: «немає твоєї породи — намалюємо».
  *
  * Прийоми бренду з «Про нас» (аудит 17.10, U1): жовта підкладка, наліпка

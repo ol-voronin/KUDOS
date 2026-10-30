@@ -156,6 +156,7 @@ export class CartPricingService {
         where: { slug: { in: printSlugs }, isPublished: true },
         select: {
           id: true, slug: true, title: true, sizeTier: true, previewUrl: true, isPublished: true,
+          fixedPriceMinor: true,
           collections: { select: { collectionId: true, collection: { select: { slug: true } } } },
           breeds: { select: { breed: { select: { slug: true } } } },
           colourExclusions: { select: { colourId: true } },
@@ -250,6 +251,7 @@ export class CartPricingService {
         };
         const pricingPrint: PricingPrint = {
           id: print.id, sizeTier: print.sizeTier, isPublished: print.isPublished,
+          fixedPriceMinor: print.fixedPriceMinor === null ? null : minor(print.fixedPriceMinor),
         };
         offer = priceOffer(pricingGarment, pricingPrint, pricingVariant, priceTable, offered, modifiers);
       }
