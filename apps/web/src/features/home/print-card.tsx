@@ -80,7 +80,7 @@ export function PrintCard(
         </p>
         <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           {print.fromPriceMinor !== null && (
-            <p className="whitespace-nowrap text-[0.95rem] font-semibold text-ink">від {formatUAH(minor(print.fromPriceMinor))}</p>
+            <p className="whitespace-nowrap text-[0.95rem] font-semibold text-ink">{print.priceIsExact ? '' : 'від '}{formatUAH(minor(print.fromPriceMinor))}</p>
           )}
           {/*
             Наявність — короткий підпис, а не зелена плашка. Плашка кричала на
