@@ -23,6 +23,12 @@
  * без --publish ні колекція, ні принти на сайті не видно.
  *
  *   node apps/api/scripts/import-blahodiina.mjs --env <файл.env> --assets <тека> [--publish] [--dry]
+ *
+ * Фото цієї колекції лежать у репо: apps/web/public/collections/blahodiina-babaka/
+ * (4.9 МБ webp), а не в Blob, — так їх можна додати без токена сховища, і
+ * вони їдуть на сайт разом із кодом. Тому за замовчуванням скрипт НЕ вантажить
+ * нічого у Blob, а пише адреси від кореня сайту; --blob вмикає стару схему
+ * (тоді потрібен BLOB_READ_WRITE_TOKEN).
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -72,6 +78,8 @@ const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1] ?? null; };
 const DRY = args.includes('--dry');
 const PUBLISH = args.includes('--publish');
+const USE_BLOB = args.includes('--blob');
+const PUBLIC_BASE = '/collections/blahodiina-babaka';
 const ASSETS = flag('--assets');
 const envFile = flag('--env');
 if (envFile) {
@@ -87,13 +95,15 @@ const DB = process.env.DATABASE_URL ?? '';
 const BLOB = process.env.BLOB_READ_WRITE_TOKEN ?? '';
 const fail = (m) => { console.error(`✗ ${m}`); process.exit(1); };
 if (!DB.startsWith('postgres')) fail('DATABASE_URL не задано.');
-if (!DRY && !BLOB.startsWith('vercel_blob_rw')) fail('BLOB_READ_WRITE_TOKEN не задано.');
+if (!DRY && USE_BLOB && !BLOB.startsWith('vercel_blob_rw')) fail('BLOB_READ_WRITE_TOKEN не задано.');
 if (!ASSETS) fail('Вкажи --assets <тека з <slug>/1.webp…>');
 const sql = neon(DB);
 
-const upload = async (file, slug, name) => put(`prints/${slug}/${name}.webp`, readFileSync(file), {
-  access: 'public', contentType: 'image/webp', addRandomSuffix: true, token: BLOB,
-});
+const upload = async (file, slug, name) => USE_BLOB
+  ? put(`prints/${slug}/${name}.webp`, readFileSync(file), { access: 'public', contentType: 'image/webp', addRandomSuffix: true, token: BLOB })
+  // pathname тут — той самий шлях: адмінка при видаленні спробує del() у Blob,
+  // не знайде й позначить файл осиротілим — це штатна гілка, нічого не ламає.
+  : { url: `${PUBLIC_BASE}/${slug}/${name}.webp`, pathname: `${PUBLIC_BASE}/${slug}/${name}.webp` };
 const imagesOf = (slug) => {
   const dir = join(ASSETS, slug);
   if (!existsSync(dir)) return [];
