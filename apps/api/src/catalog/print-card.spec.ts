@@ -31,10 +31,20 @@ const ctx = (over: Partial<OfferContext> = {}): OfferContext => ({
 
 const print = (over: Partial<PrintRow> = {}): PrintRow => ({
   id: 'p1', slug: 'korhi', title: 'Коргі', sizeTier: 'MEDIUM',
-  previewUrl: 'https://example.com/1.jpg', collectionIds: ['c-portraits'], ...over,
+  previewUrl: 'https://example.com/1.jpg', fixedPriceMinor: null, collectionIds: ['c-portraits'], ...over,
 });
 
 describe('toPrintCard', () => {
+  it('фіксована ціна «принт + виріб» іде на картку як є, без тарифу друку', () => {
+    expect(toPrintCard(print({ fixedPriceMinor: fromUAH(2600) }), ctx(), PRICES).fromPriceMinor).toBe(fromUAH(2600));
+  });
+
+  it('фіксована ціна без жодного дозволеного виробу — ціни немає', () => {
+    const p = print({ fixedPriceMinor: fromUAH(2600), collectionIds: ['c-nothing'] });
+    const c = ctx({ restrictedCollectionIds: new Set(['c-nothing']) });
+    expect(toPrintCard(p, c, PRICES).fromPriceMinor).toBeNull();
+  });
+
   it('бере найдешевший виріб, на якому принт дозволений, і додає друк', () => {
     // 590 футболка + 600 друк MEDIUM = 1190, а не 1600 худі.
     expect(toPrintCard(print(), ctx(), PRICES).fromPriceMinor).toBe(fromUAH(1190));

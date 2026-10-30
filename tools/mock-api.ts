@@ -192,7 +192,7 @@ function variantsFor(garments) {
 const ADMIN_NOW = () => new Date().toISOString();
 const ADMIN_PRINTS = PRINTS.map((p, i) => ({
   id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
-  previewUrl: p.previewUrl, artworkKey: '', mockupUrl: '', isPublished: p.inStock,
+  previewUrl: p.previewUrl, artworkKey: '', mockupUrl: '', description: '', productNote: '', fixedPriceMinor: null, isPublished: p.inStock,
   // Контракт вимагає СПРАВЖНІЙ URL у фото (z.string().url()) — відносний
   // шлях тихо валив схему, і пікер вічно крутив скелетони.
   images: [{ id: uuid(800 + i), url: `http://localhost:3010${p.previewUrl}`, pathname: `mock/${i}`, alt: p.title, position: 0 }],
@@ -275,7 +275,7 @@ http.createServer(async (req,res)=>{
     body = {
       print: { id: p.id, slug: p.slug, title: p.title, sizeTier: 'MEDIUM',
         collectionSlugs: ['collection-0'], breedSlugs: ['breed-6'],
-        previewUrl: p.previewUrl, mockupUrl: '/mock/artwork-demo.png', isPublished: true },
+        previewUrl: p.previewUrl, mockupUrl: '/mock/artwork-demo.png', description: '', productNote: '', isPublished: true },
       images: PHOTOS.slice(0, 4).map((n) => ({ url: P(n), alt: p.title })),
       garments: GARMENTS, variants: variantsFor(GARMENTS), colours: COLOURS, printPriceMinor: 40000,
     };
