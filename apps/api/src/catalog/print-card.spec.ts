@@ -36,7 +36,13 @@ const print = (over: Partial<PrintRow> = {}): PrintRow => ({
 
 describe('toPrintCard', () => {
   it('фіксована ціна «принт + виріб» іде на картку як є, без тарифу друку', () => {
-    expect(toPrintCard(print({ fixedPriceMinor: fromUAH(2600) }), ctx(), PRICES).fromPriceMinor).toBe(fromUAH(2600));
+    const card = toPrintCard(print({ fixedPriceMinor: fromUAH(2600) }), ctx(), PRICES);
+    expect(card.fromPriceMinor).toBe(fromUAH(2600));
+    expect(card.priceIsExact).toBe(true);
+  });
+
+  it('звичайний принт — ціна «від», не точна', () => {
+    expect(toPrintCard(print(), ctx(), PRICES).priceIsExact).toBe(false);
   });
 
   it('фіксована ціна без жодного дозволеного виробу — ціни немає', () => {

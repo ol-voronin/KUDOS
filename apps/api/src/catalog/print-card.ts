@@ -105,6 +105,7 @@ export function toPrintCard(
     fromPriceMinor: cheapest === null || printPrice === undefined
       ? null
       : (print.fixedPriceMinor ?? cheapest + printPrice),
+    priceIsExact: print.fixedPriceMinor !== null,
     inStock: offerable.some((g) => g.hasStock),
   };
 }
