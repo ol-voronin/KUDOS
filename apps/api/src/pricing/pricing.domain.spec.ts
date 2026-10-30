@@ -35,6 +35,7 @@ const print = (over: Partial<PricingPrint> = {}): PricingPrint => ({
   id: 'p1',
   sizeTier: 'MEDIUM' as PrintSizeTier,
   isPublished: true,
+  fixedPriceMinor: null,
   ...over,
 });
 
@@ -78,6 +79,40 @@ describe('priceOffer', () => {
       (t) => priceOffer(garment(), print({ sizeTier: t }), variant(), PRINT_PRICES, OFFERED, []).printPriceMinor,
     );
     expect(totals).toEqual([50_000, 60_000, 70_000]);
+  });
+
+  it('фіксована ціна «принт + виріб»: друк — різниця з базою виробу, тариф не діє', () => {
+    // Худі 1700 + фіксована 2600 → друк 900, разом рівно 2600.
+    const offer = priceOffer(
+      garment({ basePriceMinor: fromUAH(1700) }),
+      print({ sizeTier: 'MAXI' as PrintSizeTier, fixedPriceMinor: fromUAH(2600) }),
+      variant(), PRINT_PRICES, OFFERED, [],
+    );
+    expect(offer.printPriceMinor).toBe(fromUAH(900));
+    expect(offer.totalMinor).toBe(fromUAH(2600));
+  });
+
+  it('фіксована ціна: надбавка за розмір лягає поверх, а не ховається в ній', () => {
+    const offer = priceOffer(
+      garment({ basePriceMinor: fromUAH(1700) }),
+      print({ fixedPriceMinor: fromUAH(2600) }),
+      variant({ sizeLabel: '2XL' }), PRINT_PRICES, OFFERED, [{
+        id: 'm1', name: 'Великі розміри', target: 'SIZE_LABEL',
+        sizeLabel: '2XL', fabricId: null, colourId: null, garmentId: null,
+        kind: 'DELTA', amount: 5_000, isActive: true,
+      }],
+    );
+    expect(offer.totalMinor).toBe(fromUAH(2650));
+  });
+
+  it('фіксована ціна нижча за виріб — друк нуль, а не відʼємний', () => {
+    const offer = priceOffer(
+      garment({ basePriceMinor: fromUAH(1700) }),
+      print({ fixedPriceMinor: fromUAH(1500) }),
+      variant(), PRINT_PRICES, OFFERED, [],
+    );
+    expect(offer.printPriceMinor).toBe(0);
+    expect(offer.totalMinor).toBe(fromUAH(1700));
   });
 
   it('застосовує надбавки й повертає розкладку', () => {

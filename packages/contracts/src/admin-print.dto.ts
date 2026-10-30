@@ -37,11 +37,13 @@ export type ColourOptionDto = z.infer<typeof ColourOptionDto>;
 /**
  * Скільки фото можна повісити на один принт.
  *
- * Пʼять — це не технічна межа, а межа уваги: далі покупець не гортає, а
- * адмінка перетворюється на файлообмінник. Число живе тут, бо його однаково
- * перевіряють і форма, і сервер.
+ * Шість — це не технічна межа, а межа уваги: далі покупець не гортає, а
+ * адмінка перетворюється на файлообмінник. Було пʼять; шість знадобилося
+ * «Благодійній Бабаці»: худі в двох кольорах — обкладинка + перед, спина й
+ * рукав у кожному. Число живе тут, бо його однаково перевіряють і форма,
+ * і сервер.
  */
-export const MAX_PRINT_IMAGES = 5;
+export const MAX_PRINT_IMAGES = 6;
 
 /** Дозволені формати. HEIC свідомо немає: браузери його не показують. */
 export const PRINT_IMAGE_CONTENT_TYPES = [
@@ -103,6 +105,12 @@ export const AdminPrintDto = z.object({
   artworkKey: z.string(),
   /** Вебмакет для авто-мокапів (PNG із прозорим тлом). Порожньо — мокапів немає. */
   mockupUrl: z.string(),
+  /** Абзац про принт на картці товару. Порожньо — не показується. */
+  description: z.string(),
+  /** Свій текст «Виріб і друк». Порожньо — опис виробу. */
+  productNote: z.string(),
+  /** Ціна «принт + виріб» у копійках. null — звичайна схема «виріб + тариф друку». */
+  fixedPriceMinor: z.number().int().positive().nullable(),
   isPublished: z.boolean(),
   images: z.array(PrintImageDto),
   breeds: z.array(CatalogOptionDto),
@@ -156,6 +164,19 @@ export const AdminPrintCreateDto = z.object({
   artworkKey: z.string().trim().max(500).default(''),
   /** Адреса вебмакета у сховищі. Заливає форма тим самим шляхом, що й фото. */
   mockupUrl: z.string().trim().url().or(z.literal('')).default(''),
+  /**
+   * Абзац про принт на картці товару — стоїть на місці вибору виробу, коли
+   * принт продається з одним виробом. Порожньо — не показується.
+   */
+  description: z.string().trim().max(2000).default(''),
+  /** Свій текст «Виріб і друк» (склад, метод друку). Порожньо — опис виробу. */
+  productNote: z.string().trim().max(2000).default(''),
+  /**
+   * Фіксована ціна «принт + виріб» у копійках. Для принтів, що продаються з
+   * одним виробом: ціна друку тоді — різниця з базовою ціною виробу.
+   * null — звичайна схема «виріб + тариф друку».
+   */
+  fixedPriceMinor: z.number().int().positive().max(100_000_000).nullable().default(null),
   isPublished: z.boolean().default(false),
   breedIds: z.array(z.string().uuid()).max(20).default([]),
   collectionIds: z.array(z.string().uuid()).max(20).default([]),

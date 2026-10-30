@@ -69,6 +69,8 @@ function offer(slug: string, title: string, over: Partial<PrintOfferDto['print']
       breedSlugs: ['shpits'],
       previewUrl: `${BLOB_PRINTS_PREFIX}${slug}/cover.webp`,
       mockupUrl: '',
+      description: '',
+      productNote: '',
       isPublished: true,
       ...over,
     },

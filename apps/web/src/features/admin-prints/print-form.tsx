@@ -7,7 +7,7 @@ import type { AdminPrintDto, CatalogOptionDto, PrintSizeTier } from '@dt/contrac
 import { slugify, SLUG_PATTERN } from '@dt/contracts';
 import { ApiError } from '@/lib/api-client';
 import { PrintThumb } from '@/components/print-thumb';
-import { Field, Select, SubmitButton } from '@/features/forms/fields';
+import { Field, Select, SubmitButton, TextArea } from '@/features/forms/fields';
 import { PrintImageUploader } from './image-uploader';
 import { compressImage } from './compress-image';
 import { createBreed, createPrint, deletePrint, getPrintOptions, updatePrint, uploadPrintPhoto } from './api';
@@ -46,6 +46,12 @@ export function PrintForm({ initial, presetCollectionIds }: {
   const [artworkKey, setArtworkKey] = useState(initial?.artworkKey ?? '');
   const [mockupUrl, setMockupUrl] = useState(initial?.mockupUrl ?? '');
   const [mockupBusy, setMockupBusy] = useState(false);
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [productNote, setProductNote] = useState(initial?.productNote ?? '');
+  // Ціна — у гривнях на екрані, у копійках у базі. Порожньо — звичайна схема.
+  const [fixedPrice, setFixedPrice] = useState(
+    initial?.fixedPriceMinor == null ? '' : String(initial.fixedPriceMinor / 100),
+  );
   /**
    * Фото живуть окремо від решти форми: вони зберігаються одразу, своїми
    * запитами, і не чекають кнопки «Зберегти». Тому тут — актуальний принт,
@@ -86,6 +92,9 @@ export function PrintForm({ initial, presetCollectionIds }: {
         // previewUrl не надсилаємо: обкладинку тримає перше фото.
         artworkKey: artworkKey.trim(),
         mockupUrl,
+        description: description.trim(),
+        productNote: productNote.trim(),
+        fixedPriceMinor: fixedPrice.trim() === '' ? null : Math.round(Number(fixedPrice.replace(',', '.')) * 100),
         isPublished,
         breedIds,
         collectionIds,
@@ -118,6 +127,10 @@ export function PrintForm({ initial, presetCollectionIds }: {
     if (!SLUG_PATTERN.test(slug.trim())) next['slug'] = 'Тільки маленькі латинські літери, цифри й дефіси';
     if (isPublished && breedIds.length === 0) {
       next['breeds'] = 'Без породи принт не потрапить у породну сторінку — головний вхід із пошуку';
+    }
+    if (fixedPrice.trim() !== '') {
+      const n = Number(fixedPrice.replace(',', '.'));
+      if (!Number.isFinite(n) || n <= 0) next['fixedPriceMinor'] = 'Ціна в гривнях, більше нуля — або порожньо';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -233,6 +246,29 @@ export function PrintForm({ initial, presetCollectionIds }: {
             <p className="mt-2 text-xs text-ink-subtle">Спершу заповніть назву — макет прикріплюється до адреси принта.</p>
           )}
         </fieldset>
+
+        {/*
+          Три поля для принтів, які продаються з одним виробом (як
+          «Благодійна Бабака»). Для звичайних принтів усі три порожні, і
+          картка товару виглядає як раніше.
+        */}
+        <TextArea
+          id="print-description" label="Про принт"
+          value={description} onChange={setDescription} rows={4} maxLength={2000}
+          placeholder="Цей худі допомагає популяризувати адопцію тварин з притулків…"
+          hint="Абзац на картці товару під ціною. Порожньо — не показується."
+        />
+        <TextArea
+          id="print-product-note" label="Свій текст «Виріб і друк»"
+          value={productNote} onChange={setProductNote} rows={3} maxLength={2000}
+          hint="Замість опису виробу: склад тканини, щільність, метод друку. Порожньо — береться опис виробу."
+        />
+        <Field
+          id="print-fixed-price" label="Фіксована ціна з виробом, ₴"
+          value={fixedPrice} onChange={setFixedPrice} inputMode="numeric" placeholder="2600"
+          error={errors['fixedPriceMinor']}
+          hint="Для принта на одному виробі: покупець бачить саме цю суму, тариф друку не діє. Порожньо — звичайна схема «виріб + друк»."
+        />
 
         <OptionPicker
           legend="Породи" error={errors['breeds']}
