@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TrackingConfigDto } from '@dt/contracts';
 import { setTrackingConfig, track } from './client';
 import { ga4ConsentGranted, sendGtag } from './ga4';
+import { META_PIXEL_ID, metaPageView, metaPixelInit } from './meta-pixel';
 
 const CONSENT_KEY = 'dt.consent';
 
@@ -55,6 +56,7 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
   useEffect(() => {
     if (pathname === null) return;
     track('page_view', { path: pathname });
+    metaPageView();
   }, [pathname]);
 
   // Кліки в Telegram ловимо одним слухачем на документ, а не пропсом у
@@ -106,6 +108,9 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enha
   // Вирішується один раз на візит, після читання сховища: інакше перший хіт
   // міг би піти з «дозволено» людині, яка колись відмовилась.
   const loadTags = wanted && tagId !== '' && consent !== 'loading';
+  // Meta — лише тим, хто не відмовлявся: Consent Mode у Meta немає, тож
+  // «Не треба» означає не вантажити піксель зовсім.
+  const loadMeta = META_PIXEL_ID !== '' && consent !== 'loading' && consent !== 'denied';
 
   return (
     <>
@@ -114,6 +119,10 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enha
           <Script id="gtag-init" strategy="afterInteractive">{init}</Script>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${tagId}`} strategy="afterInteractive" />
         </>
+      )}
+
+      {loadMeta && (
+        <Script id="meta-pixel" strategy="afterInteractive">{`${metaPixelInit(META_PIXEL_ID)}\nfbq('track','PageView');`}</Script>
       )}
 
       {wanted && consent === 'unknown' && <AnalyticsNotice onOk={() => decide('granted')} />}

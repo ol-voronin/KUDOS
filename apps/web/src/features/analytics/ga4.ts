@@ -3,6 +3,8 @@
 import type { CartLineDto } from '@dt/contracts';
 import type { ListName } from './lists';
 
+import { metaAddToCart, metaInitiateCheckout, metaPurchase, metaViewContent } from './meta-pixel';
+
 export { LIST, type ListName } from './lists';
 
 /**
@@ -266,12 +268,16 @@ export function ga4SelectItem(
   });
 }
 
+// Ті самі моменти воронки йдуть і в Meta Pixel (`meta-pixel.ts`): одна точка
+// виклику на подію, щоб воронки в GA4 і Meta не розходились.
 export function ga4ViewItem(item: Ga4Item): void {
   send('view_item', { currency: CURRENCY, value: total([item]), items: [withBrand(item)] });
+  metaViewContent(item, total([item]));
 }
 
 export function ga4AddToCart(item: Ga4Item): void {
   send('add_to_cart', { currency: CURRENCY, value: total([item]), items: [withBrand(item)] });
+  metaAddToCart(item, total([item]));
 }
 
 export function ga4RemoveFromCart(item: Ga4Item): void {
@@ -286,6 +292,7 @@ export function ga4ViewCart(items: readonly Ga4Item[]): void {
 export function ga4BeginCheckout(items: readonly Ga4Item[]): void {
   if (items.length === 0) return;
   send('begin_checkout', { currency: CURRENCY, value: total(items), items: [...items] });
+  metaInitiateCheckout(items, total(items));
 }
 
 /** `shipping_tier` — спосіб доставки словами, як його обрала людина. */
@@ -330,6 +337,12 @@ export function ga4Purchase(input: {
     ...(input.shippingMinor !== undefined ? { shipping: hryvnia(input.shippingMinor) } : {}),
     items: input.items === undefined ? [] : [...input.items],
   });
+  // У Meta, як і в Google Ads, цінність — без доставки.
+  metaPurchase(
+    input.transactionId,
+    input.items ?? [],
+    hryvnia(input.valueMinor - (input.shippingMinor ?? 0)),
+  );
 }
 
 /** Заявка на власний принт або зворотний звʼязок. */
