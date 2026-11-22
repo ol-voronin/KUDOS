@@ -38,6 +38,10 @@ export class TrackingService {
     return {
       ga4MeasurementId: settings.ga4MeasurementId,
       googleAdsId: settings.googleAdsId,
+      // Піксель Meta — з env, а не з налаштувань: той самий ідентифікатор
+      // потрібен Conversions API разом із токеном, а токен у базі не живе.
+      // Окреме поле в адмінці дало б дві копії, які розійдуться.
+      metaPixelId: metaPixelIdFromEnv(),
       conversions,
     };
   }
@@ -71,4 +75,10 @@ export class TrackingService {
     await this.prisma.db.conversionAction.deleteMany({ where: { id } });
     return this.list(false);
   }
+}
+
+/** `META_PIXEL_ID` з env API; не цифри — вважаємо, що пікселя немає. */
+export function metaPixelIdFromEnv(): string {
+  const id = (process.env['META_PIXEL_ID'] ?? '').trim();
+  return /^[0-9]{10,20}$/.test(id) ? id : '';
 }
