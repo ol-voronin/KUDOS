@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { OrderStatus, PaymentStatus } from '@dt/contracts';
 import { minor } from '@dt/contracts';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { MetaCapiService } from '../analytics/meta-capi.service';
 import { PrismaService } from '../common/prisma.service';
 import { sendToTelegram } from '../common/telegram';
 import { formatOrderPaid } from './format-order-notification';
@@ -51,6 +52,12 @@ export function statusesBelow(next: PaymentStatus): PaymentStatus[] {
   return (Object.keys(RANK) as PaymentStatus[]).filter((s) => RANK[s] < RANK[next]);
 }
 
+/** Коли передавати покупку в Meta: перший вхід у HOLD або SUCCESS повз HOLD. */
+export function isMetaPurchaseMoment(from: PaymentStatus, next: PaymentStatus): boolean {
+  if (next === 'HOLD') return true;
+  return next === 'SUCCESS' && from !== 'HOLD';
+}
+
 /** Only these payment outcomes move the order itself. Everything else (created/processing/hold) is in-flight. */
 const ORDER_STATUS_FOR: Partial<Record<PaymentStatus, OrderStatus>> = {
   SUCCESS: 'PAID',
@@ -71,6 +78,7 @@ export class PaymentsWebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly analytics: AnalyticsService,
+    private readonly metaCapi: MetaCapiService,
   ) {}
 
   async handle(body: MonobankWebhookBody): Promise<void> {
@@ -131,6 +139,14 @@ export class PaymentsWebhookService {
     if (nextStatus === 'SUCCESS') {
       await this.notifyPaid(payment.orderId);
       await this.recordPurchase(payment.orderId);
+    }
+
+    // Покупка в Meta — у мить, коли гроші заблоковані (HOLD), так само, як
+    // браузерний піксель і Google Ads (див. `isPurchaseConfirmed` у вебі).
+    // Якщо HOLD не було й платіж одразу став SUCCESS — тоді. Один раз на
+    // платіж; повтор між спробами оплати склеїть Meta за `event_id`.
+    if (isMetaPurchaseMoment(payment.status, nextStatus)) {
+      await this.metaCapi.sendPurchase(payment.orderId);
     }
   }
 

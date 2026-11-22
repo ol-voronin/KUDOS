@@ -1166,6 +1166,11 @@ model Order {
   referrerHost String @default("")
   sessionId    String @default("")
 
+  /// Сигнали для Conversions API Meta: { fbp, fbc, ip, ua }. Пишуться лише
+  /// коли піксель налаштований і покупець не відмовлявся від аналітики;
+  /// NULL — покупка в Meta з сервера не передається.
+  metaSignals  Json?
+
   customer Customer    @relation(fields: [customerId], references: [id])
   items    OrderItem[]
   payments Payment[]
