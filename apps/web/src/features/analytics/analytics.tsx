@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TrackingConfigDto } from '@dt/contracts';
 import { setTrackingConfig, track } from './client';
 import { ga4ConsentGranted, sendGtag } from './ga4';
+import { metaInitScript, rememberFbclid, setMetaEnabled } from './meta';
 
 const CONSENT_KEY = 'dt.consent';
 
@@ -89,7 +90,7 @@ export function Analytics({ config }: { config: TrackingConfigDto }) {
   // не в теґу, і при кожному новому візиті його треба проставити знову.
   useEffect(() => { if (consent === 'granted') ga4ConsentGranted(); }, [consent]);
 
-  const wanted = config.ga4MeasurementId !== '' || config.googleAdsId !== '';
+  const wanted = config.ga4MeasurementId !== '' || config.googleAdsId !== '' || config.metaPixelId !== '';
   const tagId = config.ga4MeasurementId !== '' ? config.ga4MeasurementId : config.googleAdsId;
 
   // Стан за замовчуванням вписується в той самий скрипт, що й `config`, і
@@ -107,6 +108,13 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enha
   // міг би піти з «дозволено» людині, яка колись відмовилась.
   const loadTags = wanted && tagId !== '' && consent !== 'loading';
 
+  // Піксель Meta — за тим самим правилом: вантажиться для всіх, крім тих,
+  // хто колись явно відмовився. Відмова = жодного скрипта Meta й жодних
+  // сигналів для Conversions API.
+  const metaPixelId = /^[0-9]{10,20}$/.test(config.metaPixelId ?? '') ? config.metaPixelId : '';
+  const loadMeta = metaPixelId !== '' && consent !== 'loading' && consent !== 'denied';
+  useEffect(() => { setMetaEnabled(loadMeta); if (loadMeta) rememberFbclid(); }, [loadMeta]);
+
   return (
     <>
       {loadTags && (
@@ -115,6 +123,8 @@ ${config.googleAdsId !== '' ? `gtag('config','${config.googleAdsId}',{allow_enha
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${tagId}`} strategy="afterInteractive" />
         </>
       )}
+
+      {loadMeta && <Script id="meta-pixel" strategy="afterInteractive">{metaInitScript(metaPixelId)}</Script>}
 
       {wanted && consent === 'unknown' && <AnalyticsNotice onOk={() => decide('granted')} />}
     </>

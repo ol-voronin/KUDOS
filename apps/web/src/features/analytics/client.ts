@@ -4,6 +4,7 @@ import type { AnalyticsEventName, AttributionDto, TrackingConfigDto } from '@dt/
 import { EMPTY_ATTRIBUTION } from '@dt/contracts';
 import { BROWSER_API_URL } from '@/lib/api-origin';
 import { sendGtag } from './ga4';
+import { metaTrack } from './meta';
 
 /**
  * Статистика на боці браузера.
@@ -145,6 +146,7 @@ export function track(
   } catch { /* мовчки */ }
 
   fireConversion(name, options.valueMinor);
+  metaTrack(name, options.valueMinor);
 }
 
 /**

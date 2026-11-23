@@ -180,6 +180,8 @@ export type ConversionActionUpdateDto = z.infer<typeof ConversionActionUpdateDto
 export const TrackingConfigDto = z.object({
   ga4MeasurementId: z.string(),
   googleAdsId: z.string(),
+  /** Піксель Meta. Порожньо — fbevents.js не вантажиться. */
+  metaPixelId: z.string().default(''),
   conversions: z.array(ConversionActionDto),
 });
 export type TrackingConfigDto = z.infer<typeof TrackingConfigDto>;
