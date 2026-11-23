@@ -96,6 +96,17 @@ export const OrderDraftRequestDto = z.object({
   delivery: DeliveryDto,
   note: z.string().max(500).default(''),
   attribution: AttributionDto.optional(),
+  /**
+   * Сигнали для Conversions API Meta: cookie `_fbp` і `_fbc` із браузера.
+   *
+   * Браузер надсилає їх лише тоді, коли піксель Meta налаштований і людина
+   * не відмовлялась від аналітики. Немає поля — сервер не передає покупку в
+   * Meta зовсім: відсутність сигналів і є відмова.
+   */
+  meta: z.object({
+    fbp: z.string().max(300).default(''),
+    fbc: z.string().max(500).default(''),
+  }).optional(),
 });
 export type OrderDraftRequestDto = z.infer<typeof OrderDraftRequestDto>;
 
