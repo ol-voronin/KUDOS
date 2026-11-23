@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { applyRuntimeMigrations } from './runtime-migrations';
 import { withTenancy, type TenantClient } from './tenancy';
 
 /**
@@ -23,6 +24,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     await this.raw.$connect();
+    // Тести й локальна розробка мігруються Prisma CLI; тут — лише прод/превʼю.
+    if (process.env['VERCEL'] === '1') await applyRuntimeMigrations(this.raw);
   }
 
   async onModuleDestroy(): Promise<void> {
