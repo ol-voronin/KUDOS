@@ -78,3 +78,39 @@ Monobank: тег на сторінці «дякуємо» не спрацює, �
 сірий напис дрібним шрифтом, збирає більше згод і є маніпуляцією.
 
 Показується тільки якщо заповнено GA4 або Google Ads.
+
+## Meta: піксель і Conversions API (22.11.2026)
+
+Реклама в Instagram без пікселя бачить лише кліки й повідомлення в директ,
+тож оптимізується на тих, хто клікає. Піксель дає їй покупки.
+
+**Піксель (браузер).** Ідентифікатор — змінна `META_PIXEL_ID` у проєкті
+`kudos-api` (лише цифри). API віддає її в `/analytics/config`, веб вантажить
+`fbevents.js`. Порожньо — жодного скрипта Meta. Події мапляться з наших:
+`page_view → PageView`, `view_item → ViewContent`, `add_to_cart → AddToCart`,
+`checkout_started → InitiateCheckout`, `lead_submitted → Lead`, оплата →
+`Purchase` з `eventID = order-<номер>`, сумою без доставки. Хто колись
+натиснув «Не треба» в старому банері — тому піксель не вантажиться.
+
+**Conversions API (сервер).** Та сама покупка з вебхука Monobank у мить
+HOLD (або SUCCESS, якщо HOLD не було) з тим самим `event_id` — Meta склеює
+пару в одну. Потрібні `META_PIXEL_ID` і `META_CAPI_TOKEN` (Events Manager →
+піксель → Налаштування → Conversions API → «Створити маркер доступу»).
+`META_TEST_EVENT_CODE` — тимчасово, для вкладки «Тестові події».
+Сервер шле тільки замовлення з `Order.metaSignals` (fbp, fbc, IP, UA) —
+каса пише їх лише коли піксель увімкнений для цього покупця.
+Міграція: `20261122170000_order_meta_signals` (`bash scripts/setup-neon.sh`).
+
+**UTM для реклами Meta.** В Ads Manager → оголошення → «Параметри URL»:
+
+    utm_source=instagram&utm_medium=paid&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}
+
+Посилання в біо: `?utm_source=instagram&utm_medium=bio`. Атрибуція першого
+дотику підхоплює ці мітки сама, і `/admin/statystyka` покаже дохід по
+кампаніях.
+
+**Політика.** До розділу «Аналітика» додати: «…а також піксель Meta
+(Instagram, Facebook): він встановлює файли cookie й передає дані про
+перегляди й покупки до Meta Platforms Ireland Ltd. Для оплачених замовлень
+ми передаємо Meta хешований номер телефону, щоб рекламу показували тим, кому
+вона цікава».

@@ -11,5 +11,5 @@ import { serverFetchOrNull } from './server-api';
  */
 export const getTracking = cache(async (): Promise<TrackingConfigDto> => {
   const data = await serverFetchOrNull('/analytics/config', TrackingConfigDto, 300);
-  return data ?? { ga4MeasurementId: '', googleAdsId: '', conversions: [] };
+  return data ?? { ga4MeasurementId: '', googleAdsId: '', metaPixelId: '', conversions: [] };
 });
