@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nestjs",
-  "installCommand": "pnpm install --frozen-lockfile && pnpm --filter @dt/contracts build && pnpm --filter @dt/api exec prisma generate",
+  "installCommand": "pnpm install --frozen-lockfile && pnpm --filter @dt/contracts build && pnpm --filter @dt/api exec prisma generate && pnpm --filter @dt/api exec node scripts/vercel-migrate.mjs",
   "regions": ["fra1"]
 }
