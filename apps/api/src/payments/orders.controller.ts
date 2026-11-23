@@ -1,6 +1,7 @@
 import {
-  Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, UsePipes,
+  Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Req, UsePipes,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
 import { CartQuoteRequestDto, OrderDraftRequestDto } from '@dt/contracts';
@@ -49,8 +50,8 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   @Throttle({ default: { ttl: 3_600_000, limit: 10 } })
   @UsePipes(new ZodValidationPipe(OrderDraftRequestDto))
-  createOrder(@Body() dto: OrderDraftRequestDto) {
-    return this.orders.createDraft(dto);
+  createOrder(@Body() dto: OrderDraftRequestDto, @Req() req: Request) {
+    return this.orders.createDraft(dto, clientOf(req));
   }
 
   /** Сторінка «дякуємо»: номер, стан і сума. Ні контактів, ні позицій. */
@@ -58,4 +59,20 @@ export class OrdersController {
   getStatus(@Param('id', ParseUUIDPipe) id: string) {
     return this.orders.getPublicStatus(id);
   }
+}
+
+/**
+ * IP і User-Agent покупця — для Conversions API Meta, і лише для нього.
+ *
+ * На Vercel справжня адреса — перша в `x-forwarded-for`: далі в ланцюжку
+ * стоять проксі платформи. Браузер ходить в API напряму, тож це адреса
+ * покупця, а не нашого фронту.
+ */
+function clientOf(req: Request): { ip: string; ua: string } {
+  const forwarded = req.headers['x-forwarded-for'];
+  const first = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() ?? '';
+  return {
+    ip: (first !== '' ? first : req.ip ?? '').slice(0, 64),
+    ua: String(req.headers['user-agent'] ?? '').slice(0, 500),
+  };
 }

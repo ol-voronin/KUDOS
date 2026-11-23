@@ -67,7 +67,10 @@ export class OrdersService {
     private readonly monobank: MonobankService,
   ) {}
 
-  async createDraft(dto: OrderDraftRequestDto): Promise<OrderDraftResponseDto> {
+  async createDraft(
+    dto: OrderDraftRequestDto,
+    client: { ip: string; ua: string } = { ip: '', ua: '' },
+  ): Promise<OrderDraftResponseDto> {
     // Ціна рахується тут і тільки тут. Клієнт прислав перелік ідентифікаторів
     // і кількість; скільки це коштує, він не знає й знати не мусить.
     const cart = await this.cart.priceForCheckout(dto.items);
@@ -109,6 +112,11 @@ export class OrdersService {
           recipientName: dto.delivery.recipientName,
           recipientPhone: dto.delivery.recipientPhone,
           ...attributionOf(dto.attribution),
+          // Лише коли браузер прислав сигнали Meta: їх немає, якщо піксель не
+          // налаштований або покупець відмовлявся від аналітики.
+          ...(dto.meta !== undefined
+            ? { metaSignals: { fbp: dto.meta.fbp, fbc: dto.meta.fbc, ip: client.ip, ua: client.ua } }
+            : {}),
           items: {
             create: cart.lines.map((line) => ({
               variantId: line.variantId,
