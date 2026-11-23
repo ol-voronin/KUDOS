@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { formatUAH, minor } from '@dt/contracts';
 import { fireConversion, setAdsUserData } from '@/features/analytics/client';
+import { metaPurchase } from '@/features/analytics/meta';
 import { ga4Purchase } from '@/features/analytics/ga4';
 import { readOrder } from '@/features/analytics/order-snapshot';
 import { claimPurchaseOnce, isPurchaseConfirmed } from '@/features/analytics/purchase';
@@ -99,6 +100,9 @@ export function OrderStatusView({ orderId }: { orderId: string }) {
 
     setAdsUserData(snapshot?.sha256Phone);
     fireConversion('purchase', totalMinor - shippingMinor, { transactionId });
+    // Meta — та сама сума без доставки й той самий номер, що шле сервер
+    // через Conversions API: Meta склеїть дві події в одну покупку.
+    metaPurchase(orderNumber, totalMinor - shippingMinor);
     ga4Purchase({
       transactionId,
       valueMinor: totalMinor,

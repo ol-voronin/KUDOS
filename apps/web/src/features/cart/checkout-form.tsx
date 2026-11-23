@@ -7,6 +7,7 @@ import {
 } from '@dt/contracts';
 import { Button, ErrorBanner, Skeleton } from '@/components/ui';
 import { attribution, hashPhone, setAdsUserData, track } from '@/features/analytics/client';
+import { metaSignals } from '@/features/analytics/meta';
 import {
   ga4AddPaymentInfo, ga4AddShippingInfo, ga4BeginCheckout, ga4GenerateLead, itemFromCartLine, type Ga4Item,
 } from '@/features/analytics/ga4';
@@ -184,6 +185,7 @@ export function CheckoutForm({
           },
           note: note.trim(),
           attribution: attribution(),
+          meta: metaSignals(),
         }),
       });
       /*
